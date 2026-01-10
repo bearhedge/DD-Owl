@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <!-- Ear tufts -->
+  <path d="M30 18 L38 28 L32 28 Z" fill="#8B5A2B"/>
+  <path d="M70 18 L62 28 L68 28 Z" fill="#8B5A2B"/>
+  <path d="M32 20 L38 28 L34 28 Z" fill="#A0522D"/>
+  <path d="M68 20 L62 28 L66 28 Z" fill="#A0522D"/>
+
+  <!-- Head -->
+  <ellipse cx="50" cy="38" rx="22" ry="18" fill="#8B4513"/>
+  <ellipse cx="50" cy="40" rx="18" ry="14" fill="#A0522D"/>
+
+  <!-- Face/forehead highlight -->
+  <path d="M42 32 Q50 28 58 32 Q54 36 50 36 Q46 36 42 32" fill="#C4A574"/>
+
+  <!-- Glasses frames -->
+  <circle cx="38" cy="40" r="11" fill="none" stroke="#2F7B7B" stroke-width="3"/>
+  <circle cx="62" cy="40" r="11" fill="none" stroke="#2F7B7B" stroke-width="3"/>
+  <path d="M49 40 L51 40" stroke="#2F7B7B" stroke-width="2"/>
+  <path d="M27 38 L24 36" stroke="#2F7B7B" stroke-width="2"/>
+  <path d="M73 38 L76 36" stroke="#2F7B7B" stroke-width="2"/>
+
+  <!-- Eyes (behind glasses) -->
+  <circle cx="38" cy="40" r="6" fill="#D4A574"/>
+  <circle cx="62" cy="40" r="6" fill="#D4A574"/>
+  <circle cx="38" cy="40" r="4" fill="#8B4513"/>
+  <circle cx="62" cy="40" r="4" fill="#8B4513"/>
+  <circle cx="36" cy="38" r="1.5" fill="#FFF"/>
+  <circle cx="60" cy="38" r="1.5" fill="#FFF"/>
+
+  <!-- Beak -->
+  <path d="M47 48 L50 54 L53 48 Z" fill="#E8A83C"/>
+
+  <!-- Body -->
+  <ellipse cx="50" cy="75" rx="26" ry="28" fill="#8B4513"/>
+  <ellipse cx="50" cy="78" rx="22" ry="22" fill="#A0522D"/>
+
+  <!-- Chest/belly -->
+  <ellipse cx="50" cy="72" rx="14" ry="12" fill="#D4B896"/>
+  <ellipse cx="50" cy="70" rx="10" ry="8" fill="#E8D4B8"/>
+
+  <!-- Wings/arms holding book -->
+  <ellipse cx="28" cy="75" rx="8" ry="14" fill="#6B3E0A"/>
+  <ellipse cx="72" cy="75" rx="8" ry="14" fill="#6B3E0A"/>
+
+  <!-- Book -->
+  <rect x="35" y="78" width="30" height="22" rx="2" fill="#2F7B7B"/>
+  <rect x="36" y="79" width="28" height="20" rx="1" fill="#3D9494"/>
+  <line x1="50" y1="79" x2="50" y2="99" stroke="#2F7B7B" stroke-width="2"/>
+
+  <!-- Book pages -->
+  <rect x="38" y="81" width="10" height="2" fill="#FFF8F0"/>
+  <rect x="38" y="85" width="10" height="2" fill="#FFF8F0"/>
+  <rect x="38" y="89" width="10" height="2" fill="#FFF8F0"/>
+  <rect x="52" y="81" width="10" height="2" fill="#FFF8F0"/>
+  <rect x="52" y="85" width="10" height="2" fill="#FFF8F0"/>
+  <rect x="52" y="89" width="10" height="2" fill="#FFF8F0"/>
+
+  <!-- Book spine stripes -->
+  <rect x="48" y="95" width="4" height="2" fill="#E8A83C"/>
+  <rect x="48" y="92" width="4" height="2" fill="#C74040"/>
+
+  <!-- Legs -->
+  <rect x="40" y="100" width="5" height="10" fill="#E8A83C"/>
+  <rect x="55" y="100" width="5" height="10" fill="#E8A83C"/>
+
+  <!-- Feet -->
+  <path d="M36 110 L42 110 L44 115 L40 113 L36 115 Z" fill="#E8A83C"/>
+  <path d="M51 110 L57 110 L59 115 L55 113 L51 115 Z" fill="#E8A83C"/>
+  <path d="M44 110 L48 115" stroke="#E8A83C" stroke-width="2"/>
+  <path d="M59 110 L63 115" stroke="#E8A83C" stroke-width="2"/>
+</svg>

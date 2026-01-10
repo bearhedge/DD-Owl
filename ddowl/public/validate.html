@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPO Data Validation</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+    h1 { margin-bottom: 20px; color: #4ecdc4; }
+    .instructions { background: #2d2d44; padding: 15px; border-radius: 8px; margin-bottom: 20px; line-height: 1.6; }
+    .deal { background: #2d2d44; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .deal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .deal-id { color: #888; font-size: 12px; }
+    .company { font-weight: bold; font-size: 16px; margin: 5px 0; color: #4ecdc4; }
+    .banks-section { margin-top: 15px; }
+    .banks-label { color: #888; font-size: 12px; margin-bottom: 5px; }
+    .bank-row { background: #3d3d5c; padding: 8px 12px; border-radius: 4px; margin: 4px 0; display: flex; justify-content: space-between; }
+    .bank-name { font-weight: 500; }
+    .bank-role { color: #4ecdc4; font-size: 14px; }
+    .bank-role.unknown { color: #ff6b6b; }
+    .no-banks { color: #ff6b6b; font-style: italic; }
+    .actions { display: flex; gap: 10px; margin-top: 15px; align-items: center; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; }
+    .btn-pdf { background: #6c5ce7; color: white; }
+    .btn-correct { background: #00b894; color: white; }
+    .btn-wrong { background: #d63031; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .notes-input { flex: 1; padding: 10px; border-radius: 4px; border: 1px solid #444; background: #1a1a2e; color: #eee; }
+    .status-badge { padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .status-correct { background: #00b894; color: white; }
+    .status-wrong { background: #d63031; color: white; }
+    .status-pending { background: #636e72; color: white; }
+    .summary { position: fixed; top: 20px; right: 20px; background: #2d2d44; padding: 20px; border-radius: 8px; min-width: 150px; }
+    .summary h3 { margin-bottom: 10px; color: #4ecdc4; }
+    .summary-row { display: flex; justify-content: space-between; margin: 5px 0; }
+    .filter-bar { margin-bottom: 20px; display: flex; gap: 10px; }
+    .filter-btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; background: #3d3d5c; color: #eee; }
+    .filter-btn.active { background: #4ecdc4; color: #1a1a2e; }
+  </style>
+</head>
+<body>
+  <h1>IPO Data Validation</h1>
+
+  <div class="instructions">
+    <strong>Instructions:</strong>
+    <ol style="margin-left: 20px; margin-top: 10px;">
+      <li>Click "View PDF" to open the original HKEX announcement</li>
+      <li>Compare the <strong>full bank names</strong> and <strong>exact role text</strong> shown here with what's in the PDF</li>
+      <li>Mark as <span style="color: #00b894;">Correct</span> if it matches, or <span style="color: #d63031;">Wrong</span> if there are errors</li>
+      <li>Add notes describing what's wrong (e.g., "Missing CLSA, wrong role for JP Morgan")</li>
+    </ol>
+  </div>
+
+  <div class="summary">
+    <h3>Progress</h3>
+    <div class="summary-row"><span>Total:</span> <span id="total">0</span></div>
+    <div class="summary-row"><span>Validated:</span> <span id="validated">0</span></div>
+    <div class="summary-row" style="color: #00b894;"><span>Correct:</span> <span id="correct">0</span></div>
+    <div class="summary-row" style="color: #d63031;"><span>Wrong:</span> <span id="wrong">0</span></div>
+    <div class="summary-row" style="color: #636e72;"><span>Pending:</span> <span id="pending">0</span></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all')">All</button>
+    <button class="filter-btn" onclick="setFilter('pending')">Pending</button>
+    <button class="filter-btn" onclick="setFilter('correct')">Correct</button>
+    <button class="filter-btn" onclick="setFilter('wrong')">Wrong</button>
+  </div>
+
+  <div id="deals"></div>
+
+  <script>
+    let deals = [];
+    let validations = {};
+    let currentFilter = 'all';
+
+    async function loadData() {
+      const [dealsRes, validationsRes] = await Promise.all([
+        fetch('/api/ipo/deals?limit=200'),
+        fetch('/api/ipo/validations')
+      ]);
+      const dealsData = await dealsRes.json();
+      const validationsData = await validationsRes.json();
+
+      deals = dealsData.deals;
+      validations = {};
+      validationsData.forEach(v => {
+        validations[v.deal_id] = v;
+      });
+
+      renderDeals();
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderDeals();
+    }
+
+    function getFilteredDeals() {
+      if (currentFilter === 'all') return deals;
+      if (currentFilter === 'pending') return deals.filter(d => !validations[d.id]);
+      if (currentFilter === 'correct') return deals.filter(d => validations[d.id]?.is_correct === true);
+      if (currentFilter === 'wrong') return deals.filter(d => validations[d.id]?.is_correct === false);
+      return deals;
+    }
+
+    function renderDeals() {
+      const container = document.getElementById('deals');
+      const filtered = getFilteredDeals();
+
+      container.innerHTML = filtered.map(d => {
+        const validation = validations[d.id];
+        const banks = d.banks || [];
+        const pdfLink = d.pdf_links?.[0] || '#';
+
+        let statusBadge = '<span class="status-badge status-pending">PENDING</span>';
+        if (validation) {
+          statusBadge = validation.is_correct
+            ? '<span class="status-badge status-correct">CORRECT</span>'
+            : '<span class="status-badge status-wrong">WRONG</span>';
+        }
+
+        return `
+          <div class="deal" id="deal-${d.id}">
+            <div class="deal-header">
+              <div>
+                <div class="deal-id">Deal ID: ${d.id}</div>
+                <div class="company">${d.company_name || 'Unknown Company'}</div>
+              </div>
+              ${statusBadge}
+            </div>
+
+            <div class="banks-section">
+              <div class="banks-label">EXTRACTED BANKS & ROLES:</div>
+              ${banks.length ? banks.map(b => `
+                <div class="bank-row">
+                  <span class="bank-name">${b.bank_name}</span>
+                  <span class="bank-role ${!b.raw_role ? 'unknown' : ''}">${b.raw_role || '(no role extracted)'}</span>
+                </div>
+              `).join('') : '<div class="no-banks">No banks extracted from PDF</div>'}
+            </div>
+
+            <div class="actions">
+              <a href="${pdfLink}" target="_blank" class="btn btn-pdf">View PDF</a>
+              <input type="text" class="notes-input" id="notes-${d.id}" placeholder="Notes (what's wrong?)" value="${validation?.notes || ''}">
+              <button class="btn btn-correct" onclick="validate(${d.id}, true)">Correct</button>
+              <button class="btn btn-wrong" onclick="validate(${d.id}, false)">Wrong</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateSummary();
+    }
+
+    async function validate(dealId, isCorrect) {
+      const notes = document.getElementById(`notes-${dealId}`).value;
+
+      const res = await fetch(`/api/ipo/validate/${dealId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_correct: isCorrect, notes })
+      });
+
+      if (res.ok) {
+        validations[dealId] = { deal_id: dealId, is_correct: isCorrect, notes };
+        renderDeals();
+      } else {
+        alert('Failed to save validation');
+      }
+    }
+
+    function updateSummary() {
+      const total = deals.length;
+      const validated = Object.keys(validations).length;
+      const correct = Object.values(validations).filter(v => v.is_correct === true).length;
+      const wrong = Object.values(validations).filter(v => v.is_correct === false).length;
+
+      document.getElementById('total').textContent = total;
+      document.getElementById('validated').textContent = validated;
+      document.getElementById('correct').textContent = correct;
+      document.getElementById('wrong').textContent = wrong;
+      document.getElementById('pending').textContent = total - validated;
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

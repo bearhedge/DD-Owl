@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h1 .logo {
+      font-size: 24px;
+    }
+
+    /* Status indicators */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+    }
+    .status-row.connected {
+      background: #d4edda;
+    }
+    .status-row.disconnected {
+      background: #f8d7da;
+    }
+    .status-label {
+      font-weight: 500;
+    }
+    .status-value {
+      font-size: 12px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .status-dot.green { background: #28a745; }
+    .status-dot.red { background: #dc3545; }
+    .status-dot.yellow { background: #ffc107; }
+
+    /* Mode selector */
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .mode-btn {
+      flex: 1;
+      padding: 8px;
+      border: 2px solid #dee2e6;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .mode-btn:hover {
+      border-color: #007bff;
+    }
+    .mode-btn.active {
+      border-color: #007bff;
+      background: #e7f1ff;
+      color: #007bff;
+    }
+
+    /* Buttons */
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background: #6c757d;
+    }
+    button.secondary:hover {
+      background: #545b62;
+    }
+    button.danger {
+      background: #dc3545;
+    }
+    button.danger:hover {
+      background: #c82333;
+    }
+
+    /* Auto mode status */
+    .auto-status {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .auto-status.active {
+      display: block;
+    }
+    .auto-status .progress {
+      margin: 8px 0;
+      font-size: 12px;
+    }
+    .auto-status .current-url {
+      font-size: 11px;
+      color: #666;
+      word-break: break-all;
+    }
+
+    /* Extracted list */
+    .extracted-list {
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .extracted-item {
+      padding: 4px 0;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .extracted-item:before {
+      content: '✓';
+      color: #28a745;
+    }
+
+    /* Result area */
+    #result {
+      margin-top: 12px;
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+    }
+    #result.visible {
+      display: block;
+    }
+
+    .divider {
+      height: 1px;
+      background: #dee2e6;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1><span class="logo">🦉</span> DD Owl</h1>
+
+  <!-- Connection Status -->
+  <div id="backendStatus" class="status-row disconnected">
+    <span class="status-label">
+      <span class="status-dot red"></span>
+      Backend
+    </span>
+    <span class="status-value">Disconnected</span>
+  </div>
+
+  <!-- Mode Selector -->
+  <div class="mode-selector">
+    <button id="manualModeBtn" class="mode-btn active">Manual Mode</button>
+    <button id="autoModeBtn" class="mode-btn">Auto Mode</button>
+  </div>
+
+  <!-- Queue Status -->
+  <div id="queueStatus" class="status-row" style="display: none;">
+    <span class="status-label">Queue</span>
+    <span class="status-value">
+      <span id="queuePending">0</span> pending /
+      <span id="queueCompleted">0</span> done
+    </span>
+  </div>
+
+  <!-- Auto Mode Status (hidden by default) -->
+  <div id="autoStatus" class="auto-status">
+    <strong>Puppeteer Running</strong>
+    <div class="progress">Progress: <span id="autoProgress">0/0</span></div>
+    <div class="current-url">Current: <span id="autoCurrentUrl">-</span></div>
+    <div class="extracted-list" id="extractedList"></div>
+    <div style="margin-top: 10px; display: flex; gap: 8px;">
+      <button id="takeOverBtn" class="secondary" style="flex: 1;">Take Over</button>
+      <button id="stopAutoBtn" class="danger" style="flex: 1;">Stop</button>
+    </div>
+  </div>
+
+  <!-- Start Auto Crawl Button -->
+  <button id="startAutoBtn" class="secondary" style="display: none;">Start Auto Crawl</button>
+
+  <!-- Manual Mode Controls -->
+  <div id="manualControls">
+    <button id="extractBtn">Extract Company Data</button>
+    <button id="copyBtn" class="secondary" style="display: none;">Copy JSON</button>
+    <button id="sendToBackendBtn" class="secondary" style="display: none;">Send to Backend</button>
+    <button id="generateReportBtn" class="secondary" style="display: none;">Generate Report</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Result Area -->
+  <div id="result"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

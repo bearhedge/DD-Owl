@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "DD Owl",
+  "version": "1.0.0",
+  "description": "Automated due diligence data extraction from QCC",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.qcc.com/*",
+    "https://*.qichacha.com/*",
+    "http://localhost:8080/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.qcc.com/*", "https://*.qichacha.com/*"],
+      "js": ["content-scripts/qcc.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "DD Owl"
+  }
+}
