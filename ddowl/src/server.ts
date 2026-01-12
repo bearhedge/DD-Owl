@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -13,6 +14,11 @@ import { ipoRouter } from './ipo-api.js';
 import { initWSServer, getWSServer } from './ws-server.js';
 import { getQueueStats } from './database.js';
 import { generatePersonReport, generateCompanyReport, saveReport } from './report.js';
+import { getSessionStatus, getSessionResults, clearSession } from './research-session.js';
+import { getResearchStatus, startPersonResearch, stopPersonResearch } from './person-research.js';
+import { generateWordReport } from './word-report.js';
+import { loadHistory, markRunClean, getRunDiff } from './run-tracker.js';
+import { validateDeals } from './validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -326,6 +332,105 @@ app.get('/screening', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
+app.get('/verify-import', (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../public/verify-import.html'));
+});
+
+// Historical import verification API
+import xlsx from 'xlsx';
+import fs from 'fs';
+
+app.get('/api/import-results', (req: Request, res: Response) => {
+  const resultsPath = path.join(__dirname, '../.historical-import-results.json');
+  try {
+    if (fs.existsSync(resultsPath)) {
+      const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+      res.json(results);
+    } else {
+      res.json([]);
+    }
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load results' });
+  }
+});
+
+app.get('/api/deal-pdf-url/:ticker', (req: Request, res: Response) => {
+  const ticker = parseInt(req.params.ticker);
+  const excelPath = path.join(__dirname, '../../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+
+  try {
+    const workbook = xlsx.readFile(excelPath);
+    const indexSheet = workbook.Sheets['Index'];
+    const rows = xlsx.utils.sheet_to_json(indexSheet, { header: 1 }) as any[][];
+
+    for (let i = 2; i < rows.length; i++) {
+      const row = rows[i];
+      if (row && row[1] === ticker) {
+        res.json({ url: row[4] || null });
+        return;
+      }
+    }
+    res.json({ url: null });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to read Excel' });
+  }
+});
+
+// Verification endpoint - shows all deals with URLs and banks for fact-checking
+app.get('/api/ipo/verify-data', async (req: Request, res: Response) => {
+  try {
+    const dbPath = path.join(__dirname, '../data/ddowl.db');
+    const Database = (await import('better-sqlite3')).default;
+    const db = new Database(dbPath, { readonly: true });
+
+    const deals = db.prepare(`
+      SELECT d.ticker, d.company, d.prospectus_url, d.banks_extracted, d.type, d.notes
+      FROM ipo_deals d
+      WHERE d.has_bank_info = 1
+      ORDER BY d.banks_extracted DESC
+    `).all();
+
+    const result = deals.map((d: any) => {
+      const banks = db.prepare(`
+        SELECT b.name, r.role, r.is_lead, r.raw_role, r.raw_name
+        FROM ipo_bank_roles r
+        JOIN banks b ON b.id = r.bank_id
+        WHERE r.deal_id = (SELECT id FROM ipo_deals WHERE ticker = ?)
+      `).all(d.ticker);
+
+      // Group by bank (normalized name)
+      const bankMap = new Map();
+      for (const b of banks as any[]) {
+        if (!bankMap.has(b.name)) {
+          bankMap.set(b.name, {
+            name: b.name,
+            raw_name: b.raw_name || b.name,  // Include raw name from PDF
+            roles: [],
+            is_lead: b.is_lead
+          });
+        }
+        bankMap.get(b.name).roles.push(b.role);
+      }
+
+      return {
+        ...d,
+        banks: Array.from(bankMap.values())
+      };
+    });
+
+    db.close();
+    res.json(result);
+  } catch (e) {
+    console.error('Verify data error:', e);
+    res.status(500).json({ error: 'Failed to load data', details: String(e) });
+  }
+});
+
+// Serve verify-banks.html
+app.get('/verify-banks', (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../verify-banks.html'));
+});
+
 // Create HTTP server for both Express and WebSocket
 const server = http.createServer(app);
 
@@ -400,6 +505,357 @@ app.get('/api/report/company', async (req: Request, res: Response) => {
     console.error('Report generation error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// ============================================================
+// PERSON RESEARCH API ENDPOINTS
+// ============================================================
+
+// Start person research - crawl all affiliations
+app.post('/api/research/start', async (req: Request, res: Response) => {
+  try {
+    const { personName, personUrl } = req.body;
+
+    if (!personName || !personUrl) {
+      res.status(400).json({ error: 'personName and personUrl required' });
+      return;
+    }
+
+    // Start research in background (don't await)
+    startPersonResearch(personName, personUrl);
+
+    res.json({
+      success: true,
+      message: 'Research started',
+      status: getSessionStatus(),
+    });
+  } catch (error: any) {
+    console.error('Research start error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get research status
+app.get('/api/research/status', (req: Request, res: Response) => {
+  res.json({
+    ...getResearchStatus(),
+    session: getSessionStatus(),
+  });
+});
+
+// Get research results
+app.get('/api/research/results', (req: Request, res: Response) => {
+  const results = getSessionResults();
+  if (!results) {
+    res.status(404).json({ error: 'No research session found' });
+    return;
+  }
+  res.json(results);
+});
+
+// Stop research
+app.post('/api/research/stop', (req: Request, res: Response) => {
+  stopPersonResearch();
+  res.json({ success: true, message: 'Research stopped' });
+});
+
+// Clear research session
+app.post('/api/research/clear', (req: Request, res: Response) => {
+  clearSession();
+  res.json({ success: true, message: 'Session cleared' });
+});
+
+// ============================================================
+// AI AGENT API ENDPOINTS
+// ============================================================
+
+import { runAgent, DDOwlAgent } from './agent/orchestrator.js';
+import { AgentProgress, AgentResult } from './agent/tools/types.js';
+
+// Store running agents
+const runningAgents: Map<string, { agent: DDOwlAgent; result?: AgentResult }> = new Map();
+
+// Start agent task with SSE progress streaming
+app.post('/api/agent/run', async (req: Request, res: Response) => {
+  const { task } = req.body;
+
+  if (!task) {
+    res.status(400).json({ error: 'task is required' });
+    return;
+  }
+
+  // Set up SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sendEvent = (type: string, data: any) => {
+    res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const agent = new DDOwlAgent({
+      onProgress: (progress: AgentProgress) => {
+        sendEvent('progress', progress);
+      },
+    });
+
+    const taskId = agent.getProgress().taskId;
+    runningAgents.set(taskId, { agent });
+
+    sendEvent('started', { taskId, task });
+
+    // Run agent
+    const result = await agent.run(task);
+
+    // Store result
+    runningAgents.set(taskId, { agent, result });
+
+    sendEvent('complete', {
+      taskId,
+      success: result.success,
+      response: result.response,
+      error: result.error,
+      toolCallCount: result.toolCallCount,
+      duration: result.duration,
+    });
+
+    // Clean up after 5 minutes
+    setTimeout(() => runningAgents.delete(taskId), 5 * 60 * 1000);
+
+  } catch (error: any) {
+    sendEvent('error', { error: error.message });
+  }
+
+  res.end();
+});
+
+// Get agent result (non-streaming)
+app.get('/api/agent/result/:taskId', (req: Request, res: Response) => {
+  const { taskId } = req.params;
+  const agentData = runningAgents.get(taskId);
+
+  if (!agentData) {
+    res.status(404).json({ error: 'Agent task not found' });
+    return;
+  }
+
+  res.json({
+    taskId,
+    progress: agentData.agent.getProgress(),
+    result: agentData.result,
+    data: agentData.agent.getData(),
+  });
+});
+
+// Simple run endpoint (non-streaming, for testing)
+app.post('/api/agent/run-sync', async (req: Request, res: Response) => {
+  const { task } = req.body;
+
+  if (!task) {
+    res.status(400).json({ error: 'task is required' });
+    return;
+  }
+
+  try {
+    console.log(`[Agent API] Starting task: ${task}`);
+    const result = await runAgent(task);
+    res.json(result);
+  } catch (error: any) {
+    console.error('[Agent API] Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// DD TABLE FORMATTING ENDPOINT
+// ============================================================
+
+// Format extracted person profile into DD table
+app.post('/api/dd/format-table', (req: Request, res: Response) => {
+  const data = req.body;
+
+  if (!data || !data.affiliations) {
+    res.status(400).json({ error: 'Invalid data - need affiliations array' });
+    return;
+  }
+
+  const personName = data.personName || 'Unknown';
+  const affiliations = data.affiliations || [];
+  const currentAffiliations = data.currentAffiliations || [];
+  const historicalAffiliations = data.historicalAffiliations || [];
+
+  // Format role with shareholding
+  const formatRole = (aff: any): string => {
+    const parts: string[] = [];
+    if (aff.role) parts.push(aff.role);
+    if (aff.shareholding) parts.push(aff.shareholding);
+    return parts.join(' ') || '-';
+  };
+
+  // Build markdown table
+  let markdown = `# DD Report: ${personName}\n\n`;
+  markdown += `Source: ${data.source || 'Unknown'}\n`;
+  markdown += `Extracted: ${data.extractedAt || new Date().toISOString()}\n\n`;
+
+  // Current affiliations table
+  if (currentAffiliations.length > 0) {
+    markdown += `## Current Affiliations (${currentAffiliations.length})\n\n`;
+    markdown += `| # | Company Name | Registration # | Role/Shareholding | Appointment Date |\n`;
+    markdown += `|---|--------------|----------------|-------------------|------------------|\n`;
+    currentAffiliations.forEach((aff: any, idx: number) => {
+      markdown += `| ${idx + 1} | ${aff.companyName} | TBD | ${formatRole(aff)} | TBD |\n`;
+    });
+    markdown += `\n`;
+  }
+
+  // Historical affiliations table
+  if (historicalAffiliations.length > 0) {
+    markdown += `## Historical Affiliations (${historicalAffiliations.length})\n\n`;
+    markdown += `| # | Company Name | Registration # | Role/Shareholding | Appointment Date |\n`;
+    markdown += `|---|--------------|----------------|-------------------|------------------|\n`;
+    historicalAffiliations.forEach((aff: any, idx: number) => {
+      markdown += `| ${idx + 1} | ${aff.companyName} | TBD | ${formatRole(aff)} | TBD |\n`;
+    });
+    markdown += `\n`;
+  }
+
+  // If no current/historical split, use main affiliations
+  if (currentAffiliations.length === 0 && historicalAffiliations.length === 0 && affiliations.length > 0) {
+    markdown += `## All Affiliations (${affiliations.length})\n\n`;
+    markdown += `| # | Company Name | Registration # | Role/Shareholding | Appointment Date |\n`;
+    markdown += `|---|--------------|----------------|-------------------|------------------|\n`;
+    affiliations.forEach((aff: any, idx: number) => {
+      markdown += `| ${idx + 1} | ${aff.companyName} | TBD | ${formatRole(aff)} | TBD |\n`;
+    });
+    markdown += `\n`;
+  }
+
+  // Risk summary
+  if (data.riskInfo) {
+    markdown += `## Risk Summary\n\n`;
+    markdown += `- Self Risk: ${data.riskInfo.selfRisk || 0}\n`;
+    markdown += `- Related Risk: ${data.riskInfo.relatedRisk || 0}\n`;
+    markdown += `- Warnings: ${data.riskInfo.warnings || 0}\n`;
+  }
+
+  res.json({
+    success: true,
+    personName,
+    currentCount: currentAffiliations.length,
+    historicalCount: historicalAffiliations.length,
+    totalCount: affiliations.length,
+    markdown,
+  });
+});
+
+// Generate Word report from extracted data
+app.post('/api/dd/report', async (req: Request, res: Response) => {
+  try {
+    const data = req.body;
+
+    if (!data || !data.personName) {
+      res.status(400).json({ error: 'Missing personName' });
+      return;
+    }
+
+    const filename = await generateWordReport({
+      personName: data.personName,
+      currentAffiliations: data.currentAffiliations || [],
+      historicalAffiliations: data.historicalAffiliations || []
+    });
+
+    const reportUrl = `/reports/${filename}`;
+
+    res.json({
+      success: true,
+      filename,
+      reportUrl,
+      currentCount: data.currentAffiliations?.length || 0,
+      historicalCount: data.historicalAffiliations?.length || 0
+    });
+  } catch (error: any) {
+    console.error('Report generation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// DATA LOCK-IN VERIFICATION ENDPOINTS
+// ============================================================
+
+// Get run history
+app.get('/api/runs', (req: Request, res: Response) => {
+  const history = loadHistory();
+  res.json(history);
+});
+
+// Get sample deals for review
+app.get('/api/verify/sample', async (req: Request, res: Response) => {
+  const n = parseInt(req.query.n as string) || 20;
+  const dbPath = path.join(__dirname, '../data/ddowl.db');
+  const Database = (await import('better-sqlite3')).default;
+  const db = new Database(dbPath, { readonly: true });
+
+  // Get random sample
+  const deals = db.prepare(`
+    SELECT d.ticker, d.company, d.prospectus_url, d.banks_extracted
+    FROM ipo_deals d
+    WHERE d.has_bank_info = 1
+    ORDER BY RANDOM()
+    LIMIT ?
+  `).all(n) as any[];
+
+  // Get banks for each deal
+  for (const deal of deals) {
+    deal.banks = db.prepare(`
+      SELECT b.name, r.raw_name, r.role, r.is_lead, r.raw_role
+      FROM ipo_bank_roles r
+      JOIN banks b ON b.id = r.bank_id
+      WHERE r.deal_id = ?
+    `).all(deal.ticker);
+  }
+
+  db.close();
+  res.json(deals);
+});
+
+// Get flagged deals
+app.get('/api/verify/flags', (req: Request, res: Response) => {
+  const flags = validateDeals();
+  res.json(flags);
+});
+
+// Get lock-in progress
+app.get('/api/verify/progress', (req: Request, res: Response) => {
+  const history = loadHistory();
+  const recentRuns = history.runs.slice(-5);
+  res.json({
+    total_runs: history.runs.length,
+    current_clean_streak: history.current_clean_streak,
+    locked: history.locked,
+    recent_runs: recentRuns,
+    target_streak: 3,
+  });
+});
+
+// Mark run as reviewed
+app.post('/api/verify/complete-review', (req: Request, res: Response) => {
+  const { run_id, issues_found } = req.body;
+  markRunClean(run_id, issues_found);
+  res.json({ success: true });
+});
+
+// Get diff between runs
+app.get('/api/runs/:id/diff/:prevId', (req: Request, res: Response) => {
+  const diff = getRunDiff(req.params.id, req.params.prevId);
+  res.json(diff || []);
+});
+
+// Serve verification UI
+app.get('/verify-lockin', (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../verify-lockin.html'));
 });
 
 server.listen(PORT, () => {
