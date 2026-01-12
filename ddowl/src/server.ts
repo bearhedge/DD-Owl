@@ -807,14 +807,31 @@ app.get('/api/verify/sample', async (req: Request, res: Response) => {
     LIMIT ?
   `).all(n) as any[];
 
-  // Get banks for each deal
+  // Get banks for each deal - grouped by decision maker status
   for (const deal of deals) {
-    deal.banks = db.prepare(`
-      SELECT b.name, r.raw_name, r.role, r.is_lead, r.raw_role
+    const allBanks = db.prepare(`
+      SELECT b.name, r.raw_name, r.is_decision_maker, r.is_lead, r.raw_roles
       FROM ipo_bank_roles r
       JOIN banks b ON b.id = r.bank_id
       WHERE r.deal_id = (SELECT id FROM ipo_deals WHERE ticker = ?)
-    `).all(deal.ticker);
+    `).all(deal.ticker) as any[];
+
+    deal.decision_makers = allBanks
+      .filter(b => b.is_decision_maker)
+      .map(b => ({
+        name: b.name,
+        raw_name: b.raw_name,
+        is_lead: b.is_lead === 1,
+        raw_roles: JSON.parse(b.raw_roles || '[]'),
+      }));
+
+    deal.other_banks = allBanks
+      .filter(b => !b.is_decision_maker)
+      .map(b => ({
+        name: b.name,
+        raw_name: b.raw_name,
+        raw_roles: JSON.parse(b.raw_roles || '[]'),
+      }));
   }
 
   db.close();
