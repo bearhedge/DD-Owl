@@ -67,7 +67,7 @@ const insertDeal = db.prepare(`
 const insertBank = db.prepare(`INSERT OR IGNORE INTO banks (name) VALUES (?)`);
 const getBank = db.prepare(`SELECT id FROM banks WHERE name = ?`);
 const insertRole = db.prepare(`
-  INSERT OR REPLACE INTO ipo_bank_roles (deal_id, bank_id, raw_name, role, is_lead, raw_role)
+  INSERT OR REPLACE INTO ipo_bank_roles (deal_id, bank_id, raw_name, is_decision_maker, is_lead, raw_roles)
   VALUES (?, ?, ?, ?, ?, ?)
 `);
 const getDeal = db.prepare(`SELECT id FROM ipo_deals WHERE ticker = ?`);
@@ -124,14 +124,57 @@ const importAll = db.transaction(() => {
     const dealId = dealRow.id;
 
     if (result?.banks) {
+      // Group banks by normalized name - one row per bank per deal
+      const bankGroups = new Map<string, {
+        name: string;
+        rawName: string;
+        rawRoles: string[];
+        isDecisionMaker: boolean;
+        isLead: boolean
+      }>();
+
       for (const bank of result.banks) {
-        insertBank.run(bank.normalized);
-        const bankRow = getBank.get(bank.normalized) as { id: number } | undefined;
+        const key = bank.normalized;
+        if (!bankGroups.has(key)) {
+          bankGroups.set(key, {
+            name: bank.normalized,
+            rawName: bank.name,
+            rawRoles: [],
+            isDecisionMaker: false,
+            isLead: false,
+          });
+        }
+        const group = bankGroups.get(key)!;
+
+        // Add raw role if not already present
+        if (bank.rawRole && !group.rawRoles.includes(bank.rawRole)) {
+          group.rawRoles.push(bank.rawRole);
+        }
+
+        // Check if this is a sponsor (decision maker)
+        if (bank.rawRole && bank.rawRole.toLowerCase().includes('sponsor')) {
+          group.isDecisionMaker = true;
+          // Check if lead sponsor
+          if (bank.rawRole.toLowerCase().includes('lead')) {
+            group.isLead = true;
+          }
+        }
+      }
+
+      // Insert one row per bank
+      for (const [normalized, group] of bankGroups) {
+        insertBank.run(normalized);
+        const bankRow = getBank.get(normalized) as { id: number } | undefined;
         if (!bankRow) continue;
 
-        for (const role of bank.roles) {
-          insertRole.run(dealId, bankRow.id, bank.name, role, bank.isLead ? 1 : 0, bank.rawRole);
-        }
+        insertRole.run(
+          dealId,
+          bankRow.id,
+          group.rawName,
+          group.isDecisionMaker ? 1 : 0,
+          group.isLead ? 1 : 0,
+          JSON.stringify(group.rawRoles)
+        );
       }
     }
   }
