@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Lock-in Verification</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; padding: 20px; }
+    h1 { margin-bottom: 20px; }
+
+    .progress-bar { background: #16213e; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .progress-bar h2 { margin-bottom: 10px; font-size: 18px; }
+    .streak { display: flex; gap: 10px; margin: 10px 0; }
+    .streak-item { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .streak-item.clean { background: #10b981; }
+    .streak-item.dirty { background: #ef4444; }
+    .streak-item.pending { background: #374151; border: 2px dashed #6b7280; }
+    .locked { background: #10b981; padding: 10px; border-radius: 4px; text-align: center; font-weight: bold; }
+
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-secondary { background: #374151; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
+
+    .sample-info { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+
+    .deals { display: flex; flex-direction: column; gap: 15px; }
+    .deal { background: #16213e; border-radius: 8px; overflow: hidden; }
+    .deal-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .deal-header:hover { background: #1e3a5f; }
+    .ticker { background: #10b981; padding: 4px 8px; border-radius: 4px; font-weight: bold; margin-right: 10px; }
+    .company { flex: 1; }
+    .stats { display: flex; gap: 10px; }
+    .stat { background: #374151; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+
+    .deal-body { padding: 0 15px 15px; display: none; }
+    .deal.expanded .deal-body { display: block; }
+
+    .banks-section { margin-top: 10px; }
+    .banks-section h4 { color: #9ca3af; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; }
+    .bank { padding: 8px; background: #0f172a; border-radius: 4px; margin-bottom: 5px; }
+    .bank-name { font-weight: bold; }
+    .bank-normalized { color: #9ca3af; font-size: 12px; }
+    .bank-roles { margin-top: 4px; }
+    .role { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 4px; }
+    .role-sponsor { background: #fbbf24; color: black; }
+    .role-coordinator { background: #f59e0b; color: black; }
+    .role-bookrunner { background: #3b82f6; }
+    .role-lead_manager { background: #6366f1; }
+    .role-other { background: #6b7280; }
+
+    .deal-actions { margin-top: 15px; display: flex; gap: 10px; }
+    .issue-type { padding: 8px; border-radius: 4px; background: #374151; border: 1px solid #4b5563; color: white; }
+
+    .flags { margin-bottom: 5px; }
+    .flag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 4px; }
+    .flag-high { background: #ef4444; }
+    .flag-medium { background: #f59e0b; color: black; }
+    .flag-low { background: #6b7280; }
+
+    .changed { border-left: 3px solid #fbbf24; }
+    .pdf-link { color: #3b82f6; text-decoration: none; font-size: 12px; }
+    .pdf-link:hover { text-decoration: underline; }
+
+    #issues-counter { font-size: 24px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Data Lock-in Verification</h1>
+
+  <div class="progress-bar">
+    <h2>Lock-in Progress</h2>
+    <div class="streak" id="streak"></div>
+    <div id="progress-status"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" onclick="loadSample()">Load New Sample (20)</button>
+    <button class="btn btn-secondary" onclick="loadFlagged()">Show Flagged Deals</button>
+    <button class="btn btn-secondary" onclick="expandAll()">Expand All</button>
+    <button class="btn btn-secondary" onclick="collapseAll()">Collapse All</button>
+  </div>
+
+  <div class="sample-info" id="sample-info">
+    <strong>Sample Review</strong>
+    <p>Issues marked: <span id="issues-counter">0</span> / <span id="total-deals">0</span></p>
+  </div>
+
+  <div class="deals" id="deals"></div>
+
+  <div class="controls" style="margin-top: 20px;">
+    <button class="btn btn-success" onclick="completeReview()">Complete Review</button>
+  </div>
+
+  <script>
+    let currentDeals = [];
+    let issuesMarked = new Set();
+    let flaggedDeals = new Map();
+
+    async function loadProgress() {
+      const res = await fetch('/api/verify/progress');
+      const data = await res.json();
+
+      const streak = document.getElementById('streak');
+      streak.innerHTML = '';
+
+      for (let i = 0; i < 3; i++) {
+        const run = data.recent_runs[data.recent_runs.length - 3 + i];
+        const div = document.createElement('div');
+        div.className = 'streak-item ' + (run ? (run.is_clean ? 'clean' : 'dirty') : 'pending');
+        div.textContent = run ? (run.is_clean ? '✓' : '✗') : '?';
+        streak.appendChild(div);
+      }
+
+      const status = document.getElementById('progress-status');
+      if (data.locked) {
+        status.innerHTML = '<div class="locked">DATASET LOCKED - 3 consecutive clean runs achieved!</div>';
+      } else {
+        status.innerHTML = `<p>Clean streak: ${data.current_clean_streak} / 3</p><p>Total runs: ${data.total_runs}</p>`;
+      }
+    }
+
+    async function loadFlags() {
+      const res = await fetch('/api/verify/flags');
+      const flags = await res.json();
+      flaggedDeals.clear();
+      for (const flag of flags) {
+        if (!flaggedDeals.has(flag.ticker)) {
+          flaggedDeals.set(flag.ticker, []);
+        }
+        flaggedDeals.get(flag.ticker).push(flag);
+      }
+    }
+
+    async function loadSample() {
+      await loadFlags();
+      const res = await fetch('/api/verify/sample?n=20');
+      currentDeals = await res.json();
+      issuesMarked.clear();
+      renderDeals();
+    }
+
+    async function loadFlagged() {
+      await loadFlags();
+      const res = await fetch('/api/verify/sample?n=100');
+      const allDeals = await res.json();
+      currentDeals = allDeals.filter(d => flaggedDeals.has(d.ticker));
+      issuesMarked.clear();
+      renderDeals();
+    }
+
+    function renderDeals() {
+      const container = document.getElementById('deals');
+      container.innerHTML = '';
+      document.getElementById('total-deals').textContent = currentDeals.length;
+      document.getElementById('issues-counter').textContent = issuesMarked.size;
+
+      for (const deal of currentDeals) {
+        const flags = flaggedDeals.get(deal.ticker) || [];
+        const div = document.createElement('div');
+        div.className = 'deal' + (flags.length ? ' changed' : '');
+        div.innerHTML = `
+          <div class="deal-header" onclick="toggleDeal(${deal.ticker})">
+            <div>
+              <span class="ticker">${deal.ticker}</span>
+              <span class="company">${deal.company}</span>
+            </div>
+            <div class="stats">
+              <span class="stat">${deal.banks?.length || 0} banks</span>
+              <span class="stat">${deal.banks?.filter(b => b.role === 'sponsor').length || 0} sponsors</span>
+            </div>
+          </div>
+          <div class="deal-body">
+            ${flags.length ? `<div class="flags">${flags.map(f => `<span class="flag flag-${f.severity}">${f.flag}</span>`).join('')}</div>` : ''}
+            <a href="${deal.prospectus_url}" target="_blank" class="pdf-link">View PDF</a>
+            <div class="banks-section">
+              <h4>Decision Makers</h4>
+              ${renderBanks(deal.banks?.filter(b => b.role === 'sponsor' || b.role === 'coordinator') || [])}
+              <h4>Bookrunners</h4>
+              ${renderBanks(deal.banks?.filter(b => b.role === 'bookrunner') || [])}
+              <h4>Lead Managers</h4>
+              ${renderBanks(deal.banks?.filter(b => b.role === 'lead_manager') || [])}
+              <h4>Other</h4>
+              ${renderBanks(deal.banks?.filter(b => b.role === 'other') || [])}
+            </div>
+            <div class="deal-actions">
+              <button class="btn btn-success" onclick="markCorrect(${deal.ticker})">Correct</button>
+              <button class="btn btn-danger" onclick="markIssue(${deal.ticker})">Has Issue</button>
+              <select class="issue-type" id="issue-${deal.ticker}">
+                <option value="">Issue type...</option>
+                <option value="wrong_banks">Wrong banks</option>
+                <option value="missing_banks">Missing banks</option>
+                <option value="normalization">Normalization issue</option>
+                <option value="wrong_roles">Wrong roles</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function renderBanks(banks) {
+      if (!banks.length) return '<p style="color: #6b7280; font-size: 12px;">None</p>';
+      return banks.map(b => `
+        <div class="bank">
+          <div class="bank-name">${b.raw_name || b.name}</div>
+          <div class="bank-normalized">Normalized: ${b.name}</div>
+          <div class="bank-roles">
+            <span class="role role-${b.role}">${b.role}</span>
+            ${b.is_lead ? '<span class="role" style="background:#fbbf24;color:black;">LEAD</span>' : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleDeal(ticker) {
+      const deals = document.querySelectorAll('.deal');
+      deals.forEach(d => {
+        if (d.querySelector('.ticker').textContent == ticker) {
+          d.classList.toggle('expanded');
+        }
+      });
+    }
+
+    function expandAll() {
+      document.querySelectorAll('.deal').forEach(d => d.classList.add('expanded'));
+    }
+
+    function collapseAll() {
+      document.querySelectorAll('.deal').forEach(d => d.classList.remove('expanded'));
+    }
+
+    function markCorrect(ticker) {
+      issuesMarked.delete(ticker);
+      document.getElementById('issues-counter').textContent = issuesMarked.size;
+    }
+
+    function markIssue(ticker) {
+      issuesMarked.add(ticker);
+      document.getElementById('issues-counter').textContent = issuesMarked.size;
+    }
+
+    async function completeReview() {
+      const history = await (await fetch('/api/verify/progress')).json();
+      const runId = history.recent_runs[history.recent_runs.length - 1]?.run_id || '001';
+
+      await fetch('/api/verify/complete-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run_id: runId, issues_found: issuesMarked.size })
+      });
+
+      alert(`Review complete! ${issuesMarked.size} issues found.`);
+      loadProgress();
+    }
+
+    // Initialize
+    loadProgress();
+  </script>
+</body>
+</html>
