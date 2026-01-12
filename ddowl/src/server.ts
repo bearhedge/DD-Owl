@@ -813,7 +813,7 @@ app.get('/api/verify/sample', async (req: Request, res: Response) => {
       SELECT b.name, r.raw_name, r.role, r.is_lead, r.raw_role
       FROM ipo_bank_roles r
       JOIN banks b ON b.id = r.bank_id
-      WHERE r.deal_id = ?
+      WHERE r.deal_id = (SELECT id FROM ipo_deals WHERE ticker = ?)
     `).all(deal.ticker);
   }
 
