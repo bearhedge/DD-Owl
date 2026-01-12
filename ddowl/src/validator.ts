@@ -16,9 +16,50 @@ export function validateDeals(): ValidationFlag[] {
   const db = new Database(DB_PATH, { readonly: true });
   const flags: ValidationFlag[] = [];
 
-  // Flag: Single bank only
+  // Flag: No decision maker (sponsor)
+  const noDecisionMaker = db.prepare(`
+    SELECT d.ticker, d.company
+    FROM ipo_deals d
+    WHERE d.has_bank_info = 1
+    AND NOT EXISTS (
+      SELECT 1 FROM ipo_bank_roles r
+      WHERE r.deal_id = d.id AND r.is_decision_maker = 1
+    )
+  `).all() as any[];
+
+  for (const deal of noDecisionMaker) {
+    flags.push({
+      ticker: deal.ticker,
+      company: deal.company,
+      flag: 'NO_DECISION_MAKER',
+      severity: 'high',
+      details: 'No sponsor/decision maker found',
+    });
+  }
+
+  // Flag: Single decision maker only (unusual - most IPOs have multiple sponsors)
+  const singleDecisionMaker = db.prepare(`
+    SELECT d.ticker, d.company, COUNT(*) as dm_count
+    FROM ipo_deals d
+    JOIN ipo_bank_roles r ON r.deal_id = d.id
+    WHERE d.has_bank_info = 1 AND r.is_decision_maker = 1
+    GROUP BY d.ticker
+    HAVING dm_count = 1
+  `).all() as any[];
+
+  for (const deal of singleDecisionMaker) {
+    flags.push({
+      ticker: deal.ticker,
+      company: deal.company,
+      flag: 'SINGLE_DECISION_MAKER',
+      severity: 'medium',
+      details: 'Only 1 decision maker - verify this is correct',
+    });
+  }
+
+  // Flag: Single bank total (very unusual)
   const singleBank = db.prepare(`
-    SELECT d.ticker, d.company, d.banks_extracted
+    SELECT d.ticker, d.company
     FROM ipo_deals d
     WHERE d.has_bank_info = 1 AND d.banks_extracted = 1
   `).all() as any[];
@@ -29,49 +70,7 @@ export function validateDeals(): ValidationFlag[] {
       company: deal.company,
       flag: 'SINGLE_BANK',
       severity: 'high',
-      details: 'Only 1 bank extracted - unusual for IPO',
-    });
-  }
-
-  // Flag: No sponsor
-  const noSponsor = db.prepare(`
-    SELECT d.ticker, d.company
-    FROM ipo_deals d
-    WHERE d.has_bank_info = 1
-    AND NOT EXISTS (
-      SELECT 1 FROM ipo_bank_roles r
-      WHERE r.deal_id = d.ticker AND r.role = 'sponsor'
-    )
-  `).all() as any[];
-
-  for (const deal of noSponsor) {
-    flags.push({
-      ticker: deal.ticker,
-      company: deal.company,
-      flag: 'NO_SPONSOR',
-      severity: 'high',
-      details: 'No sponsor role found',
-    });
-  }
-
-  // Flag: Duplicate bank in same deal
-  const duplicates = db.prepare(`
-    SELECT d.ticker, d.company, b.name, COUNT(*) as cnt
-    FROM ipo_deals d
-    JOIN ipo_bank_roles r ON r.deal_id = d.ticker
-    JOIN banks b ON b.id = r.bank_id
-    WHERE d.has_bank_info = 1
-    GROUP BY d.ticker, b.id
-    HAVING cnt > 1
-  `).all() as any[];
-
-  for (const dup of duplicates) {
-    flags.push({
-      ticker: dup.ticker,
-      company: dup.company,
-      flag: 'DUPLICATE_BANK',
-      severity: 'medium',
-      details: `Bank "${dup.name}" appears ${dup.cnt} times`,
+      details: 'Only 1 bank total - unusual for IPO',
     });
   }
 
