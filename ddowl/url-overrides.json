@@ -1,0 +1,316 @@
+{
+  "description": "Correct prospectus URLs that differ from the Excel file",
+  "overrides": {
+    "2400": {
+      "company": "XD Inc.",
+      "correctUrl": "https://img.xdcdn.net/xdwp/2019/11/E02400Fullset.pdf",
+      "excelUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1129/2019112900007.pdf",
+      "reason": "Excel URL is 7-page OC announcement, not prospectus"
+    },
+    "6098": {
+      "company": "Country Garden Services Holdings Company Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0606/ltn20180606051.pdf",
+      "reason": "Spin-off prospectus dated Jun 2018"
+    },
+    "1970": {
+      "company": "IMAX China Holding, Inc.",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2015/0924/ltn20150924017.pdf",
+      "reason": "Found via HKEX search - Global Offering prospectus dated 24 Sep 2015"
+    },
+    "3750": {
+      "company": "Contemporary Amperex Technology Co., Limited (CATL)",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0512/2025051200005.pdf",
+      "reason": "Secondary listing prospectus dated May 2025"
+    },
+    "2076": {
+      "company": "KANZHUN LIMITED",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/1216/2022121600140.pdf",
+      "reason": "Secondary listing prospectus dated Dec 2022"
+    },
+    "1552": {
+      "company": "BHCC Holding Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2017/0829/ltn20170829051.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Aug 2017"
+    },
+    "1285": {
+      "company": "Jiashili Group Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0915/ltn20140915013.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Sep 2014"
+    },
+    "1968": {
+      "company": "Hingtex Holdings Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2018/0628/ltn20180628017.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Jun 2018"
+    },
+    "1429": {
+      "company": "Skymission Group Holdings Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0915/2020091500015.pdf",
+      "reason": "Found via HKEX search - Global Offering prospectus dated Sep 2020"
+    },
+    "1931": {
+      "company": "IVD Medical Holding Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0628/ltn201906281710.pdf",
+      "reason": "User provided - correct prospectus with BOCI, AMTD, Haitong"
+    },
+    "1971": {
+      "company": "Redsun Services Group Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0624/2020062400015.pdf",
+      "reason": "User provided - Global Offering prospectus dated Jun 2020"
+    },
+    "1337": {
+      "company": "Razer Inc.",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2017/1101/ltn20171101025.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Nov 2017"
+    },
+    "1992": {
+      "company": "Fosun Tourism Group",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2018/1214/ltn20181214120.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Dec 2018"
+    },
+    "3799": {
+      "company": "Dali Foods Group Company Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2015/1120/ltn20151120039.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Nov 2015"
+    },
+    "1821": {
+      "company": "ESR Cayman Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1022/2019102200177.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Oct 2019"
+    },
+    "2148": {
+      "company": "Vesync Co., Ltd",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1208/2020120800023.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Dec 2020"
+    },
+    "9923": {
+      "company": "Yeahka Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0519/2020051901060.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated May 2020"
+    },
+    "1665": {
+      "company": "Pentamaster International Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/SEHK/2017/1229/LTN20171229057.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Dec 2017"
+    },
+    "6819": {
+      "company": "IntelliCentrics Global Holdings Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0318/ltn20190318013.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Mar 2019"
+    },
+    "2207": {
+      "company": "Ronshine Service Holding Co., Ltd",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2021/0630/2021063000093.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Jun 2021"
+    },
+    "1438": {
+      "company": "Nirvana Asia Ltd.",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2014/1204/ltn20141204017.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Dec 2014"
+    },
+    "2014": {
+      "company": "Ozner Water International Holding Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2014/0617/ltn20140617107.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Jun 2014"
+    },
+    "6893": {
+      "company": "Hin Sang Group (International) Holding Co. Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0930/ltn20140930055.pdf",
+      "reason": "English prospectus dated Sep 2014"
+    },
+    "3358": {
+      "company": "Bestway Global Holding Inc.",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2017/1106/ltn20171106037.pdf",
+      "reason": "English prospectus dated Nov 2017"
+    },
+    "1859": {
+      "company": "China Bright Culture Group",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0228/2020022800045.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Feb 2020"
+    },
+    "2115": {
+      "company": "Channel Micron Holdings Company Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1015/sehk20091501103.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Sep 2020"
+    },
+    "1573": {
+      "company": "China Unienergy Group Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2016/0713/ltn20160713030.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Jul 2016"
+    },
+    "7836": {
+      "company": "Aquila Acquisition Corporation - Z",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/0318/sehk22030900242.pdf",
+      "reason": "Found via web search - SPAC listing prospectus dated Mar 2022"
+    },
+    "6836": {
+      "company": "Tianyun International Holdings Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2015/0624/ltn20150624007.pdf",
+      "reason": "Found via web search - Global Offering prospectus dated Jun 2015"
+    },
+    "1761": {
+      "company": "BabyTree Group",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2018/1115/ltn20181115013.pdf",
+      "reason": "User provided - Global Offering prospectus dated Nov 2018"
+    },
+    "1381": {
+      "company": "Canvest Environmental Protection Group Company Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/1215/ltn20141215039.pdf",
+      "reason": "User provided - Global Offering prospectus dated Dec 2014"
+    },
+    "1839": {
+      "company": "CIMC Vehicles (Group) Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0627/ltn20190627065.pdf",
+      "reason": "User provided - Global Offering prospectus dated Jun 2019"
+    },
+    "1509": {
+      "company": "Harmonicare Medical Holdings Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2015/0625/ltn20150625015.pdf",
+      "reason": "User provided - Global Offering prospectus dated Jun 2015"
+    },
+    "865": {
+      "company": "First Mobile Group Holdings Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/gem/2002/1019/e_8110pro-20001220.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1035": {
+      "company": "BBI Life Sciences Corporation",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2014/1216/ltn20141216013.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1073": {
+      "company": "Da Yu Financial Holdings Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0628/ltn20190628037.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1330": {
+      "company": "Dynagreen Environmental Protection Group Co., Ltd",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0609/01330_1955715/e112.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1365": {
+      "company": "China Rundong Auto Group Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2014/0731/ltn20140731031.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1158": {
+      "company": "Zhejiang New Century Hotel Management Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0226/ltn20190226013.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1367": {
+      "company": "Hanbo Enterprises Holdings Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2014/0630/ltn20140630143.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1533": {
+      "company": "Lanzhou Zhuangyuan Pasture Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2015/0930/ltn20150930009.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1503": {
+      "company": "China Merchants Commercial Real Estate Investment Trust",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1128/2019112800125.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1492": {
+      "company": "China ZhongDi Dairy Holdings Company Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2015/1120/ltn20151120005.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1619": {
+      "company": "Tianhe Chemicals Group Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0609/ltn20140609007.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1902": {
+      "company": "Yincheng International Holding Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0222/ltn20190222007.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "1989": {
+      "company": "Pine Care Group Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2017/0127/ltn20170127007.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2117": {
+      "company": "Datang Group Holdings Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1127/2020112700019.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2229": {
+      "company": "Changgang Dunxin Enterprise Company Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2014/0616/ltn20140616015.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2296": {
+      "company": "Huarchi Global Group Holdings Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1031/2019103100035.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2278": {
+      "company": "Hailan Holdings Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2016/0630/ltn20160630037.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2421": {
+      "company": "KRP DEVELOPMENT HOLDINGS LIMITED",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0303/2023030300018.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2599": {
+      "company": "Shinsun Holdings (Group) Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1030/2020103000019.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2606": {
+      "company": "Sichuan Languang JUSTBON Services Group Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1008/ltn20191008009.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "2718": {
+      "company": "Shanghai Dongzheng Automotive Finance Co., Ltd.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0314/ltn20190314039.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "3992": {
+      "company": "Creative Enterprise Holdings Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/1129/ltn20181129019.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "6111": {
+      "company": "DaFa Properties Group Limited",
+      "correctUrl": "https://www.hkexnews.hk/listedco/listconews/sehk/2018/0928/ltn20180928031.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "9877": {
+      "company": "Jenscare Scientific Co., Ltd.",
+      "correctUrl": "https://www.kgi.com.hk/en/-/media/files/kgishk/pdf/ipofactsheet/hkipo_09877.pdf",
+      "reason": "User provided - IPO factsheet from KGI"
+    },
+    "7841": {
+      "company": "HK Acquisition Corporation",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/0809/2022080900063.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "7827": {
+      "company": "Vision Deal HK Acquisition Corp.",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/0606/2022060600009.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "7801": {
+      "company": "Interra Acquisition Corporation",
+      "correctUrl": "https://www.interraacquisition.com/assets/documents/2.-Listing-Document-(English).PDF",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "6600": {
+      "company": "SciClone Pharmaceutical (Holdings) Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2021/0219/2021021900087.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    },
+    "9882": {
+      "company": "Best Linking Group Holdings Limited",
+      "correctUrl": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0922/2023092201796.pdf",
+      "reason": "User provided - Global Offering prospectus"
+    }
+  }
+}
