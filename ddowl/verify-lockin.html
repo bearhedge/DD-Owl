@@ -35,27 +35,77 @@
     .company { flex: 1; }
     .stats { display: flex; gap: 10px; }
     .stat { background: #374151; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .stat-sponsor { background: #F59E0B; color: black; }
 
     .deal-body { padding: 0 15px 15px; display: none; }
     .deal.expanded .deal-body { display: block; }
 
-    .banks-section { margin-top: 10px; }
-    .banks-section h4 { color: #9ca3af; margin-bottom: 8px; font-size: 12px; text-transform: uppercase; }
-    .bank { padding: 8px; background: #0f172a; border-radius: 4px; margin-bottom: 5px; }
-    .bank-name { font-weight: bold; }
-    .bank-normalized { color: #9ca3af; font-size: 12px; }
-    .bank-roles { margin-top: 4px; }
-    .role { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 4px; }
-    .role-sponsor { background: #fbbf24; color: black; }
-    .role-coordinator { background: #f59e0b; color: black; }
-    .role-bookrunner { background: #3b82f6; }
-    .role-lead_manager { background: #6366f1; }
-    .role-other { background: #6b7280; }
+    /* Decision Makers Section - Yellow */
+    .decision-makers {
+      background: #FEF3C7;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+    }
+    .decision-makers h4 {
+      color: #92400E;
+      margin-bottom: 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    .decision-maker {
+      background: #FDE68A;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .decision-maker:last-child { margin-bottom: 0; }
+
+    /* Other Banks Section - Gray */
+    .other-banks {
+      background: #374151;
+      border-radius: 8px;
+      padding: 15px;
+    }
+    .other-banks h4 {
+      color: #9CA3AF;
+      margin-bottom: 10px;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    .other-bank {
+      background: #1F2937;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    .other-bank:last-child { margin-bottom: 0; }
+
+    .bank-name { font-weight: bold; color: #111; }
+    .other-bank .bank-name { color: #eee; }
+    .bank-normalized { color: #6B7280; font-size: 12px; margin-top: 2px; }
+    .other-bank .bank-normalized { color: #9CA3AF; }
+    .bank-raw-roles { font-size: 11px; color: #78716C; margin-top: 4px; font-style: italic; }
+    .other-bank .bank-raw-roles { color: #6B7280; }
+
+    .lead-badge {
+      background: #F59E0B;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-left: 8px;
+    }
+
+    .empty { color: #6B7280; font-size: 12px; font-style: italic; }
+    .decision-makers .empty { color: #92400E; }
 
     .deal-actions { margin-top: 15px; display: flex; gap: 10px; }
     .issue-type { padding: 8px; border-radius: 4px; background: #374151; border: 1px solid #4b5563; color: white; }
 
-    .flags { margin-bottom: 5px; }
+    .flags { margin-bottom: 10px; }
     .flag { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-right: 4px; }
     .flag-high { background: #ef4444; }
     .flag-medium { background: #f59e0b; color: black; }
@@ -111,7 +161,7 @@
         const run = data.recent_runs[data.recent_runs.length - 3 + i];
         const div = document.createElement('div');
         div.className = 'streak-item ' + (run ? (run.is_clean ? 'clean' : 'dirty') : 'pending');
-        div.textContent = run ? (run.is_clean ? '✓' : '✗') : '?';
+        div.textContent = run ? (run.is_clean ? '?' : '?') : '?';
         streak.appendChild(div);
       }
 
@@ -160,6 +210,9 @@
 
       for (const deal of currentDeals) {
         const flags = flaggedDeals.get(deal.ticker) || [];
+        const dmCount = deal.decision_makers?.length || 0;
+        const otherCount = deal.other_banks?.length || 0;
+
         const div = document.createElement('div');
         div.className = 'deal' + (flags.length ? ' changed' : '');
         div.innerHTML = `
@@ -169,32 +222,32 @@
               <span class="company">${deal.company}</span>
             </div>
             <div class="stats">
-              <span class="stat">${deal.banks?.length || 0} banks</span>
-              <span class="stat">${deal.banks?.filter(b => b.role === 'sponsor').length || 0} sponsors</span>
+              <span class="stat stat-sponsor">${dmCount} sponsor${dmCount !== 1 ? 's' : ''}</span>
+              <span class="stat">${otherCount} other</span>
             </div>
           </div>
           <div class="deal-body">
             ${flags.length ? `<div class="flags">${flags.map(f => `<span class="flag flag-${f.severity}">${f.flag}</span>`).join('')}</div>` : ''}
             <a href="${deal.prospectus_url}" target="_blank" class="pdf-link">View PDF</a>
-            <div class="banks-section">
-              <h4>Decision Makers</h4>
-              ${renderBanks(deal.banks?.filter(b => b.role === 'sponsor' || b.role === 'coordinator') || [])}
-              <h4>Bookrunners</h4>
-              ${renderBanks(deal.banks?.filter(b => b.role === 'bookrunner') || [])}
-              <h4>Lead Managers</h4>
-              ${renderBanks(deal.banks?.filter(b => b.role === 'lead_manager') || [])}
-              <h4>Other</h4>
-              ${renderBanks(deal.banks?.filter(b => b.role === 'other') || [])}
+
+            <div class="decision-makers">
+              <h4>Decision Makers (Sponsors)</h4>
+              ${renderDecisionMakers(deal.decision_makers || [])}
             </div>
+
+            <div class="other-banks">
+              <h4>Other Banks</h4>
+              ${renderOtherBanks(deal.other_banks || [])}
+            </div>
+
             <div class="deal-actions">
               <button class="btn btn-success" onclick="markCorrect(${deal.ticker})">Correct</button>
               <button class="btn btn-danger" onclick="markIssue(${deal.ticker})">Has Issue</button>
               <select class="issue-type" id="issue-${deal.ticker}">
                 <option value="">Issue type...</option>
-                <option value="wrong_banks">Wrong banks</option>
-                <option value="missing_banks">Missing banks</option>
+                <option value="wrong_sponsors">Wrong sponsors</option>
+                <option value="missing_sponsors">Missing sponsors</option>
                 <option value="normalization">Normalization issue</option>
-                <option value="wrong_roles">Wrong roles</option>
                 <option value="other">Other</option>
               </select>
             </div>
@@ -204,16 +257,27 @@
       }
     }
 
-    function renderBanks(banks) {
-      if (!banks.length) return '<p style="color: #6b7280; font-size: 12px;">None</p>';
+    function renderDecisionMakers(banks) {
+      if (!banks.length) return '<p class="empty">None found - verify against PDF</p>';
       return banks.map(b => `
-        <div class="bank">
-          <div class="bank-name">${b.raw_name || b.name}</div>
-          <div class="bank-normalized">Normalized: ${b.name}</div>
-          <div class="bank-roles">
-            <span class="role role-${b.role}">${b.role}</span>
-            ${b.is_lead ? '<span class="role" style="background:#fbbf24;color:black;">LEAD</span>' : ''}
+        <div class="decision-maker">
+          <div class="bank-name">
+            ${b.raw_name}
+            ${b.is_lead ? '<span class="lead-badge">LEAD</span>' : ''}
           </div>
+          <div class="bank-normalized">Normalized: ${b.name}</div>
+          <div class="bank-raw-roles">Raw: ${b.raw_roles.join(', ')}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderOtherBanks(banks) {
+      if (!banks.length) return '<p class="empty">None</p>';
+      return banks.map(b => `
+        <div class="other-bank">
+          <div class="bank-name">${b.raw_name}</div>
+          <div class="bank-normalized">Normalized: ${b.name}</div>
+          <div class="bank-raw-roles">Raw: ${b.raw_roles.join(', ')}</div>
         </div>
       `).join('');
     }
