@@ -88283,7 +88283,7 @@
     "ticker": 6060,
     "company": "ZhongAn Online P & C Insurance Co., Ltd.",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 19,
     "banks": [
       {
         "name": "J.P. Morgan Securities (Far East) Limited",
@@ -88413,7 +88413,7 @@
       },
       {
         "name": "Essence International Securities (Hong Kong) Limited",
-        "normalized": "Essence Securities",
+        "normalized": "Essence International Securities",
         "roles": [
           "lead_manager"
         ],
@@ -88421,22 +88421,59 @@
         "rawRole": "Joint Lead Managers"
       },
       {
+        "name": "Bank of China (Hong Kong) Limited",
+        "normalized": "Bank of China",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "J.P. Morgan Securities (Asia Pacific) Limited",
+        "normalized": "J.P. Morgan",
+        "roles": [
+          "coordinator",
+          "bookrunner"
+        ],
+        "isLead": true,
+        "rawRole": "Fallback: coordinator, bookrunner"
+      },
+      {
+        "name": "ICBC International Securities Limited",
+        "normalized": "ICBC International",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "ABCI Securities Company Limited",
+        "normalized": "ABCI",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
         "name": "Morgan Stanley & Co. International plc",
         "normalized": "Morgan Stanley",
         "roles": [
-          "bookrunner"
+          "other"
         ],
         "isLead": false,
-        "rawRole": "International offering"
+        "rawRole": "Fallback extraction"
       },
       {
         "name": "J.P. Morgan Securities plc",
         "normalized": "J.P. Morgan",
         "roles": [
-          "bookrunner"
+          "other"
         ],
         "isLead": false,
-        "rawRole": "International offering"
+        "rawRole": "Fallback extraction"
       }
     ]
   },

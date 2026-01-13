@@ -766,7 +766,8 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
       const bankName = match[0].trim();
       if (bankName.length > 10 && bankName.length < 100) {
         const { canonical } = normalizeBankName(bankName);
-        const key = canonical.toLowerCase();
+        // Use raw name as key to preserve different entities (e.g., HK vs International)
+        const key = bankName.toLowerCase();
 
         if (!seenBanks.has(key)) {
           seenBanks.set(key, {
@@ -834,9 +835,15 @@ export async function extractBanksFromProspectus(pdfBuffer: Buffer): Promise<{
     // Parse banks from the section
     let banks = parseBanksFromSection(sectionText);
 
-    // If no banks found, try fallback extraction for two-column PDFs
-    if (banks.length === 0) {
-      banks = fallbackBankExtraction(allText);
+    // Always run fallback to catch additional banks (e.g., international offering PLC banks)
+    const fallbackBanks = fallbackBankExtraction(allText);
+
+    // Merge fallback banks that aren't already captured (by raw name)
+    const existingRawNames = new Set(banks.map(b => b.bank.toLowerCase()));
+    for (const fb of fallbackBanks) {
+      if (!existingRawNames.has(fb.bank.toLowerCase())) {
+        banks.push(fb);
+      }
     }
 
     return {
