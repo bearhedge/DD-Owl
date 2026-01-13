@@ -625,66 +625,102 @@
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        if (data.type === 'progress') {
-          addLogEntry('search', `Query ${data.searchIndex}/${data.totalSearches}: ${data.currentTerm}`);
-          updateActivityStats(`Search ${data.searchIndex}/${data.totalSearches}`);
+        // === STAGE 0: SEARCH ===
+        if (data.type === 'query_start') {
+          addLogEntry('search', `━━━ QUERY ${data.queryIndex}/${data.totalQueries} ━━━`);
+          addLogEntry('search', `${data.query}`);
+          updateActivityStats(`Query ${data.queryIndex}/${data.totalQueries}`);
         }
 
-        if (data.type === 'fetch') {
-          addLogEntry('fetch', data.title || 'Fetching page...', data.url);
+        if (data.type === 'search_results') {
+          addLogEntry('search', `→ Found ${data.found} results`);
+        }
+
+        // === STAGE 1: TRIAGE ===
+        if (data.type === 'triage_start') {
+          addLogEntry('fetch', `[TRIAGE] Classifying ${data.count} results...`);
+        }
+
+        if (data.type === 'triage_item') {
+          const icon = data.classification === 'GREEN' ? '✓' : data.classification === 'YELLOW' ? '?' : '!';
+          const color = data.classification === 'GREEN' ? 'analyze' : data.classification === 'YELLOW' ? 'fetch' : 'red';
+          const title = data.title.length > 35 ? data.title.slice(0, 35) + '...' : data.title;
+          addLogEntry(color, `  ${icon} ${data.classification}: ${title}`);
+          addLogEntry(color, `    Reason: ${data.reason} → ${data.action}`);
+        }
+
+        if (data.type === 'triage_summary') {
+          addLogEntry('search', `[TRIAGE] Done: ${data.green} skipped, ${data.toInvestigate} to check`);
+        }
+
+        // === STAGE 2: QUICK SCAN ===
+        if (data.type === 'quick_scan_start') {
+          addLogEntry('fetch', `[QUICK SCAN] ${data.title}`);
+          addLogEntry('fetch', `  Why: ${data.triageReason}`);
           urlsProcessed++;
         }
 
-        if (data.type === 'analyze') {
-          addLogEntry('analyze', `Analyzing: ${data.title}`, data.url);
+        if (data.type === 'quick_scan_result') {
+          if (data.shouldAnalyze) {
+            addLogEntry('amber', `  → PROCEED: ${data.reason}`);
+          } else {
+            addLogEntry('analyze', `  → SKIP: ${data.reason}`);
+          }
         }
 
-        if (data.type === 'triage') {
-          addLogEntry('search', `Triaging ${data.count} results...`);
+        // === STAGE 3: DEEP ANALYSIS ===
+        if (data.type === 'analyze_start') {
+          addLogEntry('fetch', `[ANALYZE] ${data.title}`);
+          addLogEntry('fetch', `  From triage: ${data.fromTriage}`);
         }
 
-        if (data.type === 'triage_result') {
-          addLogEntry('search', `Triage: ${data.red} RED, ${data.yellow} YELLOW, ${data.green} GREEN skipped`);
+        if (data.type === 'analyze_result') {
+          if (data.action === 'SKIP') {
+            addLogEntry('analyze', `  → SKIP: ${data.reason}`);
+          } else if (data.isAdverse) {
+            const color = data.severity === 'RED' ? 'red' : 'amber';
+            addLogEntry(color, `  ★ ${data.severity} FLAG: ${data.headline}`);
+            addLogEntry(color, `    ${data.summary}`);
+            addResultToUI({
+              url: data.url,
+              title: data.title,
+              severity: data.severity,
+              summary: data.headline + ' - ' + data.summary
+            });
+          } else {
+            addLogEntry('analyze', `  → CLEAR: No adverse info`);
+          }
         }
 
-        if (data.type === 'quick_scan') {
-          addLogEntry('fetch', `Quick scan: ${data.title}`, data.url);
+        if (data.type === 'analyze_error') {
+          addLogEntry('error', `  → ERROR: ${data.error}`);
         }
 
-        if (data.type === 'quick_scan_skip') {
-          addLogEntry('analyze', `Skipped: ${data.reason}`, data.url);
-        }
-
-        if (data.type === 'quick_scan_pass') {
-          addLogEntry('analyze', `Passed quick scan, analyzing...`, data.url);
-        }
-
-        if (data.type === 'finding') {
-          const color = data.severity === 'RED' ? 'red' : 'amber';
-          addLogEntry(color, data.headline);
-        }
-
-        if (data.type === 'result') {
-          const severity = data.result.severity.toLowerCase();
-          addLogEntry(severity, data.result.summary, data.result.url);
-          addResultToUI(data.result);
-          updateActivityStats(`${redCount} red, ${amberCount} amber, ${urlsProcessed} processed`);
-        }
-
+        // === COMPLETION ===
         if (data.type === 'complete') {
-          currentReport = data.report;
-          showFinalResults(data.report);
-          addLogEntry('result', `Screening complete. ${data.report.totalResultsAnalyzed} articles analyzed.`);
+          const stats = data.stats || {};
+          addLogEntry('result', `━━━ SCREENING COMPLETE ━━━`);
+          addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
+          addLogEntry('result', `Total fetched: ${stats.totalFetched || 0}`);
+          addLogEntry('result', `Total analyzed: ${stats.totalAnalyzed || 0}`);
+          addLogEntry('result', `Findings: ${stats.red || 0} RED, ${stats.amber || 0} AMBER`);
           document.getElementById('statusDot').classList.remove('active');
-          updateActivityStats(`Complete: ${redCount} red, ${amberCount} amber, ${data.report.flags.green} clear`);
+          updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
           eventSource.close();
 
-          // Auto-save to screening log
-          saveToScreeningLog(name, data.report);
+          if (data.findings && data.findings.length > 0) {
+            saveToScreeningLog(name, {
+              flags: {
+                red: data.findings.filter(f => f.severity === 'RED'),
+                amber: data.findings.filter(f => f.severity === 'AMBER')
+              },
+              totalResultsAnalyzed: stats.totalAnalyzed
+            });
+          }
         }
 
         if (data.type === 'error') {
-          addLogEntry('error', data.message);
+          addLogEntry('error', `[ERROR] ${data.message}`);
           eventSource.close();
           resetUI();
         }

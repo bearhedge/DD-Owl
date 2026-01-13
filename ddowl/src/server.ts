@@ -391,26 +391,61 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
       const template = SEARCH_TEMPLATES[i];
       const query = buildSearchQuery(template, subjectName);
 
+      // Stage 0: Search
       sendEvent({
-        type: 'search',
+        type: 'query_start',
         queryIndex: i + 1,
         totalQueries: SEARCH_TEMPLATES.length,
-        query: query.slice(0, 60)
+        query: query
       });
 
-      // Stage 0: Search
       const searchResults = await searchAllPages(query, 3);
       totalSearchResults += searchResults.length;
 
+      sendEvent({
+        type: 'search_results',
+        queryIndex: i + 1,
+        found: searchResults.length
+      });
+
       if (searchResults.length === 0) continue;
 
-      // Stage 1: Triage
-      sendEvent({ type: 'triage', count: searchResults.length });
+      // Stage 1: Triage - classify each result
+      sendEvent({ type: 'triage_start', count: searchResults.length });
 
       const triage = await triageSearchResults(
         searchResults.map(r => ({ title: r.title, snippet: r.snippet, url: r.link })),
         subjectName
       );
+
+      // Send each item's classification with reason
+      for (const item of triage.green) {
+        sendEvent({
+          type: 'triage_item',
+          classification: 'GREEN',
+          title: item.title,
+          reason: item.reason,
+          action: 'SKIP'
+        });
+      }
+      for (const item of triage.yellow) {
+        sendEvent({
+          type: 'triage_item',
+          classification: 'YELLOW',
+          title: item.title,
+          reason: item.reason,
+          action: 'QUICK_SCAN'
+        });
+      }
+      for (const item of triage.red) {
+        sendEvent({
+          type: 'triage_item',
+          classification: 'RED',
+          title: item.title,
+          reason: item.reason,
+          action: 'ANALYZE'
+        });
+      }
 
       triageLog.push({
         query: query.slice(0, 60),
@@ -420,41 +455,79 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
       });
 
       sendEvent({
-        type: 'triage_result',
+        type: 'triage_summary',
         red: triage.red.length,
         yellow: triage.yellow.length,
-        green: triage.green.length
+        green: triage.green.length,
+        skipped: triage.green.length,
+        toInvestigate: triage.red.length + triage.yellow.length
       });
 
       // Stage 2: Quick scan YELLOW results
       const toAnalyze: TriageResult[] = [...triage.red];
 
       for (const item of triage.yellow) {
-        sendEvent({ type: 'quick_scan', url: item.url, title: item.title });
+        sendEvent({
+          type: 'quick_scan_start',
+          url: item.url,
+          title: item.title,
+          triageReason: item.reason
+        });
 
         const scan = await quickScan(item.url, subjectName);
         totalFetched++;
 
+        sendEvent({
+          type: 'quick_scan_result',
+          url: item.url,
+          title: item.title,
+          shouldAnalyze: scan.shouldAnalyze,
+          reason: scan.reason,
+          action: scan.shouldAnalyze ? 'ANALYZE' : 'SKIP'
+        });
+
         if (scan.shouldAnalyze) {
           toAnalyze.push(item);
-          sendEvent({ type: 'quick_scan_pass', url: item.url });
-        } else {
-          sendEvent({ type: 'quick_scan_skip', url: item.url, reason: scan.reason });
         }
       }
 
       // Stage 3: Deep analysis
       for (const item of toAnalyze) {
-        sendEvent({ type: 'analyze', url: item.url, title: item.title });
+        sendEvent({
+          type: 'analyze_start',
+          url: item.url,
+          title: item.title,
+          fromTriage: item.classification
+        });
 
         try {
           const content = await fetchPageContent(item.url);
           totalFetched++;
 
-          if (content.length < 100) continue;
+          if (content.length < 100) {
+            sendEvent({
+              type: 'analyze_result',
+              url: item.url,
+              isAdverse: false,
+              reason: 'No content to analyze',
+              action: 'SKIP'
+            });
+            continue;
+          }
 
           const analysis = await analyzeWithLLM(content, subjectName, query);
           totalAnalyzed++;
+
+          sendEvent({
+            type: 'analyze_result',
+            url: item.url,
+            title: item.title,
+            isAdverse: analysis.isAdverse,
+            severity: analysis.severity,
+            headline: analysis.headline,
+            summary: analysis.summary,
+            action: analysis.isAdverse ? 'FLAG' : 'CLEAR'
+          });
 
           if (analysis.isAdverse) {
             allFindings.push({
@@ -465,15 +538,14 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
               summary: analysis.summary,
               triageClassification: item.classification
             });
-
-            sendEvent({
-              type: 'finding',
-              severity: analysis.severity,
-              headline: analysis.headline
-            });
           }
         } catch (err) {
           console.error(`Analysis failed for ${item.url}:`, err);
+          sendEvent({
+            type: 'analyze_error',
+            url: item.url,
+            error: 'Failed to fetch/analyze'
+          });
         }
       }
     }
