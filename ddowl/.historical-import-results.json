@@ -5117,7 +5117,7 @@
     "ticker": 6199,
     "company": "Bank of Guizhou Co., Ltd.",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "ABCI Capital Limited",
@@ -5215,15 +5215,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Compliance Advisor \tGuotai Junan Capital Limited",
-        "normalized": "Guotai Junan",
-        "roles": [
-          "sponsor"
-        ],
-        "isLead": true,
-        "rawRole": "Legal Advisors to the Joint Sponsors"
       }
     ]
   },
