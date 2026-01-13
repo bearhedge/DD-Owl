@@ -336,7 +336,7 @@ function extractBankName(line: string): string | null {
   let trimmed = line.trim();
 
   // Strip role prefixes (e.g., "Financial Adviser Karl Thomson..." → "Karl Thomson...")
-  const rolePrefixPattern = /^(?:Financial\s+Advis[eo]r?s?|Sole\s+Sponsor|Joint\s+Sponsors?|Compliance\s+Advis[eo]r?|Receiving\s+Bank|Legal\s+Advis[eo]r?s?|Auditor)\s*/i;
+  const rolePrefixPattern = /^(?:Financial\s+Advis[eo]r?s?|Sole\s+Sponsor|Joint\s+Sponsors?|Compliance\s+Advis[eo]r?|Receiving\s+Bank|Legal\s+Advis[eo]r?s?|Auditor|Placing\s+Underwriters?|Public\s+Offer\s+Underwriters?|and\s+Capital\s+Market\s+Intermediar(?:y|ies))\s*/i;
   trimmed = trimmed.replace(rolePrefixPattern, '');
 
   // Skip lines containing regulatory disclaimers
@@ -752,6 +752,12 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
     /\bBOCOM[^,\n]*Limited/gi,
     /\bFutu[^,\n]*Limited/gi,
     /\bTiger Brokers[^,\n]*Limited/gi,
+    // PLC endings for international offering banks
+    /\bMorgan Stanley[^,\n]*Plc/gi,
+    /\bJ\.?P\.?\s*Morgan[^,\n]*Plc/gi,
+    // Additional broker patterns
+    /\bLong\s*bridge[^,\n]*Limited/gi,
+    /\bZINVEST[^,\n]*Limited/gi,
   ];
 
   for (const pattern of bankPatterns) {
