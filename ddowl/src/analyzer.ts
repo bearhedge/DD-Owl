@@ -150,6 +150,63 @@ export async function fetchPageContent(url: string): Promise<string> {
   }
 }
 
+// Quick scan for YELLOW result filtering (lightweight pre-analysis)
+export async function quickScan(
+  url: string,
+  subjectName: string
+): Promise<{ shouldAnalyze: boolean; reason: string }> {
+  // Fetch first 1500 chars only
+  let content = '';
+  try {
+    content = await fetchPageContent(url);
+    content = content.slice(0, 1500);
+  } catch {
+    return { shouldAnalyze: false, reason: 'fetch failed' };
+  }
+
+  if (content.length < 100) {
+    return { shouldAnalyze: false, reason: 'no content' };
+  }
+
+  const prompt = `First 1500 characters of article:
+${content}
+
+Question: Does this article contain adverse information about "${subjectName}"?
+(Adverse = crime, fraud, regulatory action, sanctions, litigation, misconduct)
+
+Answer in JSON:
+{"shouldAnalyze": true/false, "reason": "5 words max"}`;
+
+  try {
+    const response = await axios.post(
+      KIMI_URL,
+      {
+        model: 'moonshot-v1-8k',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${KIMI_API_KEY}`,
+        },
+        timeout: 30000,
+      }
+    );
+
+    const text = response.data.choices?.[0]?.message?.content || '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch {
+    // On error, default to analyzing (safer)
+    return { shouldAnalyze: true, reason: 'scan error, defaulting yes' };
+  }
+
+  return { shouldAnalyze: true, reason: 'parse failed, defaulting yes' };
+}
+
 // Analyze content with Kimi/Moonshot
 export async function analyzeWithLLM(
   content: string,
