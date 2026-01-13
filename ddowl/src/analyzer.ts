@@ -181,7 +181,7 @@ Answer in JSON:
     const response = await axios.post(
       KIMI_URL,
       {
-        model: 'moonshot-v1-8k',
+        model: KIMI_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
       },
@@ -197,10 +197,16 @@ Answer in JSON:
     const text = response.data.choices?.[0]?.message?.content || '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        shouldAnalyze: typeof parsed.shouldAnalyze === 'boolean'
+          ? parsed.shouldAnalyze
+          : parsed.shouldAnalyze === true || parsed.shouldAnalyze === 'true',
+        reason: String(parsed.reason || 'unknown')
+      };
     }
-  } catch {
-    // On error, default to analyzing (safer)
+  } catch (error) {
+    console.error(`Quick scan error for ${url}:`, error);
     return { shouldAnalyze: true, reason: 'scan error, defaulting yes' };
   }
 
