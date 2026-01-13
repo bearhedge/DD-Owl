@@ -6,7 +6,8 @@ import http from 'http';
 import { fileURLToPath } from 'url';
 import { SEARCH_TEMPLATES, buildSearchQuery } from './searchStrings.js';
 import { searchAllPages } from './searcher.js';
-import { fetchPageContent, analyzeWithLLM, closeBrowser } from './analyzer.js';
+import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
+import { triageSearchResults, TriageResult } from './triage.js';
 import { extractFinding, isSameFinding, mergeFindings, Finding } from './extract.js';
 import { detectCategory } from './searchStrings.js';
 import { DDOwlReport, DDOwlReportV2, Issue, AnalyzedResult } from './types.js';
@@ -354,6 +355,159 @@ function determineActionV2(issueCount: number, risk: 'RED' | 'AMBER' | 'GREEN'):
   }
   return 'CLEAR - No adverse information found. Proceed with standard onboarding.';
 }
+
+// V3 API - Smart 3-stage triage screening
+app.get('/api/screen/v3', async (req: Request, res: Response) => {
+  const subjectName = req.query.name as string;
+
+  if (!subjectName || subjectName.trim().length < 2) {
+    res.status(400).json({ error: 'Name required (2+ chars)' });
+    return;
+  }
+
+  // SSE setup
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sendEvent = (data: any) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Heartbeat to prevent timeout
+  const heartbeat = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 10000);
+
+  try {
+    const allFindings: any[] = [];
+    const triageLog: any[] = [];
+    let totalSearchResults = 0;
+    let totalFetched = 0;
+    let totalAnalyzed = 0;
+
+    for (let i = 0; i < SEARCH_TEMPLATES.length; i++) {
+      const template = SEARCH_TEMPLATES[i];
+      const query = buildSearchQuery(template, subjectName);
+
+      sendEvent({
+        type: 'search',
+        queryIndex: i + 1,
+        totalQueries: SEARCH_TEMPLATES.length,
+        query: query.slice(0, 60)
+      });
+
+      // Stage 0: Search
+      const searchResults = await searchAllPages(query, 3);
+      totalSearchResults += searchResults.length;
+
+      if (searchResults.length === 0) continue;
+
+      // Stage 1: Triage
+      sendEvent({ type: 'triage', count: searchResults.length });
+
+      const triage = await triageSearchResults(
+        searchResults.map(r => ({ title: r.title, snippet: r.snippet, url: r.link })),
+        subjectName
+      );
+
+      triageLog.push({
+        query: query.slice(0, 60),
+        red: triage.red.length,
+        yellow: triage.yellow.length,
+        green: triage.green.length
+      });
+
+      sendEvent({
+        type: 'triage_result',
+        red: triage.red.length,
+        yellow: triage.yellow.length,
+        green: triage.green.length
+      });
+
+      // Stage 2: Quick scan YELLOW results
+      const toAnalyze: TriageResult[] = [...triage.red];
+
+      for (const item of triage.yellow) {
+        sendEvent({ type: 'quick_scan', url: item.url, title: item.title });
+
+        const scan = await quickScan(item.url, subjectName);
+        totalFetched++;
+
+        if (scan.shouldAnalyze) {
+          toAnalyze.push(item);
+          sendEvent({ type: 'quick_scan_pass', url: item.url });
+        } else {
+          sendEvent({ type: 'quick_scan_skip', url: item.url, reason: scan.reason });
+        }
+      }
+
+      // Stage 3: Deep analysis
+      for (const item of toAnalyze) {
+        sendEvent({ type: 'analyze', url: item.url, title: item.title });
+
+        try {
+          const content = await fetchPageContent(item.url);
+          totalFetched++;
+
+          if (content.length < 100) continue;
+
+          const analysis = await analyzeWithLLM(content, subjectName, query);
+          totalAnalyzed++;
+
+          if (analysis.isAdverse) {
+            allFindings.push({
+              url: item.url,
+              title: item.title,
+              severity: analysis.severity,
+              headline: analysis.headline,
+              summary: analysis.summary,
+              triageClassification: item.classification
+            });
+
+            sendEvent({
+              type: 'finding',
+              severity: analysis.severity,
+              headline: analysis.headline
+            });
+          }
+        } catch (err) {
+          console.error(`Analysis failed for ${item.url}:`, err);
+        }
+      }
+    }
+
+    // Complete
+    clearInterval(heartbeat);
+
+    const redFindings = allFindings.filter(f => f.severity === 'RED');
+    const amberFindings = allFindings.filter(f => f.severity === 'AMBER');
+
+    sendEvent({
+      type: 'complete',
+      stats: {
+        totalSearchResults,
+        totalFetched,
+        totalAnalyzed,
+        findings: allFindings.length,
+        red: redFindings.length,
+        amber: amberFindings.length
+      },
+      findings: allFindings,
+      triageLog
+    });
+
+    res.end();
+  } catch (error) {
+    clearInterval(heartbeat);
+    console.error('V3 screening error:', error);
+    sendEvent({ type: 'error', message: 'Screening failed' });
+    res.end();
+  } finally {
+    await closeBrowser();
+  }
+});
 
 // Serve frontend
 app.get('/', (req: Request, res: Response) => {
