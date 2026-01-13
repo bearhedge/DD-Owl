@@ -755,9 +755,14 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
     // PLC endings for international offering banks
     /\bMorgan Stanley[^,\n]*Plc/gi,
     /\bJ\.?P\.?\s*Morgan[^,\n]*Plc/gi,
+    // International entities (no Limited/Plc suffix)
+    /\bMerrill Lynch International\b/gi,
+    /\bCredit Suisse International\b/gi,
     // Additional broker patterns
     /\bLong\s*bridge[^,\n]*Limited/gi,
     /\bZINVEST[^,\n]*Limited/gi,
+    /\bCLSA[^,\n]*Limited/gi,
+    /\bAVIC[T]?[^,\n]*Limited/gi,
   ];
 
   for (const pattern of bankPatterns) {

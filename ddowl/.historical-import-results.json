@@ -4144,7 +4144,7 @@
     "ticker": 2443,
     "company": "Autostreets Development Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 17,
     "banks": [
       {
         "name": "CITIC Securities (Hong Kong) Limited",
@@ -4269,6 +4269,51 @@
         ],
         "isLead": false,
         "rawRole": "(only as a Joint Lead Manager)"
+      },
+      {
+        "name": "Haitong International Securities Company Limited",
+        "normalized": "Haitong",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "CMB International Capital Limited",
+        "normalized": "CMB International",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "ABCI Capital Limited",
+        "normalized": "ABCI",
+        "roles": [
+          "bookrunner"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback: bookrunner"
+      },
+      {
+        "name": "Future Optimal Limited",
+        "normalized": "Future Optimal",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "CLSA Limited",
+        "normalized": "CITIC",
+        "roles": [
+          "bookrunner"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback: bookrunner"
       }
     ]
   },
@@ -15251,7 +15296,7 @@
     "ticker": 772,
     "company": "China Literature Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 18,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -15361,7 +15406,7 @@
       },
       {
         "name": "The Hongkong and Shanghai Banking Corporation Limited",
-        "normalized": "The Hongkong and Shanghai Banking Corporation",
+        "normalized": "HSBC",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -15377,6 +15422,60 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
+      },
+      {
+        "name": "Bank of China (Hong Kong) Limited",
+        "normalized": "Bank of China",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "Hongkong and Shanghai Banking Corporation Limited",
+        "normalized": "HSBC",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "Guotai Junan Capital Limited",
+        "normalized": "Guotai Junan Capital",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "Morgan Stanley & Co. International plc",
+        "normalized": "Morgan Stanley",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "J.P. Morgan Securities plc",
+        "normalized": "J.P. Morgan",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "Merrill Lynch International",
+        "normalized": "Bank of America",
+        "roles": [
+          "coordinator"
+        ],
+        "isLead": true,
+        "rawRole": "Fallback: coordinator"
       }
     ]
   },
@@ -39787,22 +39886,23 @@
     "ticker": 1931,
     "company": "IVD Medical Holding Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 4,
     "banks": [
       {
-        "name": "Ballas Capital Limited",
-        "normalized": "Ballas Capital",
+        "name": "BOCI Asia Limited",
+        "normalized": "BOCI",
         "roles": [
           "sponsor",
+          "coordinator",
           "bookrunner",
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Sole Sponsor"
+        "rawRole": "Sole Sponsor and Sole Global Coordinator"
       },
       {
-        "name": "Nobleseed Securities Limited",
-        "normalized": "Nobleseed Securities",
+        "name": "AMTD Global Markets Limited",
+        "normalized": "AMTD Global Markets",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -39811,49 +39911,24 @@
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
       },
       {
-        "name": "CSC Securities (HK) Limited",
-        "normalized": "China Securities",
+        "name": "China Industrial Securities International Capital Limited",
+        "normalized": "China Industrial Securities",
         "roles": [
+          "bookrunner",
           "lead_manager"
         ],
         "isLead": false,
-        "rawRole": "Joint Lead Managers"
+        "rawRole": "Joint Bookrunners and Joint Lead Managers"
       },
       {
-        "name": "Grand View Securities Limited",
-        "normalized": "Grand View Securities",
+        "name": "Haitong International Securities Company Limited",
+        "normalized": "Haitong",
         "roles": [
+          "bookrunner",
           "lead_manager"
         ],
         "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Fulbright Securities Limited",
-        "normalized": "Fulbright Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "China Sky Securities Limited",
-        "normalized": "China Sky Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Alpha Financial Group Limited",
-        "normalized": "Alpha Financial Group",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
+        "rawRole": "Joint Bookrunners and Joint Lead Managers"
       }
     ]
   },
@@ -48413,7 +48488,7 @@
     "ticker": 6613,
     "company": "Lens Technology Co., Ltd.",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 11,
     "banks": [
       {
         "name": "CITIC Securities (Hong Kong) Limited",
@@ -48469,6 +48544,62 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
+      },
+      {
+        "name": "Bank of China Limited",
+        "normalized": "Bank of China",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "Bank of China (Hong Kong) Limited",
+        "normalized": "Bank of China",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "CITIC Bank International Limited",
+        "normalized": "CITIC",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "ABCI Securities Company Limited",
+        "normalized": "ABCI",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
+      },
+      {
+        "name": "CLSA Limited",
+        "normalized": "CITIC",
+        "roles": [
+          "sponsor",
+          "coordinator",
+          "bookrunner"
+        ],
+        "isLead": true,
+        "rawRole": "Fallback: sponsor, coordinator, bookrunner"
+      },
+      {
+        "name": "AVICT Global Asset Management Limited",
+        "normalized": "AVICT Global Asset Management",
+        "roles": [
+          "other"
+        ],
+        "isLead": false,
+        "rawRole": "Fallback extraction"
       }
     ]
   },
