@@ -13,6 +13,26 @@ const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-8k';
 // Shared browser instance for Puppeteer fallback
 let browser: Browser | null = null;
 
+// Page pool to limit concurrent Puppeteer pages
+const MAX_CONCURRENT_PAGES = 2;
+let activePages = 0;
+const pageQueue: Array<() => void> = [];
+
+async function acquirePage(): Promise<void> {
+  if (activePages < MAX_CONCURRENT_PAGES) {
+    activePages++;
+    return;
+  }
+  await new Promise<void>(resolve => pageQueue.push(resolve));
+  activePages++;
+}
+
+function releasePage(): void {
+  activePages--;
+  const next = pageQueue.shift();
+  if (next) next();
+}
+
 async function getBrowser(): Promise<Browser> {
   if (!browser) {
     browser = await puppeteer.launch({
@@ -104,20 +124,20 @@ async function fetchWithAxios(url: string): Promise<string> {
 
 // Fallback fetch with Puppeteer for JS-rendered pages
 async function fetchWithPuppeteer(url: string): Promise<string> {
+  await acquirePage();
   const b = await getBrowser();
   const page = await b.newPage();
 
   try {
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' });
-
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await new Promise(r => setTimeout(r, 1000)); // Wait for JS to render
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await new Promise(r => setTimeout(r, 500));
 
     const text = await page.evaluate(() => {
       const body = document.body;
       if (!body) return '';
-      const unwanted = body.querySelectorAll('script, style, nav, footer, header, aside, .ad, .advertisement');
+      const unwanted = body.querySelectorAll('script, style, nav, footer, header, aside');
       unwanted.forEach(el => el.remove());
       return body.innerText?.replace(/\s+/g, ' ').trim() || '';
     });
@@ -125,6 +145,7 @@ async function fetchWithPuppeteer(url: string): Promise<string> {
     return text.slice(0, 8000);
   } finally {
     await page.close();
+    releasePage();
   }
 }
 
