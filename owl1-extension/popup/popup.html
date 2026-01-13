@@ -124,6 +124,42 @@
     .auto-status.active {
       display: block;
     }
+
+    /* Research status */
+    .research-status {
+      background: #e7f3ff;
+      border: 1px solid #007bff;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .research-status.active {
+      display: block;
+    }
+    .research-status .step {
+      font-size: 12px;
+      margin: 6px 0;
+      color: #444;
+    }
+    .research-status .progress-bar {
+      height: 6px;
+      background: #dee2e6;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .research-status .progress-fill {
+      height: 100%;
+      background: #007bff;
+      transition: width 0.3s;
+    }
+    button.success {
+      background: #28a745;
+    }
+    button.success:hover {
+      background: #218838;
+    }
     .auto-status .progress {
       margin: 8px 0;
       font-size: 12px;
@@ -157,6 +193,7 @@
     #result {
       margin-top: 12px;
       padding: 8px;
+      padding-top: 28px;
       background: #f8f9fa;
       border-radius: 4px;
       font-size: 11px;
@@ -165,15 +202,114 @@
       max-height: 150px;
       overflow-y: auto;
       display: none;
+      position: relative;
     }
     #result.visible {
       display: block;
+    }
+    .copy-icon {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 12px;
+      width: auto;
+      margin: 0;
+    }
+    .copy-icon:hover {
+      background: #e0e0e0;
     }
 
     .divider {
       height: 1px;
       background: #dee2e6;
       margin: 12px 0;
+    }
+
+    /* AI Agent Status */
+    .agent-status {
+      background: #f0f4ff;
+      border: 1px solid #4a6cf7;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .agent-status.active {
+      display: block;
+    }
+    .agent-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .agent-state {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: #e0e0e0;
+      color: #666;
+    }
+    .agent-state.running {
+      background: #fff3cd;
+      color: #856404;
+    }
+    .agent-state.completed {
+      background: #d4edda;
+      color: #155724;
+    }
+    .agent-state.failed {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .agent-task {
+      font-size: 12px;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .agent-step {
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .tool-calls {
+      max-height: 120px;
+      overflow-y: auto;
+      font-size: 11px;
+    }
+    .tool-call {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .tool-call:last-child {
+      border-bottom: none;
+    }
+    .tool-icon {
+      width: 16px;
+      text-align: center;
+    }
+    .tool-icon.running::before { content: '⏳'; }
+    .tool-icon.completed::before { content: '✅'; }
+    .tool-icon.failed::before { content: '❌'; }
+    .tool-name {
+      font-weight: 500;
+      color: #4a6cf7;
+    }
+    .tool-observation {
+      font-size: 10px;
+      color: #888;
+      margin-left: 22px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   </style>
 </head>
@@ -219,9 +355,51 @@
   <!-- Start Auto Crawl Button -->
   <button id="startAutoBtn" class="secondary" style="display: none;">Start Auto Crawl</button>
 
+  <!-- Research Status (for person DD) -->
+  <div id="researchStatus" class="research-status">
+    <strong>🔍 Researching: <span id="researchSubject">-</span></strong>
+    <div class="step" id="researchStep">Starting...</div>
+    <div class="step" id="researchProgress">0 / 0 companies</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="researchProgressBar" style="width: 0%"></div>
+    </div>
+    <div style="margin-top: 10px;">
+      <button id="stopResearchBtn" class="danger">Stop Research</button>
+    </div>
+  </div>
+
+  <!-- AI Agent Status -->
+  <div id="agentStatus" class="agent-status">
+    <div class="agent-header">
+      <strong>🤖 AI Agent</strong>
+      <span id="agentState" class="agent-state">idle</span>
+    </div>
+    <div class="agent-task" id="agentTask">-</div>
+    <div class="agent-step" id="agentStep">-</div>
+    <div class="tool-calls" id="toolCalls"></div>
+    <div style="margin-top: 10px;">
+      <button id="stopAgentBtn" class="danger" style="display: none;">Stop Agent</button>
+    </div>
+  </div>
+
+  <!-- Auto-Research Status (Extension-based, no Puppeteer) -->
+  <div id="autoResearchStatus" class="research-status">
+    <strong>🔍 Auto-Researching: <span id="autoResearchPerson">-</span></strong>
+    <div class="step" id="autoResearchCompany">Preparing...</div>
+    <div class="step" id="autoResearchCount">0 / 0 companies</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="autoResearchProgressBar" style="width: 0%"></div>
+    </div>
+    <div style="margin-top: 10px;">
+      <button id="stopAutoResearchBtn" class="danger">Stop Research</button>
+    </div>
+  </div>
+
   <!-- Manual Mode Controls -->
   <div id="manualControls">
-    <button id="extractBtn">Extract Company Data</button>
+    <button id="extractBtn">Extract Data</button>
+    <button id="getFullDetailsBtn" class="success" style="display: none;">Get Full Details (AI Agent)</button>
+    <button id="researchAllBtn" class="success" style="display: none;">Research All Companies</button>
     <button id="copyBtn" class="secondary" style="display: none;">Copy JSON</button>
     <button id="sendToBackendBtn" class="secondary" style="display: none;">Send to Backend</button>
     <button id="generateReportBtn" class="secondary" style="display: none;">Generate Report</button>
@@ -230,7 +408,10 @@
   <div class="divider"></div>
 
   <!-- Result Area -->
-  <div id="result"></div>
+  <div id="result">
+    <button id="copyIconBtn" class="copy-icon" title="Copy JSON">&#x2398;</button>
+    <span id="resultContent"></span>
+  </div>
 
   <script src="popup.js"></script>
 </body>

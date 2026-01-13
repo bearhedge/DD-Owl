@@ -74,6 +74,30 @@ export function validateDeals(): ValidationFlag[] {
     });
   }
 
+  // Flag: Scraping errors (role prefixes, regulatory text, addresses in bank names)
+  const scrapingErrors = db.prepare(`
+    SELECT DISTINCT d.ticker, d.company, r.raw_name
+    FROM ipo_deals d
+    JOIN ipo_bank_roles r ON r.deal_id = d.id
+    WHERE r.raw_name LIKE 'Financial Adviser%'
+       OR r.raw_name LIKE 'Financial adviser%'
+       OR r.raw_name LIKE '%SFO%'
+       OR r.raw_name LIKE '%regulated activit%'
+       OR (r.raw_name LIKE 'Wan Chai%' AND r.raw_name NOT LIKE '%Limited')
+       OR (r.raw_name LIKE 'Central Hong Kong%' AND r.raw_name NOT LIKE '%Limited')
+       OR r.raw_name LIKE '%corporate finance)%'
+  `).all() as any[];
+
+  for (const deal of scrapingErrors) {
+    flags.push({
+      ticker: deal.ticker,
+      company: deal.company,
+      flag: 'SCRAPING_ERROR',
+      severity: 'high',
+      details: `Bad extraction: "${deal.raw_name.slice(0, 50)}..."`,
+    });
+  }
+
   db.close();
   return flags;
 }

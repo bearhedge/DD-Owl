@@ -85,6 +85,12 @@ app.get('/api/screen', async (req: Request, res: Response) => {
         if (seenUrls.has(result.link)) continue;
         seenUrls.add(result.link);
 
+        // Skip PDFs and other non-HTML content
+        const lowerUrl = result.link.toLowerCase();
+        if (lowerUrl.endsWith('.pdf') || lowerUrl.endsWith('.doc') || lowerUrl.endsWith('.docx')) {
+          continue;
+        }
+
         // Send fetch event
         sendEvent({
           type: 'fetch',
@@ -92,8 +98,14 @@ app.get('/api/screen', async (req: Request, res: Response) => {
           title: result.title,
         });
 
-        // Fetch page content
-        const content = await fetchPageContent(result.link);
+        // Fetch page content with error handling
+        let content = '';
+        try {
+          content = await fetchPageContent(result.link);
+        } catch (fetchErr) {
+          console.error(`Fetch failed for ${result.link}:`, fetchErr);
+          continue;
+        }
 
         if (content.length > 50) {
           // Send analyze event
@@ -103,8 +115,14 @@ app.get('/api/screen', async (req: Request, res: Response) => {
             title: result.title,
           });
 
-          // Analyze with LLM
-          const analysis = await analyzeWithLLM(content, subjectName, query);
+          // Analyze with LLM (with error handling)
+          let analysis;
+          try {
+            analysis = await analyzeWithLLM(content, subjectName, query);
+          } catch (llmErr) {
+            console.error(`LLM analysis failed for ${result.link}:`, llmErr);
+            continue;
+          }
           totalAnalyzed++;
 
           const analyzed: AnalyzedResult = {
@@ -215,13 +233,25 @@ app.get('/api/screen/v2', async (req: Request, res: Response) => {
         if (processedUrls.has(result.link)) continue;
         processedUrls.add(result.link);
 
+        // Skip PDFs and other non-HTML content
+        const lowerUrl = result.link.toLowerCase();
+        if (lowerUrl.endsWith('.pdf') || lowerUrl.endsWith('.doc') || lowerUrl.endsWith('.docx')) {
+          continue;
+        }
+
         sendEvent({
           type: 'fetch',
           url: result.link,
           title: result.title,
         });
 
-        const content = await fetchPageContent(result.link);
+        let content = '';
+        try {
+          content = await fetchPageContent(result.link);
+        } catch (fetchErr) {
+          console.error(`Fetch failed for ${result.link}:`, fetchErr);
+          continue;
+        }
         if (content.length < 100) continue;
 
         sendEvent({
@@ -230,7 +260,13 @@ app.get('/api/screen/v2', async (req: Request, res: Response) => {
         });
 
         articlesAnalyzed++;
-        const finding = await extractFinding(content, subjectName, result.link, result.title);
+        let finding;
+        try {
+          finding = await extractFinding(content, subjectName, result.link, result.title);
+        } catch (extractErr) {
+          console.error(`Extract failed for ${result.link}:`, extractErr);
+          continue;
+        }
 
         if (finding.isRelevant) {
           findings.push(finding);
@@ -873,6 +909,130 @@ app.get('/api/runs/:id/diff/:prevId', (req: Request, res: Response) => {
 // Serve verification UI
 app.get('/verify-lockin', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../verify-lockin.html'));
+});
+
+// ============================================================
+// SCREENING LOG API (L0 Learning Loop)
+// ============================================================
+
+const SCREENING_LOG_PATH = path.join(__dirname, '../data/screening-log.json');
+
+function loadScreeningLog() {
+  try {
+    return JSON.parse(fs.readFileSync(SCREENING_LOG_PATH, 'utf8'));
+  } catch {
+    return { project: '', subjects: [], learning_log: [] };
+  }
+}
+
+function saveScreeningLog(log: any) {
+  fs.writeFileSync(SCREENING_LOG_PATH, JSON.stringify(log, null, 2));
+}
+
+// Get current screening log
+app.get('/api/screening-log', (req: Request, res: Response) => {
+  res.json(loadScreeningLog());
+});
+
+// Save DD Owl run results for a subject
+app.post('/api/screening-log/ddowl-run', (req: Request, res: Response) => {
+  const { subject_name, red_flags, amber_flags, sources_checked } = req.body;
+  const log = loadScreeningLog();
+
+  const subject = log.subjects.find((s: any) => s.name === subject_name);
+  if (!subject) {
+    res.status(404).json({ error: 'Subject not found in log' });
+    return;
+  }
+
+  subject.ddowl_run = {
+    timestamp: new Date().toISOString(),
+    red_flags: red_flags || [],
+    amber_flags: amber_flags || [],
+    sources_checked: sources_checked || 0
+  };
+
+  saveScreeningLog(log);
+  res.json({ success: true, subject });
+});
+
+// Add human findings for a subject
+app.post('/api/screening-log/human-finding', (req: Request, res: Response) => {
+  const { subject_name, issue, source, severity, notes } = req.body;
+  const log = loadScreeningLog();
+
+  const subject = log.subjects.find((s: any) => s.name === subject_name);
+  if (!subject) {
+    res.status(404).json({ error: 'Subject not found in log' });
+    return;
+  }
+
+  subject.human_findings.push({
+    issue,
+    source,
+    severity,
+    notes,
+    added_at: new Date().toISOString()
+  });
+
+  saveScreeningLog(log);
+  res.json({ success: true, subject });
+});
+
+// Record comparison (matches, false negatives, false positives)
+app.post('/api/screening-log/comparison', (req: Request, res: Response) => {
+  const { subject_name, false_negatives, false_positives, matches, notes } = req.body;
+  const log = loadScreeningLog();
+
+  const subject = log.subjects.find((s: any) => s.name === subject_name);
+  if (!subject) {
+    res.status(404).json({ error: 'Subject not found in log' });
+    return;
+  }
+
+  subject.comparison = {
+    false_negatives: false_negatives || [],
+    false_positives: false_positives || [],
+    matches: matches || [],
+    compared_at: new Date().toISOString()
+  };
+  subject.notes = notes || subject.notes;
+
+  // Add to learning log
+  if (false_negatives?.length > 0 || false_positives?.length > 0) {
+    log.learning_log.push({
+      subject: subject_name,
+      timestamp: new Date().toISOString(),
+      false_negatives,
+      false_positives,
+      notes
+    });
+  }
+
+  saveScreeningLog(log);
+  res.json({ success: true, subject });
+});
+
+// Get learning insights (aggregated)
+app.get('/api/screening-log/insights', (req: Request, res: Response) => {
+  const log = loadScreeningLog();
+
+  const allFalseNegatives: any[] = [];
+  const allFalsePositives: any[] = [];
+
+  for (const entry of log.learning_log) {
+    allFalseNegatives.push(...(entry.false_negatives || []));
+    allFalsePositives.push(...(entry.false_positives || []));
+  }
+
+  res.json({
+    total_subjects: log.subjects.length,
+    completed_comparisons: log.subjects.filter((s: any) => s.comparison).length,
+    total_false_negatives: allFalseNegatives.length,
+    total_false_positives: allFalsePositives.length,
+    false_negatives: allFalseNegatives,
+    false_positives: allFalsePositives
+  });
 });
 
 server.listen(PORT, () => {

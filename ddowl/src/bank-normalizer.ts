@@ -58,17 +58,46 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'SPDB': ['SPDB', 'Shanghai Pudong Development Bank'],
   'Tiger Brokers': ['Tiger Brokers', 'Tiger Securities'],
   'Futu': ['Futu', 'Futu Securities'],
+
+  // International banks
+  'Credit Agricole': ['Credit Agricole', 'Credit Agricole CIB', 'CA-CIB', 'Crédit Agricole'],
+  'Natixis': ['Natixis'],
+  'Standard Chartered': ['Standard Chartered', 'Standard Chartered Bank', 'StanChart'],
+  'Societe Generale': ['Societe Generale', 'SocGen', 'SG', 'Société Générale'],
+  'Macquarie': ['Macquarie', 'Macquarie Capital', 'Macquarie Bank'],
+  'First Capital': ['First Capital', 'First Capital Securities'],
+  'National Australia Bank': ['National Australia Bank', 'NAB', 'NADS'],
+  'Jefferies': ['Jefferies', 'Jefferies LLC'],
+  'Mizuho': ['Mizuho', 'Mizuho Securities'],
+  'SMBC': ['SMBC', 'SMBC Nikko', 'Sumitomo Mitsui'],
+  'SBI': ['SBI', 'SBI Securities'],
+  'OCBC': ['OCBC', 'OCBC Bank', 'Oversea-Chinese Banking'],
+  'United Overseas Bank': ['United Overseas Bank', 'UOB'],
+  'ANZ': ['ANZ', 'Australia and New Zealand Banking'],
+  'Westpac': ['Westpac', 'Westpac Banking'],
+  'ING': ['ING', 'ING Bank'],
+  'Rabobank': ['Rabobank'],
+  'Commerzbank': ['Commerzbank'],
+  'Santander': ['Santander', 'Banco Santander'],
+  'BBVA': ['BBVA', 'Banco Bilbao'],
 };
 
 // Keywords that indicate a real bank (must have at least one)
 const BANK_KEYWORDS = [
   'Securities', 'Capital', 'Financial', 'Bank', 'Brokers', 'Brokerage',
-  'Investment', 'Partners', 'Advisors', 'Advisory',
+  'Investment', 'Partners', 'Advisors', 'Advisory', 'Markets',
   'Morgan', 'Goldman', 'CLSA', 'CITIC', 'CICC', 'Huatai', 'Guotai',
   'CMB', 'UBS', 'Credit Suisse', 'Merrill', 'Haitong', 'ICBC', 'BOCI',
   'BOCOM', 'CCB', 'CEB', 'CMBC', 'Cinda', 'Fosun', 'GF ', 'Guosen',
   'Daiwa', 'DBS', 'Nomura', 'Barclays', 'Deutsche', 'BNP', 'HSBC',
   'Renaissance', 'Galaxy', 'Everbright', 'Orient', 'Shenwan', 'Zhongtai',
+  'Citigroup', 'Citi', 'Tiger', 'Futu', 'Livermore',
+  // International banks added
+  'First Capital', 'Standard Chartered', 'Credit Agricole', 'Agricole',
+  'Natixis', 'SocGen', 'Societe Generale', 'Macquarie', 'NADS',
+  'National Australia', 'BofA', 'Jefferies', 'Mizuho', 'SMBC',
+  'SBI', 'OCBC', 'UOB', 'ANZ', 'Westpac', 'ING', 'Rabobank',
+  'Commerzbank', 'Santander', 'BBVA', 'ABN AMRO',
 ];
 
 // Keywords that indicate it's a company (IPO applicant), NOT a bank

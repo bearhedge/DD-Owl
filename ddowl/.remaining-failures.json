@@ -1,0 +1,687 @@
+[
+  {
+    "ticker": 9988,
+    "company": "Alibaba Group Holding Limited",
+    "error": "No banks found in section",
+    "date": "15/11/2019",
+    "sizeHKDm": 94000,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1115/2019111500039.pdf"
+  },
+  {
+    "ticker": 288,
+    "company": "WH Group Limited",
+    "error": "No banks found in section",
+    "date": "15/04/2014",
+    "sizeHKDm": 41118.525,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0415/ltn20140415117.pdf"
+  },
+  {
+    "ticker": 9999,
+    "company": "NetEase, Inc.",
+    "error": "No banks found in section",
+    "date": "02/06/2020",
+    "sizeHKDm": 21606.48,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0602/2020060200009.pdf"
+  },
+  {
+    "ticker": 9868,
+    "company": "XPeng Inc. -W",
+    "error": "No banks found in section",
+    "date": "25/06/2021",
+    "sizeHKDm": 15300,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2021/0625/2021062500039.pdf"
+  },
+  {
+    "ticker": 2015,
+    "company": "Li Auto Inc.",
+    "error": "No banks found in section",
+    "date": "03/08/2021",
+    "sizeHKDm": 15000,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2021/0803/2021080300011.pdf"
+  },
+  {
+    "ticker": 9698,
+    "company": "GDS Holdings Limited - W",
+    "error": "No banks found in section",
+    "date": "21/10/2020",
+    "sizeHKDm": 13760,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1021/2020102100011.pdf"
+  },
+  {
+    "ticker": 6099,
+    "company": "China Merchants Securities Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "27/09/2016",
+    "sizeHKDm": 11390.479164,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2016/0927/ltn20160927059.pdf"
+  },
+  {
+    "ticker": 6806,
+    "company": "Shenwan Hongyuan Group Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "12/04/2019",
+    "sizeHKDm": 9840.72,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0412/ltn20190412021.pdf"
+  },
+  {
+    "ticker": 1516,
+    "company": "Sunac Services Holdings Limited",
+    "error": "No banks found in section",
+    "date": "09/11/2020",
+    "sizeHKDm": 8728.5,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1109/2020110900019.pdf"
+  },
+  {
+    "ticker": 6936,
+    "company": "S.F. Holding Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "19/11/2024",
+    "sizeHKDm": 6170.999999999999,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/1119/2024111900011.pdf"
+  },
+  {
+    "ticker": 2186,
+    "company": "Luye Pharma Group Ltd.",
+    "error": "No banks found in section",
+    "date": "26/06/2014",
+    "sizeHKDm": 5917.8688,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0626/ltn20140626017.pdf"
+  },
+  {
+    "ticker": 667,
+    "company": "China East Education Holdings Limited",
+    "error": "No banks found in section",
+    "date": "30/05/2019",
+    "sizeHKDm": 5342.908,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0530/ltn20190530019.pdf"
+  },
+  {
+    "ticker": 9899,
+    "company": "Cloud Village Inc.",
+    "error": "No banks found in section",
+    "date": "23/11/2021",
+    "sizeHKDm": 3520,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2021/1123/2021112300032.pdf"
+  },
+  {
+    "ticker": 6693,
+    "company": "Chifeng Jilong Gold Mining Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "28/02/2025",
+    "sizeHKDm": 3255.47116,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0228/2025022800056.pdf"
+  },
+  {
+    "ticker": 3903,
+    "company": "Hanhua Financial Holding Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "28/02/2014",
+    "sizeHKDm": 2845.44,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0228/ltn20140228011.pdf"
+  },
+  {
+    "ticker": 2610,
+    "company": "Nanshan Aluminium International Holdings Limited",
+    "error": "No banks found in section",
+    "date": "17/03/2025",
+    "sizeHKDm": 2347.05898,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0317/2025031700019.pdf"
+  },
+  {
+    "ticker": 2076,
+    "company": "KANZHUN LIMITED - W",
+    "error": "No banks found in section",
+    "date": "25/06/2025",
+    "sizeHKDm": 2340,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0625/2025062500135.pdf"
+  },
+  {
+    "ticker": 3329,
+    "company": "BOCOM International Holdings Company Limited",
+    "error": "No banks found in section",
+    "date": "42860",
+    "sizeHKDm": 2066.708,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/0505/ltn20170505017.pdf"
+  },
+  {
+    "ticker": 1375,
+    "company": "Central China Securities Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "11/06/2014",
+    "sizeHKDm": 1878.034,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0611/ltn20140611011.pdf"
+  },
+  {
+    "ticker": 2298,
+    "company": "Cosmo Lady (China) Holdings Company Limited",
+    "error": "No banks found in section",
+    "date": "16/06/2014",
+    "sizeHKDm": 1796.53994,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0616/ltn20140616013.pdf"
+  },
+  {
+    "ticker": 6839,
+    "company": "Yunnan Water Investment Co., Limited",
+    "error": "No banks found in section",
+    "date": "13/05/2015",
+    "sizeHKDm": 1667.6218,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2015/0513/ltn20150513059.pdf"
+  },
+  {
+    "ticker": 6860,
+    "company": "FingerTango Inc.",
+    "error": "No banks found in section",
+    "date": "26/06/2018",
+    "sizeHKDm": 1635,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0626/ltn20180626017.pdf"
+  },
+  {
+    "ticker": 699,
+    "company": "CAR Inc.",
+    "error": "No banks found in section",
+    "date": "29/06/2023",
+    "sizeHKDm": 1634.07608,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0629/2023062900043.pdf"
+  },
+  {
+    "ticker": 6990,
+    "company": "Sichuan Kelun-Biotech Biopharmaceutical Co., Ltd. - B",
+    "error": "No banks found in section",
+    "date": "29/06/2023",
+    "sizeHKDm": 1634.07608,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0629/2023062900043.pdf"
+  },
+  {
+    "ticker": 1980,
+    "company": "Tian Ge Interactive Holdings Limited",
+    "error": "No banks found in section",
+    "date": "25/06/2014",
+    "sizeHKDm": 1612.6151,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0625/ltn20140625065.pdf"
+  },
+  {
+    "ticker": 2390,
+    "company": "Zhihu Inc. - WVR",
+    "error": "No banks found in section",
+    "date": "11/04/2022",
+    "sizeHKDm": 1346.8,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/0411/2022041100009.pdf"
+  },
+  {
+    "ticker": 2181,
+    "company": "Mabpharm Limited-B",
+    "error": "No banks found in section",
+    "date": "20/05/2019",
+    "sizeHKDm": 1175.37,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0520/ltn20190520005.pdf"
+  },
+  {
+    "ticker": 6896,
+    "company": "Golden Throat Holdings Group Company Limited",
+    "error": "No banks found in section",
+    "date": "30/06/2015",
+    "sizeHKDm": 1140.3852,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2015/0630/ltn20150630041.pdf"
+  },
+  {
+    "ticker": 1418,
+    "company": "Sinomax Group Limited",
+    "error": "No banks found in section",
+    "date": "30/06/2014",
+    "sizeHKDm": 1072.5,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0630/ltn20140630141.pdf"
+  },
+  {
+    "ticker": 2400,
+    "company": "XD Inc.",
+    "error": "Parties Involved section not found",
+    "date": "29/11/2019",
+    "sizeHKDm": 1004.88,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1129/2019112900007.pdf"
+  },
+  {
+    "ticker": 911,
+    "company": "Hang Fat Ginseng Holdings Company Limited",
+    "error": "No banks found in section",
+    "date": "17/06/2014",
+    "sizeHKDm": 720,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0617/ltn20140617033.pdf"
+  },
+  {
+    "ticker": 3882,
+    "company": "Sky Light Holdings Limited",
+    "error": "No banks found in section",
+    "date": "19/06/2015",
+    "sizeHKDm": 676,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2015/0619/ltn20150619015.pdf"
+  },
+  {
+    "ticker": 2512,
+    "company": "Cloud Factory Technology Holdings Limited",
+    "error": "No banks found in section",
+    "date": "05/06/2024",
+    "sizeHKDm": 528.9999999999999,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0605/2024060500041.pdf"
+  },
+  {
+    "ticker": 3869,
+    "company": "Hospital Corporation of China Limited",
+    "error": "No banks found in section",
+    "date": "28/02/2017",
+    "sizeHKDm": 500.01,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/0228/ltn20170228013.pdf"
+  },
+  {
+    "ticker": 2597,
+    "company": "Beijing Xunzhong Communication Technology Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "30/06/2025",
+    "sizeHKDm": 461.166,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0630/2025063000023.pdf"
+  },
+  {
+    "ticker": 2898,
+    "company": "Sunho Biologics, Inc. - B",
+    "error": "No banks found in section",
+    "date": "16/05/2024",
+    "sizeHKDm": 461.0493,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0516/2024051600013.pdf"
+  },
+  {
+    "ticker": 1769,
+    "company": "Scholar Education Group",
+    "error": "No banks found in section",
+    "date": "12/06/2019",
+    "sizeHKDm": 454.636,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0612/ltn20190612033.pdf"
+  },
+  {
+    "ticker": 6833,
+    "company": "Sinco Pharmaceuticals Holdings Limited",
+    "error": "No banks found in section",
+    "date": "29/02/2016",
+    "sizeHKDm": 444.00000000000006,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2016/0229/ltn20160229027.pdf"
+  },
+  {
+    "ticker": 2022,
+    "company": "Digital Hollywood Interactive Limited",
+    "error": "No banks found in section",
+    "date": "05/12/2017",
+    "sizeHKDm": 425,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/1205/ltn20171205051.pdf"
+  },
+  {
+    "ticker": 2489,
+    "company": "Persistence Resources Group Ltd",
+    "error": "No banks found in section",
+    "date": "14/12/2023",
+    "sizeHKDm": 375,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/1214/2023121400075.pdf"
+  },
+  {
+    "ticker": 2286,
+    "company": "Chen Xing Development Holdings Limited",
+    "error": "No banks found in section",
+    "date": "22/06/2015",
+    "sizeHKDm": 320,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2015/0622/ltn20150622031.pdf"
+  },
+  {
+    "ticker": 2360,
+    "company": "Best Mart 360 Holdings Limited",
+    "error": "No banks found in section",
+    "date": "28/12/2018",
+    "sizeHKDm": 300,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/1228/ltn20181228007.pdf"
+  },
+  {
+    "ticker": 3738,
+    "company": "Vobile Group Limited",
+    "error": "No banks found in section",
+    "date": "19/12/2017",
+    "sizeHKDm": 296,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/1219/ltn20171219007.pdf"
+  },
+  {
+    "ticker": 1853,
+    "company": "Jilin Province Chuncheng Heating Company Limited",
+    "error": "No banks found in section",
+    "date": "27/09/2019",
+    "sizeHKDm": 291.75,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0927/2019092700159.pdf"
+  },
+  {
+    "ticker": 2576,
+    "company": "Zhejiang Taimei Medical Technology Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "27/09/2024",
+    "sizeHKDm": 291.4158,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0927/2024092700025.pdf"
+  },
+  {
+    "ticker": 2339,
+    "company": "BeijingWest Industries International Limited",
+    "error": "No banks found in section",
+    "date": "37874",
+    "sizeHKDm": 266,
+    "type": "Placing and public offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2003/1009/ltn20031009016.pdf"
+  },
+  {
+    "ticker": 6816,
+    "company": "Prosper Construction Holdings Limited",
+    "error": "No banks found in section",
+    "date": "30/06/2016",
+    "sizeHKDm": 250,
+    "type": "Placing and public offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2016/0630/ltn20160630131.pdf"
+  },
+  {
+    "ticker": 9608,
+    "company": "Sundy Service Group Co. Ltd.",
+    "error": "No banks found in section",
+    "date": "31/12/2020",
+    "sizeHKDm": 231.99999999999997,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1231/2020123100097.pdf"
+  },
+  {
+    "ticker": 2619,
+    "company": "X.J. Electrics (Hu Bei) Co., Ltd",
+    "error": "No banks found in section",
+    "date": "17/06/2025",
+    "sizeHKDm": 228.537,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0617/2025061700043.pdf"
+  },
+  {
+    "ticker": 1856,
+    "company": "Ernest Borel Holdings Limited",
+    "error": "No banks found in section",
+    "date": "30/06/2014",
+    "sizeHKDm": 228.36,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0630/ltn20140630123.pdf"
+  },
+  {
+    "ticker": 2292,
+    "company": "Thing On Enterprise Limited",
+    "error": "No banks found in section",
+    "date": "28/12/2017",
+    "sizeHKDm": 223.2,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/1228/ltn20171228047.pdf"
+  },
+  {
+    "ticker": 3848,
+    "company": "Wealthy Way Group Limited",
+    "error": "No banks found in section",
+    "date": "28/06/2017",
+    "sizeHKDm": 200.16,
+    "type": "Placing and public offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/0628/ltn20170628045.pdf"
+  },
+  {
+    "ticker": 9916,
+    "company": "Xingye Wulian Service Group Co. Ltd.",
+    "error": "No banks found in section",
+    "date": "25/02/2020",
+    "sizeHKDm": 200,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0225/2020022500017.pdf"
+  },
+  {
+    "ticker": 2545,
+    "company": "Zhonggan Communication (Group) Holdings Limited",
+    "error": "No banks found in section",
+    "date": "21/06/2024",
+    "sizeHKDm": 200,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0621/2024062100099.pdf"
+  },
+  {
+    "ticker": 1740,
+    "company": "Values Cultural Investment Limited",
+    "error": "No banks found in section",
+    "date": "30/12/2019",
+    "sizeHKDm": 185,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1230/2019123000020.pdf"
+  },
+  {
+    "ticker": 2516,
+    "company": "FAR International Holdings Group Company Limited",
+    "error": "No banks found in section",
+    "date": "12/12/2023",
+    "sizeHKDm": 170.8,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/1212/2023121200029.pdf"
+  },
+  {
+    "ticker": 2391,
+    "company": "Tuya Inc. - W",
+    "error": "No banks found in section",
+    "date": "22/06/2022",
+    "sizeHKDm": 166.44,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/0622/2022062200189.pdf"
+  },
+  {
+    "ticker": 2521,
+    "company": "Shenghui Cleanness Group Holdings Limited",
+    "error": "No banks found in section",
+    "date": "27/11/2023",
+    "sizeHKDm": 165.75,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/1127/2023112700086.pdf"
+  },
+  {
+    "ticker": 2129,
+    "company": "Legion Consortium Limited",
+    "error": "No banks found in section",
+    "date": "30/12/2020",
+    "sizeHKDm": 162.5,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/1230/2020123000007.pdf"
+  },
+  {
+    "ticker": 1523,
+    "company": "Plover Bay Technologies Limited",
+    "error": "No banks found in section",
+    "date": "30/06/2016",
+    "sizeHKDm": 162.5,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2016/0630/ltn20160630063.pdf"
+  },
+  {
+    "ticker": 1942,
+    "company": "MOG Holdings Limited",
+    "error": "No banks found in section",
+    "date": "27/03/2020",
+    "sizeHKDm": 150,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0327/2020032701535.pdf"
+  },
+  {
+    "ticker": 1843,
+    "company": "Snack Empire Holdings Limited",
+    "error": "No banks found in section",
+    "date": "30/09/2019",
+    "sizeHKDm": 150,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0930/2019093000101.pdf"
+  },
+  {
+    "ticker": 2569,
+    "company": "Soft International Group Ltd",
+    "error": "No banks found in section",
+    "date": "19/03/2025",
+    "sizeHKDm": 150,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0319/2025031900013.pdf"
+  },
+  {
+    "ticker": 1943,
+    "company": "Silver Tide Holdings Limited",
+    "error": "No banks found in section",
+    "date": "18/06/2019",
+    "sizeHKDm": 135,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/0618/ltn20190618005.pdf"
+  },
+  {
+    "ticker": 2535,
+    "company": "WK Group (Holdings) Limited",
+    "error": "No banks found in section",
+    "date": "29/02/2024",
+    "sizeHKDm": 135,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2024/0229/2024022900013.pdf"
+  },
+  {
+    "ticker": 1552,
+    "company": "BHCC Holding Limited",
+    "error": "No banks found in section",
+    "date": "29/08/2017",
+    "sizeHKDm": 120,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/0829/ltn20170829051.pdf"
+  },
+  {
+    "ticker": 2266,
+    "company": "Lai Si Enterprise Holding Limited",
+    "error": "No banks found in section",
+    "date": "27/01/2017",
+    "sizeHKDm": 114.99999999999999,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/0127/ltn20170127023.pdf"
+  },
+  {
+    "ticker": 1757,
+    "company": "Affluent Foundation Holdings Limited",
+    "error": "No banks found in section",
+    "date": "23/05/2018",
+    "sizeHKDm": 102,
+    "type": "Share offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0523/ltn20180523019.pdf"
+  },
+  {
+    "ticker": 1933,
+    "company": "OneForce Holdings Limited",
+    "error": "No banks found in section",
+    "date": "12/02/2018",
+    "sizeHKDm": 92.16,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0212/ltn20180212037.pdf"
+  },
+  {
+    "ticker": 2193,
+    "company": "Man King Holdings Limited",
+    "error": "No banks found in section",
+    "date": "19/06/2015",
+    "sizeHKDm": 80,
+    "type": "Placing and public offer",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2015/0619/ltn20150619017.pdf"
+  },
+  {
+    "ticker": 1932,
+    "company": "CPM Group Limited",
+    "error": "No banks found in section",
+    "date": "19/06/2017",
+    "sizeHKDm": 25,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/0619/ltn20170619009.pdf"
+  },
+  {
+    "ticker": 3309,
+    "company": "C-MER Eye Care Holdings Limited",
+    "error": "No banks found in section",
+    "date": "29/12/2017",
+    "sizeHKDm": 19.7,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/1229/ltn20171229017.pdf"
+  },
+  {
+    "ticker": 1995,
+    "company": "Ever Sunshine Lifestyle Services Group Limited",
+    "error": "No banks found in section",
+    "date": "04/12/2018",
+    "sizeHKDm": 3.8,
+    "type": "Global offering",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/1204/ltn20181204007.pdf"
+  },
+  {
+    "ticker": 6098,
+    "company": "Country Garden Services Holdings Company Limited",
+    "error": "No banks found in section",
+    "date": "43257",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0606/ltn20180606049.pdf"
+  },
+  {
+    "ticker": 9689,
+    "company": "JTF International Holdings Limited",
+    "error": "No banks found in section",
+    "date": "45235",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/0511/2023051100303.pdf"
+  },
+  {
+    "ticker": 6638,
+    "company": "OneConnect Financial Technology Co., Ltd.",
+    "error": "No banks found in section",
+    "date": "28/06/2022",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2022/0628/2022062800234.pdf"
+  },
+  {
+    "ticker": 1570,
+    "company": "Weiye Holdings Limited",
+    "error": "No banks found in section",
+    "date": "29/03/2016",
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2016/0329/ltn20160329133.pdf"
+  }
+]

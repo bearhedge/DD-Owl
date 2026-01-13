@@ -231,12 +231,12 @@
             <a href="${deal.prospectus_url}" target="_blank" class="pdf-link">View PDF</a>
 
             <div class="decision-makers">
-              <h4>Decision Makers (Sponsors)</h4>
+              <h4>Sponsors</h4>
               ${renderDecisionMakers(deal.decision_makers || [])}
             </div>
 
             <div class="other-banks">
-              <h4>Other Banks</h4>
+              <h4>Others</h4>
               ${renderOtherBanks(deal.other_banks || [])}
             </div>
 
@@ -265,8 +265,7 @@
             ${b.raw_name}
             ${b.is_lead ? '<span class="lead-badge">LEAD</span>' : ''}
           </div>
-          <div class="bank-normalized">Normalized: ${b.name}</div>
-          <div class="bank-raw-roles">Raw: ${b.raw_roles.join(', ')}</div>
+          <div class="bank-normalized">→ ${b.name}</div>
         </div>
       `).join('');
     }
@@ -276,8 +275,7 @@
       return banks.map(b => `
         <div class="other-bank">
           <div class="bank-name">${b.raw_name}</div>
-          <div class="bank-normalized">Normalized: ${b.name}</div>
-          <div class="bank-raw-roles">Raw: ${b.raw_roles.join(', ')}</div>
+          <div class="bank-normalized">→ ${b.name}</div>
         </div>
       `).join('');
     }

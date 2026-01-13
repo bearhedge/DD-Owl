@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPO Import Failures Review</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { color: #333; }
+    h2 {
+      color: #666;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 10px;
+      margin-top: 40px;
+    }
+    .summary {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .stat {
+      text-align: center;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .stat-number {
+      font-size: 36px;
+      font-weight: bold;
+      color: #2196F3;
+    }
+    .stat-label {
+      color: #666;
+      margin-top: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    th {
+      background: #2196F3;
+      color: white;
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 500;
+    }
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #eee;
+    }
+    tr:hover {
+      background: #f8f9fa;
+    }
+    a {
+      color: #1976D2;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .no-link {
+      color: #999;
+      font-style: italic;
+    }
+    .size {
+      text-align: right;
+      font-family: monospace;
+    }
+    .error-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .error-no-banks {
+      background: #FFF3E0;
+      color: #E65100;
+    }
+    .error-no-section {
+      background: #FCE4EC;
+      color: #C2185B;
+    }
+    .error-download {
+      background: #EFEBE9;
+      color: #5D4037;
+    }
+    .check-btn {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .check-btn:hover {
+      background: #43A047;
+    }
+  </style>
+</head>
+<body>
+  <h1>IPO Import Failures Review</h1>
+
+  <div class="summary">
+    <div class="summary-grid">
+      <div class="stat">
+        <div class="stat-number">8</div>
+        <div class="stat-label">No Banks Found</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">1</div>
+        <div class="stat-label">Section Not Found</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">85</div>
+        <div class="stat-label">Download Failed</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>No Banks Found (8 cases)</h2>
+  <p>These PDFs were downloaded but no banks could be extracted from the "Parties Involved" section.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>Company</th>
+        <th>Size (HKDm)</th>
+        <th>Year</th>
+        <th>Prospectus Link</th>
+      </tr>
+    </thead>
+    <tbody id="no-banks"></tbody>
+  </table>
+
+  <h2>Section Not Found (1 case)</h2>
+  <p>The "Parties Involved" section could not be located in these prospectuses.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>Company</th>
+        <th>Size (HKDm)</th>
+        <th>Year</th>
+        <th>Prospectus Link</th>
+      </tr>
+    </thead>
+    <tbody id="no-section"></tbody>
+  </table>
+
+  <h2>Download Failed (85 cases)</h2>
+  <p>These prospectuses could not be downloaded from HKEX - likely privatized, delisted, or acquired companies.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>Company</th>
+        <th>Size (HKDm)</th>
+        <th>Year</th>
+        <th>Link (if available)</th>
+      </tr>
+    </thead>
+    <tbody id="download-failed"></tbody>
+  </table>
+
+  <script>
+    // Data will be injected here
+    const failures = [
+  {
+    "ticker": 2686,
+    "company": "AAG Energy Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 7836,
+    "company": "Aquila Acquisition Corporation - Z",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1761,
+    "company": "BabyTree Group",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 416,
+    "company": "Bank of Jinzhou Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1035,
+    "company": "BBI Life Sciences Corporation",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 9882,
+    "company": "Best Linking Group Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 3358,
+    "company": "Bestway Global Holding Inc.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1381,
+    "company": "Canvest Environmental Protection Group Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6090,
+    "company": "Centurion Corporation Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2229,
+    "company": "Changgang Dunxin Enterprise Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2115,
+    "company": "Channel Micron Holdings Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1859,
+    "company": "China Bright Culture Group",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6183,
+    "company": "China Greenfresh Group Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1197,
+    "company": "China Hengshi Foundation Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1589,
+    "company": "China Logistics Property Holdings Co., Ltd",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1503,
+    "company": "China Merchants Commercial Real Estate Investment Trust",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 735,
+    "company": "China Power Clean Energy Development Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1365,
+    "company": "China Rundong Auto Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1573,
+    "company": "China Unienergy Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6166,
+    "company": "China VAST Industrial Urban Development Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1492,
+    "company": "China ZhongDi Dairy Holdings Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1609,
+    "company": "Chong Kin Group Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2277,
+    "company": "Chun Sing Engineering Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1839,
+    "company": "CIMC Vehicles (Group) Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1,
+    "company": "CK Hutchison Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2298,
+    "company": "Cosmo Lady (China) Holdings Company Limited",
+    "error": "No banks found in section",
+    "sizeHKDm": 1796.53994,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0616/ltn20140616013.pdf"
+  },
+  {
+    "ticker": 6098,
+    "company": "Country Garden Services Holdings Company Limited",
+    "error": "No banks found in section",
+    "sizeHKDm": null,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0606/ltn20180606049.pdf"
+  },
+  {
+    "ticker": 3992,
+    "company": "Creative Enterprise Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1073,
+    "company": "Da Yu Financial Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6111,
+    "company": "DaFa Properties Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 3799,
+    "company": "Dali Foods Group Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2117,
+    "company": "Datang Group Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1856,
+    "company": "Ernest Borel Holdings Limited",
+    "error": "No banks found in section",
+    "sizeHKDm": 228.36,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0630/ltn20140630123.pdf"
+  },
+  {
+    "ticker": 1821,
+    "company": "ESR Cayman Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 865,
+    "company": "First Mobile Group Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1992,
+    "company": "Fosun Tourism Group",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1469,
+    "company": "Get Nice Financial Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 787,
+    "company": "Global Brands Group Holding Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 989,
+    "company": "Ground Properties Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2278,
+    "company": "Hailan Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1367,
+    "company": "Hanbo Enterprises Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 911,
+    "company": "Hang Fat Ginseng Holdings Company Limited",
+    "error": "No banks found in section",
+    "sizeHKDm": 720,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0617/ltn20140617033.pdf"
+  },
+  {
+    "ticker": 1509,
+    "company": "Harmonicare Medical Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2303,
+    "company": "Hengxing Gold Holding Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6893,
+    "company": "Hin Sang Group (International) Holding Co. Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 7841,
+    "company": "HK Acquisition Corporation - Z",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 3611,
+    "company": "Huafang Group Inc.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2296,
+    "company": "Huarchi Global Group Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1649,
+    "company": "Inner Mongolia Energy Engineering Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6819,
+    "company": "IntelliCentrics Global Holdings Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 7801,
+    "company": "Interra Acquisition Corporation - Z",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 9877,
+    "company": "Jenscare Scientific Co., Ltd. - B",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2768,
+    "company": "Jiayuan International Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6139,
+    "company": "Jinmao Investments and Jinmao (China) Investments Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 647,
+    "company": "Joyce Boutique Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1329,
+    "company": "Juda International Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2076,
+    "company": "KANZHUN LIMITED - W",
+    "error": "No banks found in section",
+    "sizeHKDm": 2340,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2025/0625/2025062500135.pdf"
+  },
+  {
+    "ticker": 2421,
+    "company": "KRP DEVELOPMENT HOLDINGS LIMITED",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "6623"
+  },
+  {
+    "ticker": 1533,
+    "company": "Lanzhou Zhuangyuan Pasture Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1462,
+    "company": "Nga Chun Holdings Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1438,
+    "company": "Nirvana Asia Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1933,
+    "company": "OneForce Holdings Limited",
+    "error": "No banks found in section",
+    "sizeHKDm": 92.16,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2018/0212/ltn20180212037.pdf"
+  },
+  {
+    "ticker": 2014,
+    "company": "Ozner Water International Holding Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1665,
+    "company": "Pentamaster International Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2489,
+    "company": "Persistence Resources Group Ltd",
+    "error": "No banks found in section",
+    "sizeHKDm": 375,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2023/1214/2023121400075.pdf"
+  },
+  {
+    "ticker": 1989,
+    "company": "Pine Care Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 334,
+    "company": "Proview International Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1337,
+    "company": "Razer Inc.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2207,
+    "company": "Ronshine Service Holding Co., Ltd",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6600,
+    "company": "SciClone Pharmaceutical (Holdings) Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2718,
+    "company": "Shanghai Dongzheng Automotive Finance Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6116,
+    "company": "Shanghai La Chapelle Fashion Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2599,
+    "company": "Shinsun Holdings (Group) Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1706,
+    "company": "Shuang Yun Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 650,
+    "company": "Shun Cheong Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2606,
+    "company": "Sichuan Languang JUSTBON Services Group Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2103,
+    "company": "Sinic Holdings (Group) Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1430,
+    "company": "Suchuang Gas Corporation Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1781,
+    "company": "Sun Cheong Creative Development Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6161,
+    "company": "Target Insurance (Holdings) Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1619,
+    "company": "Tianhe Chemicals Group Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 6836,
+    "company": "Tianyun International Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 627,
+    "company": "U-RIGHT International Holdings Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2346,
+    "company": "Universal Star (Holdings) Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 2148,
+    "company": "Vesync Co., Ltd",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 7827,
+    "company": "Vision Deal HK Acquisition Corp. - Z",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 3738,
+    "company": "Vobile Group Limited",
+    "error": "No banks found in section",
+    "sizeHKDm": 296,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2017/1219/ltn20171219007.pdf"
+  },
+  {
+    "ticker": 2400,
+    "company": "XD Inc.",
+    "error": "Parties Involved section not found",
+    "sizeHKDm": 1004.88,
+    "url": "https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1129/2019112900007.pdf"
+  },
+  {
+    "ticker": 1990,
+    "company": "Xinghua Port Holdings Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1799,
+    "company": "Xinte Energy Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": 1359.52,
+    "url": "3668"
+  },
+  {
+    "ticker": 9923,
+    "company": "Yeahka Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1902,
+    "company": "Yincheng International Holding Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1743,
+    "company": "Zhejiang Cangnan Instrument Group Company Limited",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  },
+  {
+    "ticker": 1158,
+    "company": "Zhejiang New Century Hotel Management Co., Ltd.",
+    "error": "Download failed",
+    "sizeHKDm": null,
+    "url": "Unavailable"
+  }
+];
+
+    function formatSize(size) {
+      if (!size) return '-';
+      return size.toLocaleString();
+    }
+
+    function getYear(url) {
+      if (!url) return '-';
+      const match = url.match(/\/(\d{4})\//);
+      return match ? match[1] : '-';
+    }
+
+    function renderTable(tableId, items) {
+      const tbody = document.getElementById(tableId);
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.ticker}</td>
+          <td>${item.company}</td>
+          <td class="size">${formatSize(item.sizeHKDm)}</td>
+          <td>${getYear(item.url)}</td>
+          <td>${item.url
+            ? `<a href="${item.url}" target="_blank">Open PDF</a>`
+            : '<span class="no-link">No URL available</span>'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Group by error type
+    const noBanks = failures.filter(f => f.error === 'No banks found in section');
+    const noSection = failures.filter(f => f.error === 'Parties Involved section not found');
+    const downloadFailed = failures.filter(f => f.error === 'Download failed');
+
+    renderTable('no-banks', noBanks);
+    renderTable('no-section', noSection);
+    renderTable('download-failed', downloadFailed);
+  </script>
+</body>
+</html>

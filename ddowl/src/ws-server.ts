@@ -17,6 +17,16 @@ import {
 } from './qcc-types.js';
 import { savePerson, saveCompany, queueUrl, getQueueStats } from './database.js';
 import { connectToChrome, startCrawling, stopCrawling, getCrawlerStatus, setWsConnection } from './crawler.js';
+import {
+  startPersonResearch,
+  stopPersonResearch,
+  getResearchStatus,
+  setResearchWsConnection,
+  handleExtensionResponse,
+} from './person-research.js';
+import { getSessionStatus, getSessionResults, clearSession } from './research-session.js';
+import { runAgent, DDOwlAgent } from './agent/orchestrator.js';
+import { getBrowserBridge } from './agent/browser-bridge.js';
 
 interface ExtensionClient {
   ws: WebSocket;
@@ -39,6 +49,7 @@ export class DDOwlWSServer {
     lastExtracted: [],
   };
   private extractedData: (QCCCompanyProfile | QCCSearchResponse)[] = [];
+  private currentAgent: DDOwlAgent | null = null;
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws' });
@@ -117,6 +128,60 @@ export class DDOwlWSServer {
 
       case 'TAKE_OVER':
         this.handleTakeOver();
+        break;
+
+      // Person research handlers
+      case 'START_PERSON_RESEARCH':
+        this.handleStartResearch(ws, message.data);
+        break;
+
+      case 'STOP_PERSON_RESEARCH':
+        this.handleStopResearch();
+        break;
+
+      case 'GET_RESEARCH_STATUS':
+        this.sendToClient(ws, {
+          type: 'RESEARCH_STATUS_RESPONSE',
+          data: {
+            ...getResearchStatus(),
+            sessionDetails: getSessionStatus(),
+          },
+        });
+        break;
+
+      case 'GET_RESEARCH_RESULTS':
+        this.sendToClient(ws, {
+          type: 'RESEARCH_RESULTS_RESPONSE',
+          data: getSessionResults(),
+        });
+        break;
+
+      case 'CLEAR_RESEARCH_SESSION':
+        clearSession();
+        this.sendToClient(ws, {
+          type: 'SESSION_CLEARED',
+          data: { success: true },
+        });
+        break;
+
+      // Extension response (for FIND_PERSON_IN_COMPANY, GET_COMPANY_BASIC, etc.)
+      case 'EXTENSION_RESPONSE':
+        handleExtensionResponse(message.data);
+        break;
+
+      // AI Agent handlers
+      case 'START_AI_AGENT':
+        this.handleStartAgent(ws, message.data);
+        break;
+
+      case 'STOP_AI_AGENT':
+        this.handleStopAgent();
+        break;
+
+      // Tool execution from agent (forwarded to extension)
+      case 'TOOL_EXECUTION':
+        // Forward to extension and wait for response
+        this.forwardToExtension(message);
         break;
 
       default:
@@ -232,6 +297,100 @@ export class DDOwlWSServer {
 
     this.broadcastPuppeteerStatus();
     this.broadcast({ type: 'AUTO_MODE_STOPPED', data: { message: 'User took over' } });
+  }
+
+  private async handleStartResearch(ws: WebSocket, data: any): Promise<void> {
+    const { personName, personUrl } = data;
+    console.log('Starting person research:', personName);
+
+    // Set the WebSocket connection for research orchestrator
+    setResearchWsConnection(ws);
+
+    this.sendToClient(ws, {
+      type: 'RESEARCH_STARTED',
+      data: { personName, personUrl },
+    });
+
+    // Start research in background
+    startPersonResearch(personName, personUrl).then(() => {
+      this.broadcast({
+        type: 'RESEARCH_COMPLETED',
+        data: getSessionResults(),
+      });
+    }).catch((error) => {
+      this.broadcast({
+        type: 'RESEARCH_FAILED',
+        data: { error: error.message },
+      });
+    });
+  }
+
+  private handleStopResearch(): void {
+    console.log('Stopping person research');
+    stopPersonResearch();
+
+    this.broadcast({
+      type: 'RESEARCH_STOPPED',
+      data: { message: 'Research stopped by user' },
+    });
+  }
+
+  private async handleStartAgent(ws: WebSocket, data: any): Promise<void> {
+    const { task } = data;
+    console.log('Starting AI agent with task:', task);
+
+    // Set WebSocket for browser bridge
+    const browserBridge = getBrowserBridge();
+    browserBridge.setWebSocket(ws);
+
+    // Create agent with progress callback
+    this.currentAgent = new DDOwlAgent({
+      onProgress: (progress) => {
+        this.broadcast({
+          type: 'AGENT_PROGRESS',
+          data: progress,
+        });
+      },
+    });
+
+    // Run agent in background
+    runAgent(task, (progress) => {
+      this.broadcast({
+        type: 'AGENT_PROGRESS',
+        data: progress,
+      });
+    }).then((result) => {
+      this.currentAgent = null;
+      this.broadcast({
+        type: result.success ? 'AGENT_COMPLETED' : 'AGENT_FAILED',
+        data: result,
+      });
+    }).catch((error) => {
+      this.currentAgent = null;
+      this.broadcast({
+        type: 'AGENT_FAILED',
+        data: { error: error.message },
+      });
+    });
+  }
+
+  private handleStopAgent(): void {
+    console.log('Stopping AI agent');
+    // Note: Currently no graceful stop mechanism - agent will complete current iteration
+    this.currentAgent = null;
+
+    this.broadcast({
+      type: 'AGENT_FAILED',
+      data: { error: 'Agent stopped by user' },
+    });
+  }
+
+  private forwardToExtension(message: WSMessage): void {
+    // Forward tool execution message to extension
+    const firstClient = this.extensionClients.values().next().value;
+    if (firstClient) {
+      this.sendToClient(firstClient.ws, message);
+    }
   }
 
   private broadcastPuppeteerStatus(): void {

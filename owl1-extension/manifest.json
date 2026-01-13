@@ -2,14 +2,16 @@
   "manifest_version": 3,
   "name": "DD Owl",
   "version": "1.0.0",
-  "description": "Automated due diligence data extraction from QCC",
+  "description": "Automated due diligence data extraction from QCC and Tianyancha",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://*.qcc.com/*",
     "https://*.qichacha.com/*",
+    "https://*.tianyancha.com/*",
     "http://localhost:8080/*"
   ],
   "background": {
@@ -19,6 +21,11 @@
     {
       "matches": ["https://*.qcc.com/*", "https://*.qichacha.com/*"],
       "js": ["content-scripts/qcc.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.tianyancha.com/*"],
+      "js": ["content-scripts/tianyancha.js"],
       "run_at": "document_idle"
     }
   ],

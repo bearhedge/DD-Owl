@@ -653,6 +653,9 @@
           document.getElementById('statusDot').classList.remove('active');
           updateActivityStats(`Complete: ${redCount} red, ${amberCount} amber, ${data.report.flags.green} clear`);
           eventSource.close();
+
+          // Auto-save to screening log
+          saveToScreeningLog(name, data.report);
         }
 
         if (data.type === 'error') {
@@ -736,6 +739,36 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    async function saveToScreeningLog(subjectName, report) {
+      try {
+        const response = await fetch('/api/screening-log/ddowl-run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject_name: subjectName,
+            red_flags: report.flags.red.map(f => ({
+              title: f.title,
+              url: f.url,
+              summary: f.summary,
+              category: f.category
+            })),
+            amber_flags: report.flags.amber.map(f => ({
+              title: f.title,
+              url: f.url,
+              summary: f.summary,
+              category: f.category
+            })),
+            sources_checked: report.totalResultsAnalyzed
+          })
+        });
+        if (response.ok) {
+          addLogEntry('result', 'Results saved to screening log');
+        }
+      } catch (err) {
+        console.log('Could not save to screening log:', err);
+      }
     }
 
     document.getElementById('nameInput').addEventListener('keypress', (e) => {

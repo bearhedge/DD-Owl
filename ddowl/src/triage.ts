@@ -31,6 +31,15 @@ export async function triageSearchResults(
     return { red: [], yellow: [], green: [] };
   }
 
+  // Fix #5: Validate API key before making request
+  if (!KIMI_API_KEY) {
+    return {
+      red: [],
+      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'api key not configured' })),
+      green: []
+    };
+  }
+
   const resultsText = results.map((r, i) =>
     `${i + 1}. Title: ${r.title}\n   Snippet: ${r.snippet}`
   ).join('\n\n');
@@ -59,21 +68,31 @@ Return JSON only:
   ]
 }`;
 
-  const response = await axios.post(
-    KIMI_URL,
-    {
-      model: 'moonshot-v1-8k',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1,
-    },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${KIMI_API_KEY}`,
+  // Fix #1: Wrap axios call in try-catch for network errors, timeouts, or API errors
+  let response;
+  try {
+    response = await axios.post(
+      KIMI_URL,
+      {
+        model: 'moonshot-v1-8k',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
       },
-      timeout: 60000,
-    }
-  );
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${KIMI_API_KEY}`,
+        },
+        timeout: 60000,
+      }
+    );
+  } catch {
+    return {
+      red: [],
+      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'api failed' })),
+      green: []
+    };
+  }
 
   const text = response.data.choices?.[0]?.message?.content || '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -86,22 +105,50 @@ Return JSON only:
     };
   }
 
-  const parsed = JSON.parse(jsonMatch[0]);
+  // Fix #2: Wrap JSON.parse in try-catch for malformed JSON
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    return {
+      red: [],
+      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'parse failed' })),
+      green: []
+    };
+  }
+
+  // Fix #3: Validate that parsed.classifications exists and is an array
+  if (!parsed.classifications || !Array.isArray(parsed.classifications)) {
+    return {
+      red: [],
+      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'parse failed' })),
+      green: []
+    };
+  }
+
   const output: TriageOutput = { red: [], yellow: [], green: [] };
 
   for (const c of parsed.classifications) {
     const result = results[c.index - 1];
     if (!result) continue;
 
+    // Fix #4: Normalize classification to uppercase and validate
+    const normalizedClassification = typeof c.classification === 'string'
+      ? c.classification.toUpperCase()
+      : 'YELLOW';
+    const validClassification = ['RED', 'YELLOW', 'GREEN'].includes(normalizedClassification)
+      ? normalizedClassification as 'RED' | 'YELLOW' | 'GREEN'
+      : 'YELLOW';
+
     const triaged: TriageResult = {
       url: result.url,
       title: result.title,
-      classification: c.classification,
+      classification: validClassification,
       reason: c.reason
     };
 
-    if (c.classification === 'RED') output.red.push(triaged);
-    else if (c.classification === 'YELLOW') output.yellow.push(triaged);
+    if (validClassification === 'RED') output.red.push(triaged);
+    else if (validClassification === 'YELLOW') output.yellow.push(triaged);
     else output.green.push(triaged);
   }
 

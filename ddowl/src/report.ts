@@ -1,9 +1,12 @@
 import { Document, Paragraph, Table, TableRow, TableCell, HeadingLevel, Packer, WidthType, TextRun } from 'docx';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import db from './database.js';
 
-const REPORTS_DIR = '/Users/home/Desktop/DD Owl/reports';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPORTS_DIR = path.join(__dirname, '../reports');
 
 // Ensure reports directory exists
 if (!fs.existsSync(REPORTS_DIR)) {

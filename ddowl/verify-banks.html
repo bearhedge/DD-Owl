@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Verify Bank Extractions</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #0a0a0a;
+      color: #e0e0e0;
+    }
+    h1 { color: #fff; margin-bottom: 5px; }
+    .subtitle { color: #888; margin-bottom: 20px; }
+
+    /* Filter and controls */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    #filter {
+      padding: 10px 15px;
+      width: 300px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+    }
+    #filter:focus { outline: none; border-color: #4CAF50; }
+    .btn {
+      padding: 10px 15px;
+      background: #333;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn:hover { background: #444; }
+    .btn.active { background: #4CAF50; color: #000; }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 20px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #888;
+    }
+    .stat-value { color: #4CAF50; font-weight: bold; }
+
+    /* Deal cards */
+    .deal {
+      background: #141414;
+      margin: 8px 0;
+      border-radius: 8px;
+      border: 1px solid #222;
+      overflow: hidden;
+    }
+    .deal:hover { border-color: #333; }
+
+    .deal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 15px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .deal-header:hover { background: #1a1a1a; }
+
+    .deal-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .toggle {
+      width: 20px;
+      color: #666;
+      font-size: 12px;
+    }
+    .ticker {
+      font-size: 18px;
+      font-weight: 600;
+      color: #4CAF50;
+      min-width: 60px;
+    }
+    .company {
+      font-size: 14px;
+      color: #999;
+      max-width: 400px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .deal-stats {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .stat-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .stat-badge.banks { background: #1a3a1a; color: #4CAF50; }
+    .stat-badge.sponsors { background: #3a2a00; color: #FFD700; }
+
+    /* PDF link */
+    .pdf-link {
+      padding: 0 15px 12px 47px;
+      font-size: 12px;
+      display: none;
+    }
+    .deal.expanded .pdf-link { display: block; }
+    .pdf-link a {
+      color: #2196F3;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .pdf-link a:hover { text-decoration: underline; }
+
+    /* Banks section */
+    .banks-section {
+      display: none;
+      border-top: 1px solid #222;
+      padding: 15px;
+    }
+    .deal.expanded .banks-section { display: block; }
+
+    .role-group {
+      margin-bottom: 15px;
+    }
+    .role-group:last-child { margin-bottom: 0; }
+
+    .role-header {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .role-header.decision-makers {
+      background: linear-gradient(135deg, #3a2a00, #2a1a00);
+      color: #FFD700;
+    }
+    .role-header.bookrunners {
+      background: #1a2a3a;
+      color: #64B5F6;
+    }
+    .role-header.lead-managers {
+      background: #2a2a2a;
+      color: #aaa;
+    }
+    .role-header.other {
+      background: #1a1a1a;
+      color: #666;
+    }
+
+    .bank-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-left: 8px;
+      border-left: 2px solid #333;
+      margin-left: 4px;
+    }
+    .role-group.decision-makers .bank-list { border-left-color: #FFD700; }
+    .role-group.bookrunners .bank-list { border-left-color: #64B5F6; }
+
+    .bank-item {
+      padding: 8px 12px;
+      background: #1a1a1a;
+      border-radius: 6px;
+    }
+    .role-group.decision-makers .bank-item {
+      background: linear-gradient(135deg, #1a1500, #141000);
+      border: 1px solid #3a2a00;
+    }
+
+    .bank-raw {
+      font-size: 13px;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+    .bank-meta {
+      font-size: 11px;
+      color: #666;
+    }
+    .bank-meta .normalized {
+      color: #888;
+    }
+    .bank-meta .roles {
+      color: #4CAF50;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Verify Bank Extractions</h1>
+  <p class="subtitle">Click deals to expand. Verify extracted banks against PDF prospectuses.</p>
+
+  <div class="controls">
+    <input type="text" id="filter" placeholder="Filter by ticker or company...">
+    <button class="btn" id="expand-all">Expand All</button>
+    <button class="btn" id="collapse-all">Collapse All</button>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div id="deals"><div class="loading">Loading...</div></div>
+
+  <script>
+    let allData = [];
+    let expandedDeals = new Set();
+
+    async function load() {
+      try {
+        const resp = await fetch('/api/ipo/verify-data');
+        allData = await resp.json();
+        render(allData);
+
+        document.getElementById('filter').addEventListener('input', (e) => {
+          const q = e.target.value.toLowerCase();
+          const filtered = allData.filter(d =>
+            String(d.ticker).includes(q) ||
+            d.company.toLowerCase().includes(q)
+          );
+          render(filtered);
+        });
+
+        document.getElementById('expand-all').addEventListener('click', () => {
+          allData.forEach(d => expandedDeals.add(d.ticker));
+          render(getFilteredData());
+        });
+
+        document.getElementById('collapse-all').addEventListener('click', () => {
+          expandedDeals.clear();
+          render(getFilteredData());
+        });
+      } catch (e) {
+        document.getElementById('deals').innerHTML = '<div class="empty-state">Failed to load data: ' + e.message + '</div>';
+      }
+    }
+
+    function getFilteredData() {
+      const q = document.getElementById('filter').value.toLowerCase();
+      return allData.filter(d =>
+        String(d.ticker).includes(q) ||
+        d.company.toLowerCase().includes(q)
+      );
+    }
+
+    function toggleDeal(ticker) {
+      if (expandedDeals.has(ticker)) {
+        expandedDeals.delete(ticker);
+      } else {
+        expandedDeals.add(ticker);
+      }
+      render(getFilteredData());
+    }
+
+    function groupBanksByRole(banks) {
+      const groups = {
+        decisionMakers: [], // sponsors + coordinators
+        bookrunners: [],
+        leadManagers: [],
+        other: []
+      };
+
+      for (const bank of banks) {
+        const roles = bank.roles || [];
+        if (bank.is_lead || roles.includes('sponsor') || roles.includes('coordinator')) {
+          groups.decisionMakers.push(bank);
+        } else if (roles.includes('bookrunner')) {
+          groups.bookrunners.push(bank);
+        } else if (roles.includes('lead_manager')) {
+          groups.leadManagers.push(bank);
+        } else {
+          groups.other.push(bank);
+        }
+      }
+
+      return groups;
+    }
+
+    function renderBankGroup(banks, label, cssClass) {
+      if (banks.length === 0) return '';
+
+      return `
+        <div class="role-group ${cssClass}">
+          <div class="role-header ${cssClass}">${label} (${banks.length})</div>
+          <div class="bank-list">
+            ${banks.map(b => `
+              <div class="bank-item">
+                <div class="bank-raw">${b.raw_name || b.name}</div>
+                <div class="bank-meta">
+                  <span class="normalized">${b.name}</span>
+                  <span class="roles">${b.roles.join(', ')}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function render(deals) {
+      // Update stats
+      const totalDeals = deals.length;
+      const totalBanks = deals.reduce((sum, d) => sum + d.banks_extracted, 0);
+      const dealsWithBanks = deals.filter(d => d.banks_extracted > 0).length;
+
+      document.getElementById('stats').innerHTML = `
+        <div>Showing <span class="stat-value">${totalDeals}</span> deals</div>
+        <div><span class="stat-value">${totalBanks}</span> bank relationships</div>
+        <div><span class="stat-value">${dealsWithBanks}</span> with bank data</div>
+      `;
+
+      if (deals.length === 0) {
+        document.getElementById('deals').innerHTML = '<div class="empty-state">No deals match your filter</div>';
+        return;
+      }
+
+      const html = deals.map(d => {
+        const isExpanded = expandedDeals.has(d.ticker);
+        const groups = groupBanksByRole(d.banks);
+        const sponsorCount = groups.decisionMakers.length;
+
+        return `
+          <div class="deal ${isExpanded ? 'expanded' : ''}">
+            <div class="deal-header" onclick="toggleDeal(${d.ticker})">
+              <div class="deal-info">
+                <span class="toggle">${isExpanded ? '▼' : '▶'}</span>
+                <span class="ticker">${d.ticker}</span>
+                <span class="company">${d.company}</span>
+              </div>
+              <div class="deal-stats">
+                <span class="stat-badge banks">${d.banks_extracted} banks</span>
+                ${sponsorCount > 0 ? `<span class="stat-badge sponsors">${sponsorCount} sponsors</span>` : ''}
+              </div>
+            </div>
+            <div class="pdf-link">
+              <a href="${d.prospectus_url}" target="_blank">${d.prospectus_url}</a>
+            </div>
+            <div class="banks-section">
+              ${renderBankGroup(groups.decisionMakers, 'Decision Makers', 'decision-makers')}
+              ${renderBankGroup(groups.bookrunners, 'Bookrunners', 'bookrunners')}
+              ${renderBankGroup(groups.leadManagers, 'Lead Managers', 'lead-managers')}
+              ${renderBankGroup(groups.other, 'Other Roles', 'other')}
+              ${d.banks.length === 0 ? '<div class="empty-state">No banks extracted</div>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('deals').innerHTML = html;
+    }
+
+    load();
+  </script>
+</body>
+</html>

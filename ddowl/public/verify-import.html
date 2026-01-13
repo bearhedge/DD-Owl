@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historical Import Verification</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+    .header { background: #1a1a2e; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    .header h1 { font-size: 24px; margin-bottom: 10px; }
+    .stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .stat { background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 6px; }
+    .stat-value { font-size: 24px; font-weight: bold; }
+    .stat-label { font-size: 12px; opacity: 0.8; }
+
+    .controls { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+    .controls button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn-primary { background: #4361ee; color: white; }
+    .btn-secondary { background: #e9ecef; color: #333; }
+    .btn-success { background: #2ec4b6; color: white; }
+    .btn-danger { background: #e63946; color: white; }
+
+    .filter-group { display: flex; gap: 10px; align-items: center; }
+    .filter-group label { font-size: 14px; color: #666; }
+    .filter-group select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; }
+
+    .deal-list { display: flex; flex-direction: column; gap: 15px; }
+
+    .deal-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .deal-card.verified { border-left: 4px solid #2ec4b6; }
+    .deal-card.incorrect { border-left: 4px solid #e63946; }
+    .deal-card.failed { background: #fff5f5; border-left: 4px solid #e63946; }
+
+    .deal-header { padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #eee; }
+    .deal-info h3 { font-size: 16px; margin-bottom: 5px; }
+    .deal-info .ticker { color: #4361ee; font-weight: bold; }
+    .deal-info .meta { font-size: 13px; color: #666; }
+    .deal-actions { display: flex; gap: 8px; }
+    .deal-actions button { padding: 6px 12px; font-size: 13px; }
+
+    .deal-body { padding: 15px; }
+    .banks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+    .bank-item { background: #f8f9fa; padding: 10px; border-radius: 6px; font-size: 14px; }
+    .bank-item.lead { background: #e8f5e9; border-left: 3px solid #2ec4b6; }
+    .bank-name { font-weight: 600; margin-bottom: 4px; }
+    .bank-normalized { font-size: 12px; color: #888; margin-bottom: 4px; font-style: italic; }
+    .bank-raw-role { font-size: 11px; color: #999; margin-top: 4px; }
+    .bank-roles { font-size: 12px; color: #666; }
+    .bank-roles .role { display: inline-block; background: #e9ecef; padding: 2px 6px; border-radius: 3px; margin-right: 4px; margin-top: 4px; }
+    .bank-roles .role.sponsor { background: #d4edda; color: #155724; }
+    .bank-roles .role.coordinator { background: #cce5ff; color: #004085; }
+    .bank-roles .role.other { background: #fff3cd; color: #856404; }
+
+    .error-msg { color: #e63946; font-style: italic; }
+
+    .feedback-section { margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; display: none; }
+    .feedback-section.active { display: block; }
+    .feedback-section textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-height: 80px; }
+    .feedback-section .feedback-actions { margin-top: 10px; display: flex; gap: 10px; }
+
+    .summary-panel { position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; }
+    .summary-panel h4 { margin-bottom: 10px; }
+    .summary-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+
+    .no-data { text-align: center; padding: 40px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Historical Import Verification</h1>
+    <div class="stats" id="stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-total">-</div>
+        <div class="stat-label">Total Deals</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-success">-</div>
+        <div class="stat-label">Parsed</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-banks">-</div>
+        <div class="stat-label">Banks Found</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-verified">0</div>
+        <div class="stat-label">Verified</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-incorrect">0</div>
+        <div class="stat-label">Incorrect</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn-primary" onclick="loadResults()">Load Results</button>
+    <button class="btn-secondary" onclick="exportFeedback()">Export Feedback</button>
+
+    <div class="filter-group">
+      <label>Filter:</label>
+      <select id="filter" onchange="applyFilter()">
+        <option value="all">All</option>
+        <option value="success">Parsed Successfully</option>
+        <option value="failed">Failed</option>
+        <option value="unreviewed">Unreviewed</option>
+        <option value="verified">Verified Correct</option>
+        <option value="incorrect">Marked Incorrect</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Sort:</label>
+      <select id="sort" onchange="applyFilter()">
+        <option value="ticker">By Ticker</option>
+        <option value="banks-desc">Most Banks</option>
+        <option value="banks-asc">Fewest Banks</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="deal-list" id="deal-list">
+    <div class="no-data">Click "Load Results" to view imported deals</div>
+  </div>
+
+  <div class="summary-panel" id="summary-panel" style="display: none;">
+    <h4>Review Progress</h4>
+    <div class="summary-item">
+      <span>Reviewed:</span>
+      <span id="reviewed-count">0</span>
+    </div>
+    <div class="summary-item">
+      <span>Remaining:</span>
+      <span id="remaining-count">0</span>
+    </div>
+  </div>
+
+  <script>
+    let results = [];
+    let feedback = {}; // { ticker: { status: 'verified'|'incorrect', notes: '' } }
+
+    // Load feedback from localStorage
+    const savedFeedback = localStorage.getItem('importFeedback');
+    if (savedFeedback) {
+      feedback = JSON.parse(savedFeedback);
+    }
+
+    async function loadResults() {
+      try {
+        const resp = await fetch('/api/import-results');
+        results = await resp.json();
+        updateStats();
+        applyFilter();
+        document.getElementById('summary-panel').style.display = 'block';
+      } catch (e) {
+        alert('Error loading results. Make sure the server is running and results exist.');
+        console.error(e);
+      }
+    }
+
+    function updateStats() {
+      const success = results.filter(r => r.success);
+      const totalBanks = success.reduce((sum, r) => sum + r.banksFound, 0);
+      const verified = Object.values(feedback).filter(f => f.status === 'verified').length;
+      const incorrect = Object.values(feedback).filter(f => f.status === 'incorrect').length;
+
+      document.getElementById('stat-total').textContent = results.length;
+      document.getElementById('stat-success').textContent = success.length;
+      document.getElementById('stat-banks').textContent = totalBanks;
+      document.getElementById('stat-verified').textContent = verified;
+      document.getElementById('stat-incorrect').textContent = incorrect;
+
+      document.getElementById('reviewed-count').textContent = verified + incorrect;
+      document.getElementById('remaining-count').textContent = results.length - verified - incorrect;
+    }
+
+    function applyFilter() {
+      const filter = document.getElementById('filter').value;
+      const sort = document.getElementById('sort').value;
+
+      let filtered = [...results];
+
+      // Apply filter
+      if (filter === 'success') {
+        filtered = filtered.filter(r => r.success);
+      } else if (filter === 'failed') {
+        filtered = filtered.filter(r => !r.success);
+      } else if (filter === 'unreviewed') {
+        filtered = filtered.filter(r => !feedback[r.ticker]);
+      } else if (filter === 'verified') {
+        filtered = filtered.filter(r => feedback[r.ticker]?.status === 'verified');
+      } else if (filter === 'incorrect') {
+        filtered = filtered.filter(r => feedback[r.ticker]?.status === 'incorrect');
+      }
+
+      // Apply sort
+      if (sort === 'banks-desc') {
+        filtered.sort((a, b) => (b.banksFound || 0) - (a.banksFound || 0));
+      } else if (sort === 'banks-asc') {
+        filtered.sort((a, b) => (a.banksFound || 0) - (b.banksFound || 0));
+      } else {
+        filtered.sort((a, b) => a.ticker - b.ticker);
+      }
+
+      renderDeals(filtered);
+    }
+
+    function renderDeals(deals) {
+      const container = document.getElementById('deal-list');
+
+      if (deals.length === 0) {
+        container.innerHTML = '<div class="no-data">No deals match the filter</div>';
+        return;
+      }
+
+      container.innerHTML = deals.map(deal => {
+        const fb = feedback[deal.ticker] || {};
+        const statusClass = fb.status === 'verified' ? 'verified' :
+                           fb.status === 'incorrect' ? 'incorrect' :
+                           !deal.success ? 'failed' : '';
+
+        return `
+          <div class="deal-card ${statusClass}" id="deal-${deal.ticker}">
+            <div class="deal-header">
+              <div class="deal-info">
+                <h3><span class="ticker">${deal.ticker}</span> - ${deal.company}</h3>
+                <div class="meta">
+                  ${deal.success ? `${deal.banksFound} banks extracted` : `Error: ${deal.error}`}
+                  ${fb.status ? ` | Status: ${fb.status}` : ''}
+                </div>
+              </div>
+              <div class="deal-actions">
+                <button class="btn-secondary" onclick="openPdf(${deal.ticker})">View PDF</button>
+                <button class="btn-success" onclick="markVerified(${deal.ticker})">Correct</button>
+                <button class="btn-danger" onclick="showFeedback(${deal.ticker})">Incorrect</button>
+              </div>
+            </div>
+            ${deal.success ? `
+              <div class="deal-body">
+                <div class="banks-grid">
+                  ${(deal.banks || []).map(bank => `
+                    <div class="bank-item ${bank.isLead || bank.roles.includes('sponsor') || bank.roles.includes('coordinator') ? 'lead' : ''}">
+                      <div class="bank-name">${bank.isLead || bank.roles.includes('sponsor') || bank.roles.includes('coordinator') ? '★ ' : ''}${bank.name}</div>
+                      ${bank.normalized && bank.normalized !== bank.name ? `<div class="bank-normalized">→ ${bank.normalized}</div>` : ''}
+                      <div class="bank-roles">
+                        ${bank.roles.map(r => `<span class="role ${r}">${r}</span>`).join('')}
+                      </div>
+                      ${bank.rawRole ? `<div class="bank-raw-role">From: "${bank.rawRole}"</div>` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+                <div class="feedback-section" id="feedback-${deal.ticker}">
+                  <textarea placeholder="Describe what's wrong (missing banks, wrong roles, etc.)" id="notes-${deal.ticker}">${fb.notes || ''}</textarea>
+                  <div class="feedback-actions">
+                    <button class="btn-danger" onclick="saveFeedback(${deal.ticker}, 'incorrect')">Save as Incorrect</button>
+                    <button class="btn-secondary" onclick="hideFeedback(${deal.ticker})">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div class="deal-body">
+                <p class="error-msg">${deal.error}</p>
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openPdf(ticker) {
+      // Find the deal to get the URL
+      const deal = results.find(r => r.ticker === ticker);
+      if (deal) {
+        // Construct URL from Excel data - we need to fetch this
+        fetch(`/api/deal-pdf-url/${ticker}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.url) {
+              window.open(data.url, '_blank');
+            } else {
+              alert('PDF URL not found');
+            }
+          })
+          .catch(() => alert('Error getting PDF URL'));
+      }
+    }
+
+    function markVerified(ticker) {
+      feedback[ticker] = { status: 'verified', notes: '' };
+      saveFeedbackToStorage();
+      updateStats();
+      applyFilter();
+    }
+
+    function showFeedback(ticker) {
+      document.getElementById(`feedback-${ticker}`).classList.add('active');
+    }
+
+    function hideFeedback(ticker) {
+      document.getElementById(`feedback-${ticker}`).classList.remove('active');
+    }
+
+    function saveFeedback(ticker, status) {
+      const notes = document.getElementById(`notes-${ticker}`).value;
+      feedback[ticker] = { status, notes };
+      saveFeedbackToStorage();
+      updateStats();
+      applyFilter();
+    }
+
+    function saveFeedbackToStorage() {
+      localStorage.setItem('importFeedback', JSON.stringify(feedback));
+    }
+
+    function exportFeedback() {
+      const incorrectDeals = Object.entries(feedback)
+        .filter(([_, fb]) => fb.status === 'incorrect')
+        .map(([ticker, fb]) => ({
+          ticker: parseInt(ticker),
+          notes: fb.notes,
+          deal: results.find(r => r.ticker === parseInt(ticker))
+        }));
+
+      const report = {
+        exportedAt: new Date().toISOString(),
+        summary: {
+          total: results.length,
+          verified: Object.values(feedback).filter(f => f.status === 'verified').length,
+          incorrect: incorrectDeals.length,
+          unreviewed: results.length - Object.keys(feedback).length
+        },
+        incorrectDeals
+      };
+
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `import-feedback-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+
+    // Auto-load on page load
+    loadResults();
+  </script>
+</body>
+</html>
