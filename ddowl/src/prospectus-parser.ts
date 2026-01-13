@@ -770,6 +770,11 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
     /\bCLSA[^,\n]*Limited/gi,
     /\bCLSA Global Markets[^,\n]*/gi,
     /\bAVIC[T]?[^,\n]*Limited/gi,
+    // International offering entities (without "Asia" or location suffix)
+    /\bCitigroup Global Markets Limited\b/gi,
+    /\bCredit Suisse Securities[^,\n]*Limited/gi,
+    /\bUBS Securities LLC\b/gi,
+    /\bGoldman Sachs International\b/gi,
   ];
 
   for (const pattern of bankPatterns) {
