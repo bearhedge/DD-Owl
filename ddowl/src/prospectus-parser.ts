@@ -336,7 +336,7 @@ function extractBankName(line: string): string | null {
   let trimmed = line.trim();
 
   // Strip role prefixes (e.g., "Financial Adviser Karl Thomson..." → "Karl Thomson...")
-  const rolePrefixPattern = /^(?:Financial\s+Adviser?r?s?|Sole\s+Sponsor|Joint\s+Sponsors?|Compliance\s+Adviser?r?|Receiving\s+Bank|Legal\s+Adviser?r?|Auditor)\s+/i;
+  const rolePrefixPattern = /^(?:Financial\s+Advis[eo]r?s?|Sole\s+Sponsor|Joint\s+Sponsors?|Compliance\s+Advis[eo]r?|Receiving\s+Bank|Legal\s+Advis[eo]r?s?|Auditor)\s*/i;
   trimmed = trimmed.replace(rolePrefixPattern, '');
 
   // Skip lines containing regulatory disclaimers
@@ -378,8 +378,8 @@ function extractBankName(line: string): string | null {
   // Must end with Limited, Ltd, Branch, L.L.C., N.V., AG, S.A., Plc, Bank, CIB, or similar
   if (!trimmed.match(/Limited$|Ltd\.?$|Branch$|L\.L\.C\.?$|N\.V\.?$|AG$|S\.A\.?$|Plc$|Bank$|CIB$/i)) return null;
 
-  // Must start with capital letter or "The"
-  if (!trimmed.match(/^[A-Z]|^The\s/i)) return null;
+  // Must start with capital letter, digit, or "The"
+  if (!trimmed.match(/^[A-Z0-9]|^The\s/i)) return null;
 
   // Reasonable length
   if (trimmed.length < 10 || trimmed.length > 120) return null;
@@ -424,7 +424,7 @@ function preprocessLines(lines: string[]): string[] {
     // Lines that complete a bank name: "Securities Limited", "Limited", "Capital Limited", etc.
     // Also handles "Securities Limited (" where Chinese name follows
     // Also handles "(Hong Kong) Limited" format common in Chinese bank names
-    return trimmed.match(/^(?:Securities|Capital|Holdings|Asia|Hong Kong|China|International)?\s*Limited(?:\s*\()?$/i) ||
+    return trimmed.match(/^(?:Securities|Capital|Holdings|Asia|Hong Kong|China|International|Corporation)?\s*Limited(?:\s*\()?$/i) ||
            trimmed.match(/^\(Hong Kong\)\s+Limited$/i) ||  // "(Hong Kong) Limited" continuation
            trimmed.match(/^\([A-Z][a-z]+\)\s+Limited$/i) || // "(Singapore) Limited" etc.
            trimmed.match(/^Limited,?\s+or\s+/i) ||  // "Limited, or HSBC"
@@ -437,7 +437,7 @@ function preprocessLines(lines: string[]): string[] {
     const trimmed = line.trim();
     // Check if line starts with capital letter and contains bank keywords
     // Use word boundary to properly match keywords at end
-    return trimmed.match(/^[A-Z][A-Za-z\s&\(\)]*\b(?:Corporation|International|Capital|Securities|Group|Holdings|Bank|Finance|Financial|Partners|Sachs|Stanley|Suisse|Morgan|Barclays|Deutsche|Goldman|Merrill|Huatai|Haitong|CICC|HSBC|UBS|BNP|BOCI|CMB|ICBC|CCB|BOCOM)\b/i);
+    return trimmed.match(/^[A-Z][A-Za-z\s&\(\)]*\b(?:Corporation|International|Capital|Securities|Group|Holdings|Bank|Banking|Finance|Financial|Partners|Sachs|Stanley|Suisse|Morgan|Barclays|Deutsche|Goldman|Merrill|Huatai|Haitong|CICC|HSBC|UBS|BNP|BOCI|CMB|ICBC|CCB|BOCOM)\b/i);
   };
 
   // Helper to check if a combined line forms a complete bank name
@@ -726,6 +726,8 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
     /\bBOCI Asia[^,\n]*Limited/gi,
     /\bBank of China[^,\n]*Limited/gi,
     /\bHSBC[^,\n]*Limited/gi,
+    /\bThe Hong\s*kong and Shanghai Banking[^,\n]*Limited/gi,
+    /\bHong\s*kong and Shanghai Banking[^,\n]*Limited/gi,
     /\bJ\.?P\.?\s*Morgan[^,\n]*Limited/gi,
     /\bCiti(?:group|bank)?[^,\n]*Limited/gi,
     /\bUBS AG\b/gi,

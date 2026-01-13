@@ -19,7 +19,7 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'Credit Suisse': ['Credit Suisse', 'CS', 'Credit Suisse Securities'],
   'Deutsche Bank': ['Deutsche Bank', 'DB'],
   'Barclays': ['Barclays', 'Barclays Capital'],
-  'HSBC': ['HSBC', 'HSBC Bank'],
+  'HSBC': ['HSBC', 'HSBC Bank', 'Hongkong and Shanghai Banking', 'Hong Kong and Shanghai Banking', 'The Hongkong and Shanghai Banking Corporation'],
   'BNP Paribas': ['BNP Paribas', 'BNP'],
   'Nomura': ['Nomura', 'Nomura Securities', 'Nomura International'],
   'Daiwa': ['Daiwa', 'Daiwa Capital Markets', 'Daiwa Securities'],
@@ -29,7 +29,9 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'CITIC': ['CITIC', 'CITIC Securities', 'CLSA', 'CITIC CLSA'],
   'CICC': ['CICC', 'China International Capital', 'China International Capital Corporation'],
   'Huatai': ['Huatai', 'Huatai Securities', 'Huatai Financial', 'Huatai International'],
-  'Guotai Junan': ['Guotai Junan', 'GTJA', 'Guotai Junan Securities'],
+  'Guotai Junan Capital': ['Guotai Junan Capital'],
+  'Guotai Junan Securities': ['Guotai Junan Securities', 'GTJA Securities'],
+  'Guotai Junan': ['Guotai Junan', 'GTJA'],  // Generic mentions only
   'Haitong': ['Haitong', 'Haitong Securities', 'Haitong International'],
   'China Securities': ['China Securities', 'CSC', 'China Securities International'],
   'GF Securities': ['GF Securities', 'GF', 'Guangfa Securities'],
@@ -54,6 +56,8 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'Shenwan Hongyuan': ['Shenwan Hongyuan', 'SWS', 'Shenwan'],
   'Orient Securities': ['Orient Securities', 'DFZQ'],
   'Founder Securities': ['Founder Securities', 'Founder'],
+  'Essence Corporate Finance': ['Essence Corporate Finance'],
+  'Essence International Securities': ['Essence International Securities'],
   'Essence Securities': ['Essence Securities', 'Essence'],
   'SPDB': ['SPDB', 'Shanghai Pudong Development Bank'],
   'Tiger Brokers': ['Tiger Brokers', 'Tiger Securities'],
@@ -80,11 +84,15 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'Commerzbank': ['Commerzbank'],
   'Santander': ['Santander', 'Banco Santander'],
   'BBVA': ['BBVA', 'Banco Bilbao'],
+
+  // Online brokers / newer platforms
+  'Longbridge': ['Longbridge', 'Long Bridge', 'Long Bridge HK'],
+  '9F Primasia': ['9F Primasia', '9F Prime Asia', '9F Prime', '9F Securities'],
 };
 
 // Keywords that indicate a real bank (must have at least one)
 const BANK_KEYWORDS = [
-  'Securities', 'Capital', 'Financial', 'Bank', 'Brokers', 'Brokerage',
+  'Securities', 'Capital', 'Financial', 'Bank', 'Brokers', 'Brokerage', 'Equities',
   'Investment', 'Partners', 'Advisors', 'Advisory', 'Markets',
   'Morgan', 'Goldman', 'CLSA', 'CITIC', 'CICC', 'Huatai', 'Guotai',
   'CMB', 'UBS', 'Credit Suisse', 'Merrill', 'Haitong', 'ICBC', 'BOCI',
@@ -98,6 +106,8 @@ const BANK_KEYWORDS = [
   'National Australia', 'BofA', 'Jefferies', 'Mizuho', 'SMBC',
   'SBI', 'OCBC', 'UOB', 'ANZ', 'Westpac', 'ING', 'Rabobank',
   'Commerzbank', 'Santander', 'BBVA', 'ABN AMRO',
+  // Online brokers
+  'Longbridge', 'Long Bridge', '9F Prime', '9F Primasia', 'Primasia',
 ];
 
 // Keywords that indicate it's a company (IPO applicant), NOT a bank

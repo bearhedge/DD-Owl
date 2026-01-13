@@ -116,6 +116,15 @@
     .pdf-link:hover { text-decoration: underline; }
 
     #issues-counter { font-size: 24px; font-weight: bold; }
+
+    /* Visual feedback for marked deals */
+    .deal.marked-correct { border-left: 4px solid #10b981; background: #16213e; }
+    .deal.marked-correct .deal-header { background: rgba(16, 185, 129, 0.1); }
+    .deal.marked-issue { border-left: 4px solid #ef4444; background: #1a1a2e; }
+    .deal.marked-issue .deal-header { background: rgba(239, 68, 68, 0.1); }
+    .deal-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; margin-left: 10px; }
+    .status-correct { background: #10b981; color: white; }
+    .status-issue { background: #ef4444; color: white; }
   </style>
 </head>
 <body>
@@ -211,7 +220,9 @@
       for (const deal of currentDeals) {
         const flags = flaggedDeals.get(deal.ticker) || [];
         const dmCount = deal.decision_makers?.length || 0;
-        const otherCount = deal.other_banks?.length || 0;
+        const sponsorNames = new Set((deal.decision_makers || []).map(b => b.name));
+        const filteredOthers = (deal.other_banks || []).filter(b => !sponsorNames.has(b.name));
+        const otherCount = filteredOthers.length;
 
         const div = document.createElement('div');
         div.className = 'deal' + (flags.length ? ' changed' : '');
@@ -237,7 +248,7 @@
 
             <div class="other-banks">
               <h4>Others</h4>
-              ${renderOtherBanks(deal.other_banks || [])}
+              ${renderOtherBanks(filteredOthers)}
             </div>
 
             <div class="deal-actions">
@@ -300,11 +311,27 @@
     function markCorrect(ticker) {
       issuesMarked.delete(ticker);
       document.getElementById('issues-counter').textContent = issuesMarked.size;
+      // Visual feedback
+      const deals = document.querySelectorAll('.deal');
+      deals.forEach(d => {
+        if (d.querySelector('.ticker').textContent == ticker) {
+          d.classList.remove('marked-issue');
+          d.classList.add('marked-correct');
+        }
+      });
     }
 
     function markIssue(ticker) {
       issuesMarked.add(ticker);
       document.getElementById('issues-counter').textContent = issuesMarked.size;
+      // Visual feedback
+      const deals = document.querySelectorAll('.deal');
+      deals.forEach(d => {
+        if (d.querySelector('.ticker').textContent == ticker) {
+          d.classList.remove('marked-correct');
+          d.classList.add('marked-issue');
+        }
+      });
     }
 
     async function completeReview() {
