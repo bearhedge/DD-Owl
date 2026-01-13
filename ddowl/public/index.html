@@ -620,7 +620,7 @@
       updateActivityStats('Initializing...');
 
       // Start SSE connection
-      const eventSource = new EventSource(`/api/screen?name=${encodeURIComponent(name)}`);
+      const eventSource = new EventSource(`/api/screen/v3?name=${encodeURIComponent(name)}`);
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -637,6 +637,31 @@
 
         if (data.type === 'analyze') {
           addLogEntry('analyze', `Analyzing: ${data.title}`, data.url);
+        }
+
+        if (data.type === 'triage') {
+          addLogEntry('search', `Triaging ${data.count} results...`);
+        }
+
+        if (data.type === 'triage_result') {
+          addLogEntry('search', `Triage: ${data.red} RED, ${data.yellow} YELLOW, ${data.green} GREEN skipped`);
+        }
+
+        if (data.type === 'quick_scan') {
+          addLogEntry('fetch', `Quick scan: ${data.title}`, data.url);
+        }
+
+        if (data.type === 'quick_scan_skip') {
+          addLogEntry('analyze', `Skipped: ${data.reason}`, data.url);
+        }
+
+        if (data.type === 'quick_scan_pass') {
+          addLogEntry('analyze', `Passed quick scan, analyzing...`, data.url);
+        }
+
+        if (data.type === 'finding') {
+          const color = data.severity === 'RED' ? 'red' : 'amber';
+          addLogEntry(color, data.headline);
         }
 
         if (data.type === 'result') {
