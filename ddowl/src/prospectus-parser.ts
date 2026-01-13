@@ -339,6 +339,12 @@ function extractBankName(line: string): string | null {
   const rolePrefixPattern = /^(?:Financial\s+Advis[eo]r?s?|Sole\s+Sponsor|Joint\s+Sponsors?|Compliance\s+Advis[eo]r?|Receiving\s+Bank|Legal\s+Advis[eo]r?s?|Auditor|Placing\s+Underwriters?|Public\s+Offer\s+Underwriters?|and\s+Capital\s+Market\s+Intermediar(?:y|ies))\s*/i;
   trimmed = trimmed.replace(rolePrefixPattern, '');
 
+  // Strip location prefixes from line-joining errors (e.g., "Central Hong Kong CMB..." → "CMB...")
+  // Apply multiple times to handle nested prefixes like "Central Hong Kong"
+  const locationPrefixPattern = /^(?:Central\s+Hong\s+Kong|Hong\s+Kong|Central|Kowloon|Admiralty|Wan\s*Chai)\s+(?=[A-Z])/i;
+  trimmed = trimmed.replace(locationPrefixPattern, '');
+  trimmed = trimmed.replace(locationPrefixPattern, ''); // Second pass for nested prefixes
+
   // Skip lines containing regulatory disclaimers
   if (trimmed.match(/regulated\s+activit(?:y|ies)|under\s+the\s+SFO|Type\s+\d+\s+licence|corporate\s+finance\)/i)) {
     return null;
@@ -762,6 +768,7 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
     /\bLong\s*bridge[^,\n]*Limited/gi,
     /\bZINVEST[^,\n]*Limited/gi,
     /\bCLSA[^,\n]*Limited/gi,
+    /\bCLSA Global Markets[^,\n]*/gi,
     /\bAVIC[T]?[^,\n]*Limited/gi,
   ];
 
