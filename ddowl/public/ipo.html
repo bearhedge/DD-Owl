@@ -168,6 +168,10 @@
     .company-name {
       font-weight: 500;
       color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 280px;
     }
     .ticker {
       color: #4a9eff;
@@ -427,7 +431,7 @@
         if (!deal) {
           deal = {
             ticker: row.ticker,
-            company: row.company,
+            company: cleanCompanyName(row.company),
             date: row.date,
             sponsors: new Set(),
             others: new Set()
@@ -435,12 +439,12 @@
           deals.set(key, deal);
         }
 
-        const bank = row.bank_normalized;
-        if (!bank) continue;
+        const bank = cleanBankName(row.bank_normalized);
+        if (!bank || isGarbageBank(bank)) continue;
 
         if (row.is_sponsor === 'Y') {
           deal.sponsors.add(bank);
-          deal.others.delete(bank); // Remove from others if now sponsor
+          deal.others.delete(bank);
         } else if (!deal.sponsors.has(bank)) {
           deal.others.add(bank);
         }
@@ -450,9 +454,42 @@
         ticker: d.ticker,
         company: d.company,
         date: d.date,
-        sponsors: Array.from(d.sponsors),
-        others: Array.from(d.others)
+        sponsors: Array.from(d.sponsors).sort(),
+        others: Array.from(d.others).sort()
       }));
+    }
+
+    function cleanCompanyName(name) {
+      if (!name) return '';
+      // Remove -W, -B, -S suffixes
+      return name.replace(/\s+-\s*[WBS]$/i, '').trim();
+    }
+
+    function cleanBankName(name) {
+      if (!name) return '';
+      return name
+        .replace(/\s+/g, ' ')
+        .replace(/\s*Company$/i, '')
+        .replace(/\s*Co\.?$/i, '')
+        .replace(/\s*Limited$/i, '')
+        .replace(/\s*Ltd\.?$/i, '')
+        .trim();
+    }
+
+    function isGarbageBank(name) {
+      if (!name || name.length < 3) return true;
+      // Filter out garbage/prose
+      const garbage = [
+        /^futures$/i,
+        /^securities$/i,
+        /^capital$/i,
+        /is a$/i,
+        /Limited:$/i,
+        /Financial adviser/i,
+        /joint stock/i,
+        /into a/i,
+      ];
+      return garbage.some(p => p.test(name));
     }
 
     function parseCSVLine(line) {
