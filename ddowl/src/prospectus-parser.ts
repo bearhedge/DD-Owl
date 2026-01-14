@@ -63,6 +63,14 @@ function isValidBankName(name: string): boolean {
     /pharmaceutical/i,            // Not a bank
     /technology co/i,             // Not a bank
     /GROUP CO\.,? LTD/i,          // Company, not bank
+    /does not/i,                  // Prose pattern
+    /will not/i,                  // Prose pattern
+    /shall not/i,                 // Prose pattern
+    /is not/i,                    // Prose pattern
+    /are not/i,                   // Prose pattern
+    /\.\s+[A-Z]/,                 // Multiple sentences combined (". A")
+    /Limited\s+and\s+/i,          // "Limited and" - combined entries
+    /Limited\s*,\s*[A-Z]/,        // "Limited, X" - multiple entities
   ];
 
   for (const pattern of garbagePatterns) {
