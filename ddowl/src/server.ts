@@ -21,10 +21,10 @@ import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
 import { SEARCH_TEMPLATES, buildSearchQuery } from './searchStrings.js';
-import { searchAllPages, searchAllEngines, SearchProgressCallback } from './searcher.js';
+import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult } from './searcher.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
-import { triageSearchResults, TriageResult } from './triage.js';
+import { triageSearchResults, TriageResult, categorizeAll, CategorizedResult } from './triage.js';
 import { consolidateFindings } from './consolidator.js';
 import { generateFullReport } from './reportGenerator.js';
 import { RawFinding, ConsolidatedFinding } from './types.js';
@@ -43,6 +43,7 @@ import { validateDeals } from './validator.js';
 import { initLogDirectories, saveScreeningLog as saveLog, loadScreeningLog as loadLog, listScreeningLogs, saveBenchmarkResult, loadBenchmarkResults } from './logging/storage.js';
 import { MetricsTracker } from './metrics/tracker.js';
 import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
+import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown } from './eliminator.js';
 
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -770,6 +771,377 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   } catch (error) {
     clearInterval(heartbeat);
     console.error('V3 screening error:', error);
+    sendEvent({ type: 'error', message: 'Screening failed' });
+    res.end();
+  } finally {
+    await closeBrowser();
+  }
+});
+
+// ============================================================
+// V4 API - BATCH ARCHITECTURE
+// Gather all URLs → Categorize in one LLM call → Fetch flagged → Analyze
+// ============================================================
+
+app.get('/api/screen/v4', async (req: Request, res: Response) => {
+  const subjectName = req.query.name as string;
+
+  if (!subjectName || subjectName.trim().length < 2) {
+    res.status(400).json({ error: 'Name required (2+ chars)' });
+    return;
+  }
+
+  // SSE setup
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const eventLog: any[] = [];
+  const sendEvent = (data: any) => {
+    const event = { timestamp: new Date().toISOString(), ...data };
+    eventLog.push(event);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Heartbeat
+  const heartbeat = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 5000);
+
+  try {
+    const tracker = new MetricsTracker(subjectName);
+    const startTime = Date.now();
+
+    // URL tracking for analysis - includes search query for each URL
+    const urlTracker = {
+      gathered: [] as { url: string; title: string; snippet: string; query: string }[],
+      programmaticElimination: {
+        passed: [] as { url: string; title: string; query: string }[],
+        bypassed: [] as { url: string; title: string; query: string }[],  // .gov.cn domains
+        eliminated: {
+          noise_domain: [] as { url: string; title: string; query: string }[],
+          noise_title_pattern: [] as { url: string; title: string; query: string }[],
+          name_char_separation: [] as { url: string; title: string; query: string }[],
+          missing_dirty_word: [] as { url: string; title: string; query: string }[],
+        },
+      },
+      categorized: {
+        red: [] as { url: string; title: string; query: string; reason: string }[],
+        amber: [] as { url: string; title: string; query: string; reason: string }[],
+        green: [] as { url: string; title: string; query: string; reason: string }[],
+      },
+      eliminated: [] as { url: string; query: string; reason: string }[],
+      processed: [] as { url: string; title: string; query: string; result: 'ADVERSE' | 'CLEARED' | 'FAILED'; severity?: string; headline?: string }[],
+    };
+
+    // ========================================
+    // PHASE 1: GATHER ALL URLs
+    // ========================================
+    sendEvent({ type: 'phase', phase: 1, name: 'GATHER', message: 'Gathering all search results...' });
+
+    const allResults = await searchAll(subjectName, SEARCH_TEMPLATES, (event) => {
+      if (event.type === 'query_complete') {
+        sendEvent({
+          type: 'search_progress',
+          queryIndex: event.queryIndex,
+          totalQueries: event.totalQueries,
+          query: event.query,
+          resultsFound: event.resultsFound,
+          totalSoFar: event.totalResultsSoFar,
+        });
+        tracker.recordQuery(event.resultsFound || 0);
+      }
+    });
+
+    // Track all gathered URLs with full details
+    for (const r of allResults) {
+      urlTracker.gathered.push({ url: r.url, title: r.title, snippet: r.snippet, query: r.query });
+    }
+
+    sendEvent({
+      type: 'gather_complete',
+      totalResults: allResults.length,
+      duration: Date.now() - startTime,
+    });
+
+    if (allResults.length === 0) {
+      clearInterval(heartbeat);
+      sendEvent({ type: 'complete', stats: { totalResults: 0, findings: 0 }, findings: [] });
+      res.end();
+      return;
+    }
+
+    // ========================================
+    // PHASE 2: PROGRAMMATIC ELIMINATION (FREE)
+    // ========================================
+    sendEvent({ type: 'phase', phase: 2, name: 'PROGRAMMATIC_ELIMINATION', message: `Running programmatic filters on ${allResults.length} results...` });
+
+    const elimStart = Date.now();
+    const { passed, eliminated: progEliminated, bypassed } = eliminateObviousNoise(allResults, subjectName);
+    const breakdown = getEliminationBreakdown(progEliminated, bypassed);
+
+    // Track programmatic elimination results
+    for (const r of passed) {
+      urlTracker.programmaticElimination.passed.push({ url: r.url, title: r.title, query: r.query });
+    }
+    for (const r of bypassed) {
+      urlTracker.programmaticElimination.bypassed.push({ url: r.url, title: r.title, query: r.query });
+    }
+    for (const r of progEliminated) {
+      const bucket = urlTracker.programmaticElimination.eliminated[r.reason as keyof typeof urlTracker.programmaticElimination.eliminated];
+      if (bucket) {
+        bucket.push({ url: r.url, title: r.title, query: r.query });
+      }
+    }
+
+    sendEvent({
+      type: 'programmatic_elimination_complete',
+      before: allResults.length,
+      after: passed.length,
+      eliminated: progEliminated.length,
+      govBypassed: bypassed.length,
+      breakdown,
+      duration: Date.now() - elimStart,
+    });
+
+    if (passed.length === 0) {
+      clearInterval(heartbeat);
+      sendEvent({ type: 'complete', stats: { totalResults: allResults.length, programmaticEliminated: progEliminated.length, findings: 0 }, findings: [] });
+      res.end();
+      return;
+    }
+
+    // ========================================
+    // PHASE 3: CATEGORIZE (single LLM call)
+    // ========================================
+    sendEvent({ type: 'phase', phase: 3, name: 'CATEGORIZE', message: `Categorizing ${passed.length} results...` });
+
+    const categorizeStart = Date.now();
+    const categorized = await categorizeAll(passed, subjectName);
+
+    sendEvent({
+      type: 'categorize_complete',
+      red: categorized.red.length,
+      amber: categorized.amber.length,
+      green: categorized.green.length,
+      duration: Date.now() - categorizeStart,
+    });
+
+    tracker.recordTriage(categorized.red.length, categorized.amber.length, categorized.green.length);
+
+    // Track categorizations with full details
+    for (const item of categorized.red) {
+      urlTracker.categorized.red.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
+      sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason });
+    }
+    for (const item of categorized.amber) {
+      urlTracker.categorized.amber.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
+      sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason });
+    }
+    for (const item of categorized.green) {
+      urlTracker.categorized.green.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
+    }
+
+    // ========================================
+    // PHASE 3: FETCH & ANALYZE flagged only
+    // ========================================
+    const toProcess = [...categorized.red, ...categorized.amber];
+
+    if (toProcess.length === 0) {
+      clearInterval(heartbeat);
+      sendEvent({ type: 'complete', stats: { totalResults: allResults.length, findings: 0 }, findings: [] });
+      res.end();
+      return;
+    }
+
+    sendEvent({ type: 'phase', phase: 4, name: 'ANALYZE', message: `Analyzing ${toProcess.length} flagged results...` });
+
+    const allFindings: RawFinding[] = [];
+    const processedUrls = new Set<string>();
+
+    for (let i = 0; i < toProcess.length; i++) {
+      const item = toProcess[i];
+
+      // Skip duplicates
+      if (processedUrls.has(item.url)) {
+        urlTracker.eliminated.push({ url: item.url, query: item.query, reason: 'duplicate' });
+        continue;
+      }
+      processedUrls.add(item.url);
+
+      // Skip invalid URLs
+      if (!isValidUrl(item.url)) {
+        urlTracker.eliminated.push({ url: item.url, query: item.query, reason: 'invalid_url' });
+        continue;
+      }
+
+      sendEvent({
+        type: 'analyze_start',
+        index: i + 1,
+        total: toProcess.length,
+        url: item.url,
+        title: item.title,
+        category: item.category,
+      });
+
+      try {
+        const content = await fetchPageContent(item.url);
+        tracker.recordFetch(content.length > 100);
+
+        if (content.length < 100) {
+          // Flag for manual review if triage thought it was important
+          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Content unavailable' });
+          allFindings.push({
+            url: item.url,
+            title: item.title,
+            severity: item.category === 'RED' ? 'RED' : 'AMBER',
+            headline: 'Content unavailable - manual review required',
+            summary: `Categorized as ${item.category}: "${item.reason}". Could not fetch content.`,
+            triageClassification: item.category,
+            fetchFailed: true,
+          });
+          continue;
+        }
+
+        const analysis = await analyzeWithLLM(content, subjectName, item.query);
+        tracker.recordAnalysis(analysis.isAdverse, analysis.severity as 'RED' | 'AMBER');
+
+        sendEvent({
+          type: 'analyze_result',
+          url: item.url,
+          title: item.title,
+          isAdverse: analysis.isAdverse,
+          severity: analysis.severity,
+          headline: analysis.headline,
+        });
+
+        if (analysis.isAdverse) {
+          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'ADVERSE', severity: analysis.severity, headline: analysis.headline });
+          allFindings.push({
+            url: item.url,
+            title: item.title,
+            severity: analysis.severity as 'RED' | 'AMBER',
+            headline: analysis.headline,
+            summary: analysis.summary,
+            triageClassification: item.category,
+          });
+        } else {
+          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'CLEARED' });
+        }
+      } catch (err) {
+        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Fetch/analyze error' });
+        console.error(`[V4] Analysis failed for ${item.url}:`, err);
+        sendEvent({ type: 'analyze_error', url: item.url, error: 'Failed to fetch/analyze' });
+      }
+    }
+
+    // ========================================
+    // PHASE 4: CONSOLIDATE (elimination)
+    // ========================================
+    clearInterval(heartbeat);
+
+    let consolidatedFindings: ConsolidatedFinding[] = [];
+    if (allFindings.length > 0) {
+      sendEvent({ type: 'phase', phase: 5, name: 'CONSOLIDATE', message: `Consolidating ${allFindings.length} findings...` });
+      consolidatedFindings = await consolidateFindings(allFindings, subjectName);
+      tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
+      sendEvent({
+        type: 'eliminate_complete',
+        before: allFindings.length,
+        after: consolidatedFindings.length,
+      });
+    }
+
+    // Final stats
+    const redFindings = consolidatedFindings.filter(f => f.severity === 'RED');
+    const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER');
+    const totalDuration = Date.now() - startTime;
+
+    // Build summary breakdown
+    const eliminatedByDuplicate = urlTracker.eliminated.filter(e => e.reason === 'duplicate').length;
+    const eliminatedByInvalid = urlTracker.eliminated.filter(e => e.reason === 'invalid_url').length;
+    const processedAdverse = urlTracker.processed.filter(p => p.result === 'ADVERSE').length;
+    const processedCleared = urlTracker.processed.filter(p => p.result === 'CLEARED').length;
+    const processedFailed = urlTracker.processed.filter(p => p.result === 'FAILED').length;
+
+    sendEvent({
+      type: 'complete',
+      stats: {
+        // Phase 1: Gather
+        gathered: allResults.length,
+        // Phase 2: Programmatic Elimination
+        programmaticElimination: {
+          before: allResults.length,
+          after: passed.length,
+          eliminated: progEliminated.length,
+          govBypassed: bypassed.length,
+          breakdown,
+        },
+        // Phase 3: Categorize
+        categorized: {
+          red: categorized.red.length,
+          amber: categorized.amber.length,
+          green: categorized.green.length,
+        },
+        // Phase 4: Analyze
+        eliminated: {
+          total: urlTracker.eliminated.length,
+          duplicate: eliminatedByDuplicate,
+          invalid: eliminatedByInvalid,
+        },
+        processed: {
+          total: urlTracker.processed.length,
+          adverse: processedAdverse,
+          cleared: processedCleared,
+          failed: processedFailed,
+        },
+        // Phase 5: Consolidate
+        consolidated: {
+          before: allFindings.length,
+          after: consolidatedFindings.length,
+        },
+        // Final findings
+        findings: consolidatedFindings.length,
+        red: redFindings.length,
+        amber: amberFindings.length,
+        // Timing
+        durationMs: totalDuration,
+        durationMin: (totalDuration / 60000).toFixed(1),
+      },
+      findings: consolidatedFindings,
+    });
+
+    // Save log with full URL tracking
+    const metrics = tracker.finalize();
+    try {
+      const logPath = saveLog(subjectName, metrics.runId, {
+        metrics,
+        findings: consolidatedFindings,
+        urlTracker,  // Full URL tracking: gathered, categorized, eliminated, processed
+        eventLog,
+      });
+      console.log(`[V4] Saved log to ${logPath}`);
+    } catch (logError) {
+      console.error('[V4] Failed to save log:', logError);
+    }
+
+    // Benchmark evaluation
+    const benchmarkResult = evaluateBenchmark(subjectName, consolidatedFindings, metrics.runId);
+    if (benchmarkResult) {
+      saveBenchmarkResult(benchmarkResult);
+      sendEvent({
+        type: 'benchmark',
+        recall: benchmarkResult.recall,
+        matched: benchmarkResult.matchedIssues,
+        missed: benchmarkResult.missedIssues,
+      });
+    }
+
+    res.end();
+  } catch (error) {
+    clearInterval(heartbeat);
+    console.error('[V4] Screening error:', error);
     sendEvent({ type: 'error', message: 'Screening failed' });
     res.end();
   } finally {
