@@ -1,0 +1,210 @@
+/**
+ * Programmatic Noise Eliminator
+ *
+ * Eliminates obvious noise BEFORE sending to LLM (saves cost).
+ * Government domains (.gov.cn) bypass all rules.
+ */
+
+import { BatchSearchResult } from './searcher.js';
+import { hasDirtyWordMatch } from './constants/dirtyWordEquivalents.js';
+
+// ============================================================
+// TYPES
+// ============================================================
+
+export type EliminationReason =
+  | 'gov_domain_bypass'      // Not eliminated - .gov.cn protected
+  | 'noise_domain'           // Rule 1: job sites, corporate aggregators
+  | 'noise_title_pattern'    // Rule 2: job posting keywords
+  | 'name_char_separation'   // Rule 3: "张,三" instead of "张三"
+  | 'missing_dirty_word';    // Rule 4: no dirty word present
+
+export interface EliminatedResult extends BatchSearchResult {
+  reason: EliminationReason;
+}
+
+export interface EliminationResult {
+  passed: BatchSearchResult[];
+  eliminated: EliminatedResult[];
+  bypassed: EliminatedResult[];  // .gov.cn domains (passed but tracked)
+}
+
+export interface EliminationBreakdown {
+  gov_domain_bypass: number;
+  noise_domain: number;
+  noise_title_pattern: number;
+  name_char_separation: number;
+  missing_dirty_word: number;
+}
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+
+// Government domains that bypass all elimination rules
+const GOV_DOMAINS = ['.gov.cn', '.court.gov'];
+
+// Noise domains - job sites and corporate aggregators
+const NOISE_DOMAINS = [
+  // Job sites
+  'linkedin.com', 'indeed.com', '58.com', 'zhipin.com',
+  'lagou.com', 'liepin.com', 'boss.zhipin.com', 'glassdoor.com',
+  '51job.com', 'zhaopin.com', 'kanzhun.com',
+  // Corporate aggregators (searched separately)
+  'qichacha.com', 'tianyancha.com', 'qixin.com', 'aiqicha.com',
+];
+
+// Noise title patterns - job posting keywords
+const NOISE_TITLE_PATTERNS = [
+  '招聘', '职位', '求职', '简历', '应聘', '急招', '招人',
+  '薪资', '薪酬', '待遇', '福利', '五险一金',
+];
+
+// ============================================================
+// ELIMINATION FUNCTIONS
+// ============================================================
+
+/**
+ * Check if URL is a government domain (protected from elimination)
+ */
+function isGovDomain(url: string): boolean {
+  return GOV_DOMAINS.some(d => url.includes(d));
+}
+
+/**
+ * Rule 1: Check if URL is a noise domain
+ */
+function isNoiseDomain(url: string): boolean {
+  return NOISE_DOMAINS.some(d => url.includes(d));
+}
+
+/**
+ * Rule 2: Check if title contains noise patterns
+ */
+function hasNoiseTitlePattern(title: string): boolean {
+  return NOISE_TITLE_PATTERNS.some(p => title.includes(p));
+}
+
+/**
+ * Rule 3: Check if name characters appear separated by punctuation
+ * E.g., "张,三" or "张;三" instead of "张三"
+ */
+function hasNameCharSeparation(text: string, name: string): boolean {
+  // If name appears intact, not separated
+  if (text.includes(name)) return false;
+
+  const chars = name.split('');
+  if (chars.length < 2) return false;
+
+  // Check for patterns like "张,三" or "张 三" when "张三" doesn't appear
+  const separatorPattern = chars.join('[,;，；、\\s]+');
+  return new RegExp(separatorPattern).test(text);
+}
+
+/**
+ * Rule 4: Check if dirty words from query are missing
+ * If only subject name appears but no dirty words, likely not relevant
+ */
+function isMissingDirtyWord(
+  result: BatchSearchResult,
+  subjectName: string
+): boolean {
+  // Extract dirty words from the search query that found this result
+  // Query format: "张三" 贪污 | 贿赂 | 诈骗
+  const query = result.query || '';
+
+  // Parse dirty words from query (format: "XXX" word1 | word2 | word3)
+  const dirtyWordPart = query.replace(/^"[^"]*"\s*/, '');
+  const dirtyWords = dirtyWordPart
+    .split('|')
+    .map(w => w.trim())
+    .filter(w => w.length > 0);
+
+  // If no dirty words in query, don't eliminate (probably a site search)
+  if (dirtyWords.length === 0) return false;
+
+  // Check if text contains subject name
+  const text = `${result.title} ${result.snippet}`;
+  const hasName = text.includes(subjectName);
+
+  // If name doesn't appear, let LLM decide (might still be relevant)
+  if (!hasName) return false;
+
+  // Check if any dirty word (or equivalent) appears
+  const hasDirtyWord = hasDirtyWordMatch(text, dirtyWords);
+
+  // Eliminate if: has name but no dirty word
+  return !hasDirtyWord;
+}
+
+// ============================================================
+// MAIN ELIMINATION FUNCTION
+// ============================================================
+
+/**
+ * Eliminate obvious noise from search results.
+ * Government domains (.gov.cn) bypass all rules.
+ */
+export function eliminateObviousNoise(
+  results: BatchSearchResult[],
+  subjectName: string
+): EliminationResult {
+  const passed: BatchSearchResult[] = [];
+  const eliminated: EliminatedResult[] = [];
+  const bypassed: EliminatedResult[] = [];
+
+  for (const result of results) {
+    // BYPASS: Government domains skip all rules
+    if (isGovDomain(result.url)) {
+      bypassed.push({ ...result, reason: 'gov_domain_bypass' });
+      passed.push(result); // Gov domains pass through
+      continue;
+    }
+
+    // Rule 1: Noise domains
+    if (isNoiseDomain(result.url)) {
+      eliminated.push({ ...result, reason: 'noise_domain' });
+      continue;
+    }
+
+    // Rule 2: Noise title patterns
+    if (hasNoiseTitlePattern(result.title)) {
+      eliminated.push({ ...result, reason: 'noise_title_pattern' });
+      continue;
+    }
+
+    // Rule 3: Name character separation
+    const text = `${result.title} ${result.snippet}`;
+    if (hasNameCharSeparation(text, subjectName)) {
+      eliminated.push({ ...result, reason: 'name_char_separation' });
+      continue;
+    }
+
+    // Rule 4: Missing dirty word
+    if (isMissingDirtyWord(result, subjectName)) {
+      eliminated.push({ ...result, reason: 'missing_dirty_word' });
+      continue;
+    }
+
+    // Passed all rules
+    passed.push(result);
+  }
+
+  return { passed, eliminated, bypassed };
+}
+
+/**
+ * Get breakdown of elimination reasons
+ */
+export function getEliminationBreakdown(
+  eliminated: EliminatedResult[],
+  bypassed: EliminatedResult[]
+): EliminationBreakdown {
+  return {
+    gov_domain_bypass: bypassed.length,
+    noise_domain: eliminated.filter(e => e.reason === 'noise_domain').length,
+    noise_title_pattern: eliminated.filter(e => e.reason === 'noise_title_pattern').length,
+    name_char_separation: eliminated.filter(e => e.reason === 'name_char_separation').length,
+    missing_dirty_word: eliminated.filter(e => e.reason === 'missing_dirty_word').length,
+  };
+}
