@@ -300,9 +300,10 @@ function findPartiesSection(text: string): string | null {
   // - "PARTIES INVOLVED IN THE GLOBAL OFFERING"
   // - "PARTIES INVOLVED IN THE OFFERING"
   // - "PARTIES INVOLVED IN THE SPIN-OFF"
+  // - "PARTIES INVOLVED IN THE INTRODUCTION" (Listing by Introduction)
   // - "DIRECTORS AND PARTIES INVOLVED IN THE GLOBAL OFFERING"
   // - "PARTIES INVOLVED" (as standalone sub-section header)
-  const regex = /(?:DIRECTORS AND )?PARTIES INVOLVED(?:\s+IN THE (?:GLOBAL )?(?:OFFERING|SPIN-OFF))?/gi;
+  const regex = /(?:DIRECTORS AND )?PARTIES INVOLVED(?:\s+IN THE (?:GLOBAL )?(?:OFFERING|SPIN-OFF|INTRODUCTION))?/gi;
   let match;
   const candidates: Array<{ index: number; content: string }> = [];
 
