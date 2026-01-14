@@ -35,6 +35,22 @@ export function saveScreeningLog(
     findings: any[];
     eventLog: any[];
     triageLog?: any[];
+    urlTracker?: {
+      gathered: any[];
+      programmaticElimination?: {
+        passed: any[];
+        bypassed: any[];
+        eliminated: {
+          noise_domain: any[];
+          noise_title_pattern: any[];
+          name_char_separation: any[];
+          missing_dirty_word: any[];
+        };
+      };
+      categorized: { red: any[]; amber: any[]; green: any[] };
+      eliminated: any[];
+      processed: any[];
+    };
   }
 ): string {
   const sanitizedSubject = subject.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
