@@ -56,3 +56,107 @@ export interface ProgressUpdate {
   report?: DDOwlReport;
   message?: string;
 }
+
+// Fingerprint for deduplication
+export interface FindingFingerprint {
+  eventType: string;        // e.g., "regulatory_investigation", "criminal_charge"
+  entities: string[];       // e.g., ["ICAC", "Hong Kong"]
+  years: number[];          // e.g., [2015, 2017]
+  keywords: string[];       // key terms for matching
+}
+
+// Raw finding before consolidation
+export interface RawFinding {
+  url: string;
+  title: string;
+  severity: 'RED' | 'AMBER';
+  headline: string;
+  summary: string;
+  triageClassification: string;
+  fingerprint?: FindingFingerprint;
+  fetchFailed?: boolean;  // True if content couldn't be fetched - needs manual review
+}
+
+// Consolidated finding after deduplication
+export interface ConsolidatedFinding {
+  headline: string;
+  summary: string;
+  severity: 'RED' | 'AMBER';
+  eventType: string;
+  dateRange: string;
+  sourceCount: number;
+  sources: { url: string; title: string }[];
+}
+
+// ============================================================
+// METRICS & LOGGING TYPES
+// ============================================================
+
+// Cost tracking per LLM call
+export interface CostEstimate {
+  provider: 'deepseek' | 'kimi' | 'gemini';
+  operation: 'triage' | 'quickscan' | 'analysis' | 'consolidation';
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUSD: number;
+}
+
+// Per-screening metrics
+export interface ScreeningMetrics {
+  runId: string;
+  subject: string;
+  startTime: string;
+  endTime?: string;
+  durationMs?: number;
+
+  // Search metrics
+  queriesExecuted: number;
+  totalSearchResults: number;
+  uniqueUrlsProcessed: number;
+  duplicatesSkipped: number;
+
+  // Triage metrics
+  triageRed: number;
+  triageYellow: number;
+  triageGreen: number;
+
+  // Analysis metrics
+  fetchAttempted: number;
+  fetchSucceeded: number;
+  fetchFailed: number;
+  analysisCompleted: number;
+
+  // Output metrics
+  findingsRed: number;
+  findingsAmber: number;
+  totalCleared: number;
+  consolidationRatio: number;
+
+  // Cost tracking
+  costs: CostEstimate[];
+  totalCostUSD: number;
+}
+
+// Benchmark case definition
+export interface BenchmarkCase {
+  subject: string;
+  type: 'person' | 'company';
+  region: 'hk' | 'cn' | 'global';
+  expectedIssues: {
+    description: string;
+    keywords: string[];
+    severity: 'RED' | 'AMBER';
+  }[];
+}
+
+// Benchmark result
+export interface BenchmarkResult {
+  subject: string;
+  runId: string;
+  timestamp: string;
+  expectedCount: number;
+  foundCount: number;
+  recall: number;
+  matchedIssues: string[];
+  missedIssues: string[];
+}
