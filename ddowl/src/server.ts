@@ -1,13 +1,33 @@
 import 'dotenv/config';
+
+// Prevent unhandled promise rejections from crashing the server
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[UNHANDLED REJECTION] Promise:', promise, 'Reason:', reason);
+  // Don't exit - let the server continue running
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[UNCAUGHT EXCEPTION]', error);
+  // Don't exit for non-fatal errors
+  if (error.message?.includes('ECONNRESET') || error.message?.includes('ETIMEDOUT')) {
+    console.log('[RECOVERY] Ignoring network error, continuing...');
+    return;
+  }
+});
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
 import { SEARCH_TEMPLATES, buildSearchQuery } from './searchStrings.js';
-import { searchAllPages } from './searcher.js';
+import { searchAllPages, searchAllEngines, SearchProgressCallback } from './searcher.js';
+import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
 import { triageSearchResults, TriageResult } from './triage.js';
+import { consolidateFindings } from './consolidator.js';
+import { generateFullReport } from './reportGenerator.js';
+import { RawFinding, ConsolidatedFinding } from './types.js';
 import { extractFinding, isSameFinding, mergeFindings, Finding } from './extract.js';
 import { detectCategory } from './searchStrings.js';
 import { DDOwlReport, DDOwlReportV2, Issue, AnalyzedResult } from './types.js';
@@ -20,12 +40,33 @@ import { getResearchStatus, startPersonResearch, stopPersonResearch } from './pe
 import { generateWordReport } from './word-report.js';
 import { loadHistory, markRunClean, getRunDiff } from './run-tracker.js';
 import { validateDeals } from './validator.js';
+import { initLogDirectories, saveScreeningLog as saveLog, loadScreeningLog as loadLog, listScreeningLogs, saveBenchmarkResult, loadBenchmarkResults } from './logging/storage.js';
+import { MetricsTracker } from './metrics/tracker.js';
+import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
+
+// URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
+function isValidUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    // Must be http or https
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    // Filter out known bad patterns
+    if (url.includes('nourl.') || url.includes('.baidu.com/link')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// Initialize log directories
+initLogDirectories();
 
 app.use(cors());
 app.use(express.json());
@@ -77,8 +118,8 @@ app.get('/api/screen', async (req: Request, res: Response) => {
         currentTerm: query.slice(0, 80),
       });
 
-      // Search with pagination
-      const searchResults = await searchAllPages(query, 5);
+      // Search with pagination (Google + Baidu)
+      const searchResults = await searchAllEngines(query, 5, 2);
 
       // Analyze each result
       for (const result of searchResults) {
@@ -226,8 +267,8 @@ app.get('/api/screen/v2', async (req: Request, res: Response) => {
         currentTerm: query.slice(0, 80),
       });
 
-      // Search all pages (up to 10 pages = 100 results per query)
-      const searchResults = await searchAllPages(query, 10);
+      // Search all pages with dual engines (Google + Baidu)
+      const searchResults = await searchAllEngines(query, 10, 3);
 
       // Process all results from this search
       for (const result of searchResults) {
@@ -359,6 +400,7 @@ function determineActionV2(issueCount: number, risk: 'RED' | 'AMBER' | 'GREEN'):
 // V3 API - Smart 3-stage triage screening
 app.get('/api/screen/v3', async (req: Request, res: Response) => {
   const subjectName = req.query.name as string;
+  const resumeFrom = parseInt(req.query.resumeFrom as string) || 0;
 
   if (!subjectName || subjectName.trim().length < 2) {
     res.status(400).json({ error: 'Name required (2+ chars)' });
@@ -371,35 +413,74 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  // Collect all events for logging
+  const eventLog: any[] = [];
   const sendEvent = (data: any) => {
+    const event = { timestamp: new Date().toISOString(), ...data };
+    eventLog.push(event);
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  // Heartbeat to prevent timeout
+  // Heartbeat to prevent timeout (5s for better connection stability)
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 10000);
+  }, 5000);
 
   try {
-    const allFindings: any[] = [];
+    const allFindings: RawFinding[] = [];
     const triageLog: any[] = [];
+    const processedUrls = new Set<string>();
     let totalSearchResults = 0;
+    let totalSkippedDuplicates = 0;
     let totalFetched = 0;
     let totalAnalyzed = 0;
+    let totalCleared = 0;
 
     for (let i = 0; i < SEARCH_TEMPLATES.length; i++) {
-      const template = SEARCH_TEMPLATES[i];
-      const query = buildSearchQuery(template, subjectName);
+      try {
+        // Skip queries already completed before reconnect
+        if (i < resumeFrom) {
+          sendEvent({
+            type: 'query_skipped',
+            queryIndex: i + 1,
+            reason: 'Already processed before reconnect'
+          });
+          continue;
+        }
 
-      // Stage 0: Search
-      sendEvent({
-        type: 'query_start',
-        queryIndex: i + 1,
-        totalQueries: SEARCH_TEMPLATES.length,
-        query: query
-      });
+        const template = SEARCH_TEMPLATES[i];
+        const query = buildSearchQuery(template, subjectName);
 
-      const searchResults = await searchAllPages(query, 3);
+        // Stage 0: Search
+        sendEvent({
+          type: 'query_start',
+          queryIndex: i + 1,
+          totalQueries: SEARCH_TEMPLATES.length,
+          query: query
+        });
+
+        // Progress callback to send page-by-page results to frontend
+        const searchProgress: SearchProgressCallback = (event) => {
+          if (event.type === 'page_results' && event.results && event.results.length > 0) {
+            sendEvent({
+              type: 'search_page',
+              engine: event.engine,
+              page: event.page,
+              maxPages: event.maxPages,
+              results: event.results.map(r => ({ title: r.title, url: r.link })),
+              totalSoFar: event.totalSoFar
+            });
+          } else if (event.type === 'page_end' && event.results?.length === 0) {
+            sendEvent({
+              type: 'search_page_empty',
+              engine: event.engine,
+              page: event.page,
+              message: `No more results after page ${(event.page || 1) - 1}`
+            });
+          }
+        };
+
+        const searchResults = await searchAllEngines(query, 20, 10, searchProgress);
       totalSearchResults += searchResults.length;
 
       sendEvent({
@@ -410,13 +491,33 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
 
       if (searchResults.length === 0) continue;
 
+      // Filter out already-processed URLs (deduplication)
+      const newResults = searchResults.filter(r => !processedUrls.has(r.link));
+      const duplicatesSkipped = searchResults.length - newResults.length;
+      totalSkippedDuplicates += duplicatesSkipped;
+
+      if (duplicatesSkipped > 0) {
+        sendEvent({
+          type: 'duplicates_skipped',
+          count: duplicatesSkipped,
+          total: searchResults.length
+        });
+      }
+
+      if (newResults.length === 0) continue;
+
       // Stage 1: Triage - classify each result
-      sendEvent({ type: 'triage_start', count: searchResults.length });
+      sendEvent({ type: 'triage_start', count: newResults.length });
 
       const triage = await triageSearchResults(
-        searchResults.map(r => ({ title: r.title, snippet: r.snippet, url: r.link })),
+        newResults.map(r => ({ title: r.title, snippet: r.snippet, url: r.link })),
         subjectName
       );
+
+      // Mark all triaged URLs as processed
+      for (const item of [...triage.green, ...triage.yellow, ...triage.red]) {
+        processedUrls.add(item.url);
+      }
 
       // Send each item's classification with reason
       for (const item of triage.green) {
@@ -463,6 +564,9 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
         toInvestigate: triage.red.length + triage.yellow.length
       });
 
+      // Count cleared results
+      totalCleared += triage.green.length;
+
       // Stage 2: Quick scan YELLOW results
       const toAnalyze: TriageResult[] = [...triage.red];
 
@@ -488,6 +592,8 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
 
         if (scan.shouldAnalyze) {
           toAnalyze.push(item);
+        } else {
+          totalCleared++;
         }
       }
 
@@ -505,12 +611,31 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
           totalFetched++;
 
           if (content.length < 100) {
+            // Don't silently clear - flag for manual review since triage thought it was worth investigating
+            // But skip if URL is invalid
+            if (!isValidUrl(item.url)) {
+              console.warn(`[WARN] Skipping invalid URL: ${item.url}`);
+              totalCleared++;
+              continue;
+            }
+            allFindings.push({
+              url: item.url,
+              title: item.title,
+              severity: item.classification === 'RED' ? 'RED' : 'AMBER',
+              headline: 'Content unavailable - manual review required',
+              summary: `Triage flagged as ${item.classification}: "${item.reason}". Could not fetch page content.`,
+              triageClassification: item.classification,
+              fetchFailed: true
+            });
             sendEvent({
               type: 'analyze_result',
               url: item.url,
-              isAdverse: false,
-              reason: 'No content to analyze',
-              action: 'SKIP'
+              title: item.title,
+              isAdverse: true,
+              severity: item.classification === 'RED' ? 'RED' : 'AMBER',
+              headline: 'Content unavailable - manual review required',
+              summary: `Triage reason: ${item.reason}`,
+              action: 'FLAG_MANUAL_REVIEW'
             });
             continue;
           }
@@ -530,14 +655,22 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
           });
 
           if (analysis.isAdverse) {
-            allFindings.push({
-              url: item.url,
-              title: item.title,
-              severity: analysis.severity,
-              headline: analysis.headline,
-              summary: analysis.summary,
-              triageClassification: item.classification
-            });
+            // Skip invalid URLs
+            if (!isValidUrl(item.url)) {
+              console.warn(`[WARN] Skipping invalid URL: ${item.url}`);
+              totalCleared++;
+            } else {
+              allFindings.push({
+                url: item.url,
+                title: item.title,
+                severity: analysis.severity as 'RED' | 'AMBER',
+                headline: analysis.headline,
+                summary: analysis.summary,
+                triageClassification: item.classification
+              });
+            }
+          } else {
+            totalCleared++;
           }
         } catch (err) {
           console.error(`Analysis failed for ${item.url}:`, err);
@@ -548,27 +681,88 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
           });
         }
       }
+
+        // Rate limit delay: wait 3 seconds before next query to avoid API throttling
+        if (i < SEARCH_TEMPLATES.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      } catch (queryError: any) {
+        // Isolate per-query errors - don't crash the entire screening
+        console.error(`Query ${i + 1} failed:`, queryError);
+        sendEvent({
+          type: 'query_error',
+          queryIndex: i + 1,
+          error: queryError.message || 'Unknown error'
+        });
+        // Continue to next query
+      }
     }
 
-    // Complete
+    // Consolidate findings (deduplicate same incidents from multiple sources)
     clearInterval(heartbeat);
 
-    const redFindings = allFindings.filter(f => f.severity === 'RED');
-    const amberFindings = allFindings.filter(f => f.severity === 'AMBER');
+    let consolidatedFindings: ConsolidatedFinding[] = [];
+    if (allFindings.length > 0) {
+      sendEvent({ type: 'consolidating', count: allFindings.length });
+      consolidatedFindings = await consolidateFindings(allFindings, subjectName);
+      sendEvent({
+        type: 'consolidated',
+        before: allFindings.length,
+        after: consolidatedFindings.length
+      });
+    }
+
+    const redFindings = consolidatedFindings.filter(f => f.severity === 'RED');
+    const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER');
 
     sendEvent({
       type: 'complete',
       stats: {
         totalSearchResults,
+        totalSkippedDuplicates,
         totalFetched,
         totalAnalyzed,
-        findings: allFindings.length,
+        totalCleared,
+        findings: consolidatedFindings.length,
         red: redFindings.length,
         amber: amberFindings.length
       },
-      findings: allFindings,
+      findings: consolidatedFindings,
       triageLog
     });
+
+    // Save complete activity log to JSON file for auditing
+    try {
+      const fs = await import('fs');
+      const sanitizedName = subjectName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+      const runId = `${sanitizedName}-${Date.now()}`;
+      const logPath = path.join(__dirname, '../runs', `screening-${runId}.json`);
+
+      const logData = {
+        runId,
+        subject: subjectName,
+        timestamp: new Date().toISOString(),
+        totalEvents: eventLog.length,
+        stats: {
+          totalSearchResults,
+          totalSkippedDuplicates,
+          totalFetched,
+          totalAnalyzed,
+          totalCleared,
+          findings: consolidatedFindings.length,
+          red: redFindings.length,
+          amber: amberFindings.length
+        },
+        findings: consolidatedFindings,
+        triageLog,
+        eventLog
+      };
+
+      fs.writeFileSync(logPath, JSON.stringify(logData, null, 2));
+      console.log(`[LOG] Saved screening log to ${logPath}`);
+    } catch (logError) {
+      console.error('[LOG] Failed to save screening log:', logError);
+    }
 
     res.end();
   } catch (error) {
@@ -746,6 +940,46 @@ app.get('/api/report/person', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Report generation error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// API endpoint to generate DD write-up report with streaming
+app.post('/api/report/generate', async (req: Request, res: Response) => {
+  const { subjectName, findings } = req.body;
+
+  if (!subjectName || !findings || !Array.isArray(findings)) {
+    res.status(400).json({ error: 'subjectName and findings array required' });
+    return;
+  }
+
+  // Set up SSE for streaming
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const sendChunk = (content: string) => {
+    res.write(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`);
+  };
+
+  // Heartbeat to prevent timeout (5s for better connection stability)
+  const heartbeat = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 5000);
+
+  try {
+    console.log(`[REPORT] Starting report generation for ${subjectName} with ${findings.length} findings`);
+
+    await generateFullReport(subjectName, findings as ConsolidatedFinding[], sendChunk);
+
+    clearInterval(heartbeat);
+    res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);
+    res.end();
+  } catch (error: any) {
+    clearInterval(heartbeat);
+    console.error('[REPORT] Generation error:', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+    res.end();
   }
 });
 
@@ -1261,10 +1495,55 @@ app.get('/api/screening-log/insights', (req: Request, res: Response) => {
   });
 });
 
+// ============================================================
+// SCREENING LOGS API
+// ============================================================
+
+// List all screening logs
+app.get('/api/logs', (req: Request, res: Response) => {
+  const subject = req.query.subject as string | undefined;
+  const logs = listScreeningLogs(subject);
+  res.json(logs);
+});
+
+// Get specific screening log
+app.get('/api/logs/:subject/:runId', (req: Request, res: Response) => {
+  const { subject, runId } = req.params;
+  const log = loadLog(subject, runId);
+
+  if (!log) {
+    res.status(404).json({ error: 'Log not found' });
+    return;
+  }
+
+  res.json(log);
+});
+
+// Get benchmark results
+app.get('/api/benchmarks', (req: Request, res: Response) => {
+  const subject = req.query.subject as string | undefined;
+  const results = loadBenchmarkResults(subject);
+  res.json(results);
+});
+
+// Get benchmark case definition
+app.get('/api/benchmarks/case/:subject', (req: Request, res: Response) => {
+  const { subject } = req.params;
+  const benchmarkCase = getBenchmarkCase(subject);
+
+  if (!benchmarkCase) {
+    res.status(404).json({ error: 'Benchmark case not found' });
+    return;
+  }
+
+  res.json(benchmarkCase);
+});
+
 server.listen(PORT, () => {
   console.log(`DD Owl running on port ${PORT}`);
   console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
   console.log(`Search templates loaded: ${SEARCH_TEMPLATES.length}`);
+  console.log(`Search engines: Serper (Google)${isBaiduAvailable() ? ' + SerpAPI (Baidu)' : ''}`);
   console.log(`Scraping: axios-first with Puppeteer fallback (100% coverage)`);
 });
 
