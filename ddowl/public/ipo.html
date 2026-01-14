@@ -223,13 +223,13 @@
       color: #888;
       border: 1px solid #333;
     }
-    .type-cell {
-      color: #888;
+    .date-cell {
+      color: #666;
+      white-space: nowrap;
       font-size: 0.8rem;
     }
-    .date-cell {
-      color: #aaa;
-      white-space: nowrap;
+    .banks-cell {
+      line-height: 1.8;
     }
     .export-btn {
       background: #1a1a1a;
@@ -347,11 +347,6 @@
         <select class="filter-select" id="year-filter">
           <option value="">All Years</option>
         </select>
-        <select class="filter-select" id="role-filter">
-          <option value="">All Roles</option>
-          <option value="sponsor">Sponsors Only</option>
-          <option value="other">Non-Sponsors Only</option>
-        </select>
         <button class="export-btn" onclick="exportExcel()">Download Excel</button>
         <span class="count-badge" id="count-badge">Loading...</span>
       </div>
@@ -359,12 +354,11 @@
         <table id="data-table">
           <thead>
             <tr>
-              <th data-sort="ticker" style="width: 80px;">Ticker</th>
-              <th data-sort="company">Company</th>
-              <th data-sort="type" style="width: 140px;">Type</th>
-              <th data-sort="date" style="width: 100px;">Date</th>
-              <th data-sort="bank">Bank</th>
-              <th data-sort="role" style="width: 100px;">Role</th>
+              <th data-sort="ticker" style="width: 70px;">Ticker</th>
+              <th data-sort="company" style="width: 220px;">Company</th>
+              <th data-sort="date" style="width: 90px;">Date</th>
+              <th>Sponsors</th>
+              <th>Others</th>
             </tr>
           </thead>
           <tbody id="table-body"></tbody>
@@ -381,7 +375,7 @@
     let sortColumn = 'date';
     let sortDir = 'desc';
     let currentPage = 1;
-    const pageSize = 100;
+    const pageSize = 50;
 
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
@@ -412,47 +406,52 @@
           rawData.push(row);
         }
 
-        // Dedupe by ticker + normalized bank (keep highest role)
-        dedupeData();
+        // Group by deal
+        groupByDeal();
         populateYearFilter();
         applyFilters();
       } catch (err) {
         console.error('Failed to load data:', err);
         document.getElementById('table-body').innerHTML =
-          '<tr><td colspan="6" class="empty-state">Failed to load data</td></tr>';
+          '<tr><td colspan="5" class="empty-state">Failed to load data</td></tr>';
       }
     }
 
-    function dedupeData() {
-      // Group by ticker + normalized bank, keep if ANY entry is sponsor
-      const seen = new Map();
+    function groupByDeal() {
+      const deals = new Map();
 
       for (const row of rawData) {
-        const key = `${row.ticker}|${row.bank_normalized}`;
-        const existing = seen.get(key);
+        const key = row.ticker;
+        let deal = deals.get(key);
 
-        if (!existing) {
-          seen.set(key, {
+        if (!deal) {
+          deal = {
             ticker: row.ticker,
             company: row.company,
-            type: row.type,
             date: row.date,
-            bank: row.bank_normalized,
-            isSponsor: row.is_sponsor === 'Y',
-            isCoordinator: row.is_coordinator === 'Y',
-            isBookrunner: row.is_bookrunner === 'Y'
-          });
-        } else {
-          // Merge roles - if any entry is sponsor, mark as sponsor
-          if (row.is_sponsor === 'Y') existing.isSponsor = true;
-          if (row.is_coordinator === 'Y') existing.isCoordinator = true;
-          if (row.is_bookrunner === 'Y') existing.isBookrunner = true;
+            sponsors: new Set(),
+            others: new Set()
+          };
+          deals.set(key, deal);
+        }
+
+        const bank = row.bank_normalized;
+        if (!bank) continue;
+
+        if (row.is_sponsor === 'Y') {
+          deal.sponsors.add(bank);
+          deal.others.delete(bank); // Remove from others if now sponsor
+        } else if (!deal.sponsors.has(bank)) {
+          deal.others.add(bank);
         }
       }
 
-      allData = Array.from(seen.values()).map(row => ({
-        ...row,
-        role: row.isSponsor ? 'Sponsor' : 'Other'
+      allData = Array.from(deals.values()).map(d => ({
+        ticker: d.ticker,
+        company: d.company,
+        date: d.date,
+        sponsors: Array.from(d.sponsors),
+        others: Array.from(d.others)
       }));
     }
 
@@ -486,9 +485,7 @@
       allData.forEach(row => {
         if (row.date) {
           const parts = row.date.split('/');
-          if (parts.length === 3) {
-            years.add(parts[2]);
-          }
+          if (parts.length === 3) years.add(parts[2]);
         }
       });
 
@@ -501,34 +498,31 @@
     function applyFilters() {
       const search = document.getElementById('search').value.toLowerCase();
       const yearFilter = document.getElementById('year-filter').value;
-      const roleFilter = document.getElementById('role-filter').value;
 
       filteredData = allData.filter(row => {
-        // Search filter
         if (search) {
-          const searchFields = [row.company, row.bank, row.ticker].join(' ').toLowerCase();
+          const searchFields = [
+            row.company,
+            row.ticker,
+            ...row.sponsors,
+            ...row.others
+          ].join(' ').toLowerCase();
           if (!searchFields.includes(search)) return false;
         }
 
-        // Year filter
         if (yearFilter) {
           const parts = (row.date || '').split('/');
           if (parts.length !== 3 || parts[2] !== yearFilter) return false;
         }
 
-        // Role filter
-        if (roleFilter === 'sponsor' && row.role !== 'Sponsor') return false;
-        if (roleFilter === 'other' && row.role !== 'Other') return false;
-
         return true;
       });
 
-      // Sort
       sortData();
       currentPage = 1;
 
       document.getElementById('count-badge').textContent =
-        filteredData.length.toLocaleString() + ' rows';
+        filteredData.length.toLocaleString() + ' deals';
 
       renderTable();
       renderPagination();
@@ -542,9 +536,7 @@
         if (sortColumn === 'date') {
           const parseDate = (d) => {
             const parts = d.split('/');
-            if (parts.length === 3) {
-              return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
-            }
+            if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
             return 0;
           };
           aVal = parseDate(aVal);
@@ -565,24 +557,21 @@
 
     function renderTable() {
       const start = (currentPage - 1) * pageSize;
-      const end = start + pageSize;
-      const pageData = filteredData.slice(start, end);
-
+      const pageData = filteredData.slice(start, start + pageSize);
       const tbody = document.getElementById('table-body');
 
       if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No results found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No results found</td></tr>';
         return;
       }
 
       tbody.innerHTML = pageData.map(row => `
         <tr>
-          <td class="ticker">${row.ticker || '-'}</td>
-          <td class="company-name">${escapeHtml(row.company || '-')}</td>
-          <td class="type-cell">${escapeHtml(row.type || '-')}</td>
+          <td class="ticker">${row.ticker}</td>
+          <td class="company-name">${escapeHtml(row.company)}</td>
           <td class="date-cell">${formatDate(row.date)}</td>
-          <td><span class="bank-tag${row.role === 'Sponsor' ? ' sponsor' : ''}">${escapeHtml(row.bank || '-')}</span></td>
-          <td><span class="role-badge ${row.role === 'Sponsor' ? 'role-sponsor' : 'role-other'}">${row.role}</span></td>
+          <td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join('') || '-'}</td>
+          <td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join('') || '-'}</td>
         </tr>
       `).join('');
     }
@@ -592,27 +581,22 @@
       const parts = dateStr.split('/');
       if (parts.length !== 3) return dateStr;
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const month = months[parseInt(parts[1]) - 1] || parts[1];
-      return `${parts[0]} ${month} ${parts[2]}`;
+      return `${months[parseInt(parts[1]) - 1]} ${parts[2]}`;
     }
 
     function renderPagination() {
       const totalPages = Math.ceil(filteredData.length / pageSize);
       const container = document.getElementById('pagination');
 
-      if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-      }
+      if (totalPages <= 1) { container.innerHTML = ''; return; }
 
-      let html = '';
-      html += `<button class="page-btn" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>First</button>`;
-      html += `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Prev</button>`;
-      html += `<span class="page-info">Page ${currentPage} of ${totalPages}</span>`;
-      html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
-      html += `<button class="page-btn" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Last</button>`;
-
-      container.innerHTML = html;
+      container.innerHTML = `
+        <button class="page-btn" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>First</button>
+        <button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Prev</button>
+        <span class="page-info">Page ${currentPage} of ${totalPages}</span>
+        <button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
+        <button class="page-btn" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Last</button>
+      `;
     }
 
     function goToPage(page) {
@@ -648,7 +632,6 @@
     // Filter handlers
     document.getElementById('search').addEventListener('input', debounce(applyFilters, 300));
     document.getElementById('year-filter').addEventListener('change', applyFilters);
-    document.getElementById('role-filter').addEventListener('change', applyFilters);
 
     function debounce(fn, delay) {
       let timeout;
@@ -661,11 +644,11 @@
     // Export to Excel
     function exportExcel() {
       const BOM = '\uFEFF';
-      const headers = ['Ticker', 'Company', 'Type', 'Date', 'Bank', 'Role'];
+      const headers = ['Ticker', 'Company', 'Date', 'Sponsors', 'Others'];
 
       const csv = BOM + headers.join(',') + '\n' +
         filteredData.map(row =>
-          [row.ticker, row.company, row.type, row.date, row.bank, row.role]
+          [row.ticker, row.company, row.date, row.sponsors.join('; '), row.others.join('; ')]
             .map(v => `"${String(v || '').replace(/"/g, '""')}"`)
             .join(',')
         ).join('\n');
@@ -674,12 +657,11 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `ipo-historical-${new Date().toISOString().slice(0,10)}.csv`;
+      a.download = `ipo-deals-${new Date().toISOString().slice(0,10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     }
 
-    // Initialize
     loadData();
   </script>
 </body>
