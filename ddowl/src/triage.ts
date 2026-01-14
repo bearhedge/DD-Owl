@@ -315,3 +315,193 @@ Return JSON only:
 
   return output;
 }
+
+// ============================================================================
+// BATCH CATEGORIZATION: Single LLM call for all search results
+// ============================================================================
+
+import { BatchSearchResult } from './searcher.js';
+
+export interface CategorizedResult {
+  url: string;
+  title: string;
+  snippet: string;
+  query: string;
+  category: 'RED' | 'AMBER' | 'GREEN';
+  reason: string;
+}
+
+export interface CategorizedOutput {
+  red: CategorizedResult[];
+  amber: CategorizedResult[];
+  green: CategorizedResult[];
+}
+
+/**
+ * Categorize ALL search results in a single LLM call.
+ * This replaces the per-query triage with one batch call.
+ */
+export async function categorizeAll(
+  results: BatchSearchResult[],
+  subjectName: string
+): Promise<CategorizedOutput> {
+  if (results.length === 0) {
+    return { red: [], amber: [], green: [] };
+  }
+
+  const providers = getProviders();
+  if (providers.length === 0) {
+    return {
+      red: [],
+      amber: results.map(r => ({
+        ...r,
+        category: 'AMBER' as const,
+        reason: 'no api keys configured'
+      })),
+      green: []
+    };
+  }
+
+  // Format all results as numbered list with query context
+  const resultsText = results.map((r, i) =>
+    `${i + 1}. [Query: ${r.query}]\n   Title: ${r.title}\n   Snippet: ${r.snippet}`
+  ).join('\n\n');
+
+  const prompt = `You are a senior due diligence analyst. You have ${results.length} search results about "${subjectName}".
+
+TASK: Categorize each result as RED, AMBER, or GREEN based on title and snippet.
+
+CATEGORIES:
+- RED: Clear adverse info - crime, fraud, sanctions, conviction, arrest, prosecution
+- AMBER: Possible adverse info - lawsuit, investigation, allegations, regulatory inquiry
+- GREEN: No adverse info, neutral mention, or subject not mentioned
+
+RULES:
+1. The subject name "${subjectName}" should appear in title or snippet for RED/AMBER
+2. If article is about a different person with similar name → GREEN
+3. Corporate directory listings, job sites, aggregators → GREEN
+4. News about crime/fraud that doesn't name the subject → GREEN
+
+SEARCH RESULTS:
+${resultsText}
+
+Return JSON with classification for each result (use 1-indexed):
+{
+  "classifications": [
+    {"index": 1, "category": "GREEN", "reason": "corporate directory"},
+    {"index": 2, "category": "RED", "reason": "criminal conviction mentioned"},
+    {"index": 3, "category": "AMBER", "reason": "investigation mentioned"}
+  ]
+}`;
+
+  // Try each provider in order
+  let rawText = '';
+  let lastError = '';
+
+  for (const provider of providers) {
+    console.log(`[CATEGORIZE] Trying ${provider.name} for ${results.length} results...`);
+
+    try {
+      if (provider.isGemini) {
+        rawText = await callGeminiAPI(provider, prompt);
+      } else {
+        rawText = await callOpenAICompatibleAPI(provider, prompt);
+      }
+
+      console.log(`[CATEGORIZE] ✓ ${provider.name} succeeded`);
+      break;
+
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error?.message
+        || error?.response?.status
+        || error?.message
+        || 'unknown error';
+
+      console.error(`[CATEGORIZE] ✗ ${provider.name} failed: ${errorMessage}`);
+      lastError = `${provider.name}: ${errorMessage}`;
+
+      if (isContentModerationError(error)) {
+        console.log(`[CATEGORIZE] Content moderation error, trying next provider...`);
+        continue;
+      }
+      continue;
+    }
+  }
+
+  if (!rawText) {
+    console.error(`[CATEGORIZE] All providers failed. Last error: ${lastError}`);
+    return {
+      red: [],
+      amber: results.map(r => ({
+        ...r,
+        category: 'AMBER' as const,
+        reason: `all apis failed: ${lastError}`
+      })),
+      green: []
+    };
+  }
+
+  console.log('[CATEGORIZE] LLM response (first 500 chars):', rawText.slice(0, 500));
+
+  // Parse response
+  const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+  if (!jsonMatch) {
+    console.error('[CATEGORIZE] No JSON found in response');
+    return {
+      red: [],
+      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })),
+      green: []
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    return {
+      red: [],
+      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })),
+      green: []
+    };
+  }
+
+  if (!parsed.classifications || !Array.isArray(parsed.classifications)) {
+    return {
+      red: [],
+      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })),
+      green: []
+    };
+  }
+
+  const output: CategorizedOutput = { red: [], amber: [], green: [] };
+
+  for (const c of parsed.classifications) {
+    const result = results[c.index - 1];
+    if (!result) continue;
+
+    const normalizedCategory = typeof c.category === 'string'
+      ? c.category.toUpperCase()
+      : 'AMBER';
+    const validCategory = ['RED', 'AMBER', 'GREEN'].includes(normalizedCategory)
+      ? normalizedCategory as 'RED' | 'AMBER' | 'GREEN'
+      : 'AMBER';
+
+    const categorized: CategorizedResult = {
+      url: result.url,
+      title: result.title,
+      snippet: result.snippet,
+      query: result.query,
+      category: validCategory,
+      reason: c.reason || 'no reason given'
+    };
+
+    if (validCategory === 'RED') output.red.push(categorized);
+    else if (validCategory === 'AMBER') output.amber.push(categorized);
+    else output.green.push(categorized);
+  }
+
+  console.log(`[CATEGORIZE] Done: ${output.red.length} RED, ${output.amber.length} AMBER, ${output.green.length} GREEN`);
+  return output;
+}
