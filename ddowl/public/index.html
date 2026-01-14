@@ -886,7 +886,7 @@
         const resumeParam = retryCount > 0 && lastQueryIndex > 0
           ? `&resumeFrom=${lastQueryIndex}`
           : '';
-        eventSource = new EventSource(`/api/screen/v3?name=${encodeURIComponent(name)}${resumeParam}`);
+        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${resumeParam}`);
 
         eventSource.onmessage = (event) => {
           retryCount = 0; // Reset retry count on successful message
