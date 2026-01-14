@@ -240,15 +240,25 @@ async function main() {
     console.log('No existing results found, starting fresh');
   }
 
-  const results: ImportResult[] = [...existingResults];
-  const tickersToProcess = new Set(deals.map(d => d.ticker));
+  // Create a map of existing results by ticker for quick lookup
+  const existingByTicker = new Map<number, ImportResult>();
+  for (const r of existingResults) {
+    existingByTicker.set(r.ticker, r);
+  }
 
-  // Remove deals we're about to re-process
-  const filteredResults = results.filter(r => !tickersToProcess.has(r.ticker));
+  // Start with all existing results
+  const finalResults = [...existingResults];
+
+  // Parse dry-run flag
+  const dryRun = args.includes('--dry-run');
+  if (dryRun) {
+    console.log('🔍 DRY RUN MODE - no changes will be saved\n');
+  }
 
   let processed = 0;
-  let succeeded = 0;
-  let failed = 0;
+  let improved = 0;
+  let unchanged = 0;
+  let skipped = 0;
 
   console.log(`\nProcessing ${deals.length} deals with concurrency ${concurrency}...`);
   console.log('Press Ctrl+C to stop (progress is saved after each batch)\n');
@@ -259,24 +269,46 @@ async function main() {
 
     const batchResults = await Promise.all(batch.map(deal => processDeal(deal)));
 
-    for (const result of batchResults) {
-      filteredResults.push(result);
+    for (const newResult of batchResults) {
+      const oldResult = existingByTicker.get(newResult.ticker);
+      const oldBankCount = oldResult?.banksFound || 0;
+      const newBankCount = newResult.banksFound || 0;
+
       processed++;
-      if (result.success) {
-        succeeded++;
-        console.log(`✓ ${result.ticker} - ${result.company}: ${result.banksFound} banks`);
+
+      // Only update if new extraction is better or equal
+      if (newResult.success && newBankCount >= oldBankCount) {
+        // Find and replace in finalResults
+        const idx = finalResults.findIndex(r => r.ticker === newResult.ticker);
+        if (idx >= 0) {
+          finalResults[idx] = newResult;
+        } else {
+          finalResults.push(newResult);
+        }
+        existingByTicker.set(newResult.ticker, newResult);
+
+        if (newBankCount > oldBankCount) {
+          console.log(`✓ ${newResult.ticker} - ${newResult.company}: ${newBankCount} banks (+${newBankCount - oldBankCount})`);
+          improved++;
+        } else {
+          console.log(`= ${newResult.ticker} - ${newResult.company}: ${newBankCount} banks (unchanged)`);
+          unchanged++;
+        }
       } else {
-        failed++;
-        console.log(`✗ ${result.ticker} - ${result.company}: ${result.error}`);
+        // Keep old result
+        console.log(`✗ ${newResult.ticker} - ${newResult.company}: ${newResult.error || 'fewer banks'} (keeping old: ${oldBankCount} banks)`);
+        skipped++;
       }
     }
 
-    // Save progress after each batch
-    fs.writeFileSync('.historical-import-results.json', JSON.stringify(filteredResults, null, 2));
+    // Save progress after each batch (unless dry-run)
+    if (!dryRun) {
+      fs.writeFileSync('.historical-import-results.json', JSON.stringify(finalResults, null, 2));
+    }
 
     // Progress update
     const pct = ((processed / deals.length) * 100).toFixed(1);
-    console.log(`\n--- Progress: ${processed}/${deals.length} (${pct}%) | Success: ${succeeded} | Failed: ${failed} ---\n`);
+    console.log(`\n--- Progress: ${processed}/${deals.length} (${pct}%) | Improved: ${improved} | Unchanged: ${unchanged} | Skipped: ${skipped} ---\n`);
 
     // Small delay between batches to avoid overwhelming the server
     if (i + concurrency < deals.length) {
@@ -287,11 +319,16 @@ async function main() {
   // Final summary
   console.log('\n=== FINAL SUMMARY ===');
   console.log(`Total processed: ${processed}`);
-  console.log(`Successful: ${succeeded} (${((succeeded / processed) * 100).toFixed(1)}%)`);
-  console.log(`Failed: ${failed}`);
+  console.log(`Improved: ${improved}`);
+  console.log(`Unchanged: ${unchanged}`);
+  console.log(`Skipped (kept old): ${skipped}`);
+
+  if (dryRun) {
+    console.log('\n🔍 DRY RUN - no changes were saved');
+  }
 
   // List failures
-  const failures = filteredResults.filter(r => !r.success);
+  const failures = finalResults.filter(r => !r.success);
   if (failures.length > 0) {
     console.log('\n=== FAILED DEALS ===');
     for (const f of failures.slice(0, 20)) {

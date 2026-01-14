@@ -9,6 +9,98 @@ import { PDFParse } from 'pdf-parse';
 import { isLikelyBank, normalizeBankName, NormalizedRole } from './bank-normalizer.js';
 
 /**
+ * Validate that a bank name looks legitimate (not garbage/typo/artifact)
+ * Must either match a known bank OR have proper financial institution keywords
+ */
+function isValidBankName(name: string): boolean {
+  // Too short - likely garbage
+  if (name.length < 10) return false;
+
+  // Contains quote artifacts
+  if (name.includes('"') || name.includes('"') || name.includes('"')) return false;
+
+  // Contains tab or multiple spaces in a row (parsing artifact)
+  if (name.includes('\t') || /\s{3,}/.test(name)) return false;
+
+  // Contains newline (multiline garbage)
+  if (name.includes('\n')) return false;
+
+  // Must end with a proper financial entity suffix
+  const validSuffixes = [
+    /Limited$/i,
+    /Ltd\.?$/i,
+    /LLC$/i,
+    /L\.L\.C\.?$/i,
+    /plc$/i,
+    /PLC$/i,
+    /Inc\.?$/i,
+    /Corporation$/i,
+    /Corp\.?$/i,
+    /Bank$/i,
+    /Branch$/i,
+    /AG$/i,
+    /S\.A\.?$/i,
+    /N\.V\.?$/i,
+    /GmbH$/i,
+    /Company$/i,
+  ];
+
+  const hasValidSuffix = validSuffixes.some(suffix => suffix.test(name.trim()));
+  if (!hasValidSuffix) return false;
+
+  // Check for garbage patterns
+  const garbagePatterns = [
+    /^and\s/i,                    // Starts with "and"
+    /^the\s*$/i,                  // Just "the"
+    /citizens through/i,          // Known garbage
+    /\d{4,}/,                     // Contains 4+ digit numbers (dates, etc)
+    /^[a-z]/,                     // Starts with lowercase (parsing error)
+    /[<>{}[\]]/,                  // Contains brackets/braces
+    /https?:/i,                   // Contains URLs
+    /\.(com|org|net|hk)/i,        // Contains domains
+    /hospital/i,                  // Not a bank
+    /medical/i,                   // Not a bank
+    /pharmaceutical/i,            // Not a bank
+    /technology co/i,             // Not a bank
+    /GROUP CO\.,? LTD/i,          // Company, not bank
+  ];
+
+  for (const pattern of garbagePatterns) {
+    if (pattern.test(name)) return false;
+  }
+
+  // Should have at least one capital letter word (proper noun)
+  if (!/[A-Z][a-z]/.test(name) && !/[A-Z]{2,}/.test(name)) return false;
+
+  // Must contain financial institution keywords OR match known bank patterns
+  const upper = name.toUpperCase();
+  const financialKeywords = [
+    'BANK', 'SECURITIES', 'CAPITAL', 'INVESTMENT', 'ASSET',
+    'MORGAN', 'GOLDMAN', 'CITI', 'CREDIT SUISSE', 'UBS',
+    'HSBC', 'STANDARD CHARTERED', 'DEUTSCHE', 'BARCLAYS',
+    'J.P.', 'JP MORGAN', 'MERRILL', 'NOMURA', 'MIZUHO',
+    'CLSA', 'BOCI', 'CICC', 'CITIC', 'BOCOM', 'CCB', 'ICBC',
+    'CMB', 'ABCI', 'HAITONG', 'GUOTAI', 'HUATAI', 'CHINA MERCHANTS',
+    'CHINA INTERNATIONAL', 'CHINA RENAISSANCE', 'DBS', 'MACQUARIE',
+    'BNP', 'SOCIETE GENERALE', 'ING', 'NATIXIS', 'JEFFERIES',
+    'STIFEL', 'PIPER', 'RAYMOND JAMES', 'CANACCORD',
+    'INTERNATIONAL', 'ASIA', 'HONG KONG', 'FAR EAST', 'PACIFIC',
+    'FUTU', 'TIGER', 'LIVERMORE', 'VALUABLE', 'YUNFENG',
+    'FINANCIAL', 'CORPORATE FINANCE', 'ADVISORY', 'PARTNERS',
+  ];
+
+  const hasFinancialKeyword = financialKeywords.some(kw => upper.includes(kw));
+  if (!hasFinancialKeyword) {
+    // Last check: if it ends with "Securities Limited" or "Capital Limited" it's probably valid
+    if (!/(Securities|Capital|Bank|Investment)\s+(Limited|Ltd|plc)$/i.test(name)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * More lenient check for financial advisors that may not have typical bank keywords
  * Used when we have role context (e.g., under "Sole Sponsor" header)
  */
@@ -863,8 +955,11 @@ export async function extractBanksFromProspectus(pdfBuffer: Buffer): Promise<{
       }
     }
 
+    // Filter out garbage/invalid bank names
+    const validBanks = banks.filter(b => isValidBankName(b.bank));
+
     return {
-      banks,
+      banks: validBanks,
       sectionFound: true,
       rawSectionText: sectionText.slice(0, 5000), // For debugging
     };
