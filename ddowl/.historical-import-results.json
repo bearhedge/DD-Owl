@@ -1119,7 +1119,7 @@
     "ticker": 2256,
     "company": "Abbisko Cayman Limited - B",
     "success": true,
-    "banksFound": 17,
+    "banksFound": 16,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -1250,15 +1250,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Morgan Stanley & Co. International plc",
         "normalized": "Morgan Stanley",
         "roles": [
@@ -1277,7 +1268,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "J.P. Morgan Securities (Asia Pacific) Limited and J.P. Morgan Securities Plc",
+        "name": "J.P. Morgan Securities Plc",
         "normalized": "J.P. Morgan",
         "roles": [
           "other"
@@ -1291,7 +1282,7 @@
     "ticker": 1627,
     "company": "Able Engineering Holdings Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Ample Capital Limited",
@@ -1396,15 +1387,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -2390,7 +2372,7 @@
     "ticker": 9926,
     "company": "Akeso, Inc. - B",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -2466,15 +2448,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Morgan Stanley Asia Limited and J.P. Morgan Securities (Far East) Limited",
-        "normalized": "J.P. Morgan",
-        "roles": [
-          "sponsor"
-        ],
-        "isLead": true,
-        "rawRole": "Fallback: sponsor"
       },
       {
         "name": "Bank of China (Asia) Limited",
@@ -2900,7 +2873,7 @@
     "ticker": 1849,
     "company": "AM Group Holdings Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "Altus Capital Limited",
@@ -2947,15 +2920,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Public Offer Underwriter \tCrosby Securities Limited",
-        "normalized": "Public Offer Underwriter Crosby Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
       }
     ]
   },
@@ -2963,7 +2927,7 @@
     "ticker": 1977,
     "company": "Analogue Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "BOCOM International (Asia) Limited",
@@ -3010,15 +2974,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -3954,7 +3909,7 @@
     "ticker": 1496,
     "company": "AP Rentals Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Great Roc Capital Securities Limited",
@@ -4006,15 +3961,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -4931,7 +4877,7 @@
     "ticker": 2519,
     "company": "AuGroup (SHENZHEN) Cross-Border Business Co., Ltd.",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Huatai Financial Holdings (Hong Kong) Limited",
@@ -4994,15 +4940,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CLSA Limited and DBS Asia Capital Limited",
-        "normalized": "DBS",
-        "roles": [
-          "coordinator"
-        ],
-        "isLead": true,
-        "rawRole": "Fallback: coordinator"
       }
     ]
   },
@@ -5231,7 +5168,7 @@
     "ticker": 2031,
     "company": "Ausupreme International Holdings Limited",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 18,
     "banks": [
       {
         "name": "Ample Capital Limited",
@@ -5406,15 +5343,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -5944,7 +5872,7 @@
     "ticker": 1397,
     "company": "Baguio Green Group Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Guotai Junan Capital Limited",
@@ -5978,15 +5906,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -6093,7 +6012,7 @@
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
       },
       {
-        "name": "China  Securities  (International)  Corporate  Finance Company Limited",
+        "name": "China Securities (International) Corporate Finance Company Limited",
         "normalized": "China Securities",
         "roles": [
           "lead_manager"
@@ -6405,7 +6324,7 @@
     "ticker": 2100,
     "company": "BAIOO Family Interactive Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Deutsche Bank AG, Hong Kong Branch",
@@ -6478,15 +6397,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "J.P Morgan Securities (Asia Pacific) Limited",
         "normalized": "J.P Morgan Securities",
         "roles": [
@@ -6528,7 +6438,7 @@
     "ticker": 6608,
     "company": "Bairong Inc. - W",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -6619,15 +6529,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Manager"
-      },
-      {
-        "name": "Morgan Stanley Asia Limited and CMBC International Capital Limited",
-        "normalized": "Morgan Stanley",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       },
       {
         "name": "China International Capital Corporation Limited",
@@ -6783,7 +6684,7 @@
     "ticker": 2139,
     "company": "Bank of Gansu Co., Ltd.",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 16,
     "banks": [
       {
         "name": "CMB International Capital Limited",
@@ -6895,15 +6796,6 @@
         "rawRole": "Joint Bookrunners"
       },
       {
-        "name": "BOCI Asia Limited and Guotai Junan Securities (Hong Kong) Limited",
-        "normalized": "Guotai Junan Securities",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
         "roles": [
@@ -6924,24 +6816,6 @@
       {
         "name": "CITIC Bank Corporation Limited",
         "normalized": "CITIC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Haitong Lender is a subsidiary of Haitong International Securities Group Limited",
-        "normalized": "Haitong",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Guotai Junan Capital Limited and BOCI Asia Limited",
-        "normalized": "Guotai Junan Capital",
         "roles": [
           "other"
         ],
@@ -7415,7 +7289,7 @@
     "ticker": 1578,
     "company": "Bank of Tianjin Co., Ltd",
     "success": true,
-    "banksFound": 17,
+    "banksFound": 15,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -7514,15 +7388,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "CITIC Bank Corporation Limited",
         "normalized": "CITIC",
         "roles": [
@@ -7568,16 +7433,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "ABCI”) and CCB International Capital Limited",
-        "normalized": "CCB International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "ABCI Capital Limited and CCB International Capital Limited",
+        "name": "ABCI\u201d) and CCB International Capital Limited",
         "normalized": "CCB International",
         "roles": [
           "other"
@@ -7591,7 +7447,7 @@
     "ticker": 6196,
     "company": "Bank of Zhengzhou Co., Ltd.",
     "success": true,
-    "banksFound": 21,
+    "banksFound": 20,
     "banks": [
       {
         "name": "CITIC CLSA Capital Markets Limited",
@@ -7710,15 +7566,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -9379,7 +9226,7 @@
     "ticker": 2480,
     "company": "Beijing Luzhu Biotechnology Co., Ltd. - B",
     "success": true,
-    "banksFound": 24,
+    "banksFound": 23,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -9391,7 +9238,7 @@
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Sole Sponsor, Sole Sponsor–Overall Coordinator, Sole Overall Coordinator and Sole Representative"
+        "rawRole": "Sole Sponsor, Sole Sponsor\u2013Overall Coordinator, Sole Overall Coordinator and Sole Representative"
       },
       {
         "name": "Guotai Junan Securities (Hong Kong) Limited",
@@ -9596,15 +9443,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -10024,7 +9862,7 @@
     "ticker": 1599,
     "company": "Beijing Urban Construction Design & Development Group Co., Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "UBS Securities Hong Kong Limited",
@@ -10063,15 +9901,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -10333,7 +10162,7 @@
     "ticker": 9669,
     "company": "Beisen Holding Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -10416,15 +10245,6 @@
       {
         "name": "Guotai Junan Capital Limited",
         "normalized": "Guotai Junan Capital",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
         "roles": [
           "other"
         ],
@@ -11010,7 +10830,7 @@
     "ticker": 1552,
     "company": "BHCC Holding Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Vinco Capital Limited",
@@ -11034,15 +10854,6 @@
       {
         "name": "Wealth Link Securities Limited",
         "normalized": "Wealth Link Securities",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Public Offer Underwriters \tHead & Shoulders Securities Limited",
-        "normalized": "Public Offer Underwriters Head & Shoulders Securities",
         "roles": [
           "bookrunner"
         ],
@@ -11224,7 +11035,7 @@
     "ticker": 3316,
     "company": "Binjiang Service Group Co. Ltd.",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "CLSA Capital Markets Limited",
@@ -11281,15 +11092,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -11547,8 +11349,8 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Future Industry Fund”): Future Industry Fund is a limited",
-        "normalized": "Future Industry Fund”): Future Industry Fund is a",
+        "name": "Future Industry Fund\u201d): Future Industry Fund is a limited",
+        "normalized": "Future Industry Fund\u201d): Future Industry Fund is a",
         "roles": [
           "other"
         ],
@@ -11844,7 +11646,7 @@
     "ticker": 1204,
     "company": "Boardware Intelligence Technology Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "China Tonghai Capital Limited",
@@ -11987,15 +11789,6 @@
       {
         "name": "ABCI Capital Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -12603,8 +12396,8 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Futures Exchange (“HKFE”) Clearing Corporation Limited",
-        "normalized": "Futures Exchange (“HKFE”) Clearing Corporation",
+        "name": "Futures Exchange (\u201cHKFE\u201d) Clearing Corporation Limited",
+        "normalized": "Futures Exchange (\u201cHKFE\u201d) Clearing Corporation",
         "roles": [
           "other"
         ],
@@ -13228,7 +13021,7 @@
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
       },
       {
-        "name": "Haitong International” Haitong International Securities Company Limited",
+        "name": "Haitong International\u201d Haitong International Securities Company Limited",
         "normalized": "Haitong",
         "roles": [
           "other"
@@ -13799,7 +13592,7 @@
     "ticker": 3309,
     "company": "C-MER Eye Care Holdings Limited",
     "success": true,
-    "banksFound": 4,
+    "banksFound": 3,
     "banks": [
       {
         "name": "China Merchants Securities (HK) Co., Limited",
@@ -13829,15 +13622,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -13857,7 +13641,7 @@
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Sole Sponsor and Sponsor – OC"
+        "rawRole": "Sole Sponsor and Sponsor \u2013 OC"
       },
       {
         "name": "Citigroup Global Markets Asia Limited",
@@ -14188,7 +13972,7 @@
     "ticker": 1381,
     "company": "Canvest Environmental Protection Group Company Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 5,
     "banks": [
       {
         "name": "China Merchants Securities (HK) Co., Limited",
@@ -14223,24 +14007,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -15588,7 +15354,7 @@
     "ticker": 1816,
     "company": "CGN Power Co., Ltd",
     "success": true,
-    "banksFound": 24,
+    "banksFound": 23,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -15757,15 +15523,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -15825,7 +15582,7 @@
     "ticker": 2229,
     "company": "Changgang Dunxin Enterprise Company Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Kingsway Capital Limited",
@@ -15849,16 +15606,6 @@
       {
         "name": "SBI China Capital Financial Services Limited",
         "normalized": "SBI",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Public Offer Underwriters \tKingsway Financial Services Group Limited",
-        "normalized": "Public Offer Underwriters Kingsway Financial Services Group",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -15909,16 +15656,6 @@
       {
         "name": "Great Roc Capital Securities Limited",
         "normalized": "Great Roc Capital Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Placing Underwriters \tKingsway Financial Services Group Limited",
-        "normalized": "Placing Underwriters Kingsway Financial Services Group",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -16970,7 +16707,7 @@
     "ticker": 1490,
     "company": "Cheshi Holdings Limited",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "ABCI Capital Limited",
@@ -16996,7 +16733,7 @@
         "rawRole": "Joint Global Coordinators"
       },
       {
-        "name": "Harvest \tInternational \tSecurities \tCompany Limited",
+        "name": "International Securities Company Limited",
         "normalized": "Harvest International Securities Company",
         "roles": [
           "bookrunner",
@@ -17008,16 +16745,6 @@
       {
         "name": "BOCOM International Securities Limited",
         "normalized": "BOCOM International",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Haitong \tInternational \tSecurities \tCompany Limited",
-        "normalized": "Haitong",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -17092,7 +16819,7 @@
         "rawRole": "Joint Lead Managers"
       },
       {
-        "name": "Alpha \tInternational \tSecurities \t(HONG KONG) Limited",
+        "name": "International Securities (HONG KONG) Limited",
         "normalized": "Alpha International Securities",
         "roles": [
           "lead_manager"
@@ -17204,7 +16931,7 @@
     "ticker": 9913,
     "company": "Chi Kan Holdings Limited",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "Ample Capital Limited",
@@ -17321,15 +17048,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -17592,7 +17310,7 @@
     "ticker": 1598,
     "company": "China 21st Century Education Group Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -17674,15 +17392,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
         "roles": [
@@ -17697,7 +17406,7 @@
     "ticker": 1848,
     "company": "China Aircraft Leasing Group Holdings Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "China Everbright Capital Limited",
@@ -17772,15 +17481,6 @@
       {
         "name": "CCB International (Holdings) Limited",
         "normalized": "CCB International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -18560,7 +18260,7 @@
     "banksFound": 4,
     "banks": [
       {
-        "name": "China  International  Capital  Corporation  Hong  Kong Securities Limited",
+        "name": "China International Capital Corporation Hong Kong Securities Limited",
         "normalized": "CICC",
         "roles": [
           "sponsor"
@@ -19163,7 +18863,7 @@
     "ticker": 1257,
     "company": "China Everbright Greentech Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -19250,15 +18950,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -19966,7 +19657,7 @@
     "ticker": 2237,
     "company": "China Graphite Group Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "Lego Corporate Finance Limited",
@@ -20106,15 +19797,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -20136,7 +19818,7 @@
     "ticker": 2799,
     "company": "China Huarong Asset Management Co., Ltd.",
     "success": true,
-    "banksFound": 35,
+    "banksFound": 34,
     "banks": [
       {
         "name": "Goldman Sachs (Asia) L.L.C.",
@@ -20407,15 +20089,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "The Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -20495,7 +20168,7 @@
     "ticker": 3908,
     "company": "China International Capital Corporation Limited",
     "success": true,
-    "banksFound": 24,
+    "banksFound": 22,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -20656,15 +20329,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -20712,15 +20376,6 @@
       {
         "name": "Futures Exchange Limited",
         "normalized": "Futures Exchange",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -21269,7 +20924,7 @@
     "ticker": 6099,
     "company": "China Merchants Securities Co., Ltd.",
     "success": true,
-    "banksFound": 28,
+    "banksFound": 27,
     "banks": [
       {
         "name": "China Merchants Securities (HK) Co., Limited",
@@ -21513,15 +21168,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -21988,18 +21634,8 @@
     "ticker": 1871,
     "company": "China Oriented International Holdings Limited",
     "success": true,
-    "banksFound": 3,
+    "banksFound": 2,
     "banks": [
-      {
-        "name": "Underwriters subject to the terms and conditions of the Underwriting Agreements (including but not limited",
-        "normalized": "Underwriters subject to the terms and conditions of the Underwriting Agreements (including but not",
-        "roles": [
-          "sponsor",
-          "lead_manager"
-        ],
-        "isLead": true,
-        "rawRole": "This prospectus is published solely in connection with the Share Offer which is sponsored by the Sponsor and managed by the Joint Lead Managers. The Offer Shares will be fully underwritten by the"
-      },
       {
         "name": "China International Capital Limited",
         "normalized": "CICC",
@@ -22159,7 +21795,7 @@
     "ticker": 3969,
     "company": "China Railway Signal & Communication Corporation Limited",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "Citigroup Global Markets Asia Limited",
@@ -22281,15 +21917,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Citigroup Global Markets Limited",
         "normalized": "Citi",
         "roles": [
@@ -22313,7 +21940,7 @@
     "ticker": 1508,
     "company": "China Reinsurance (Group) Corporation",
     "success": true,
-    "banksFound": 29,
+    "banksFound": 28,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -22542,15 +22169,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "HSBC Corporate Finance (Hong Kong) Limited",
         "normalized": "HSBC",
         "roles": [
@@ -22700,7 +22318,7 @@
         "rawRole": "Joint Bookrunners"
       },
       {
-        "name": "Morgan Stanley” refers to Morgan Stanley Asia Limited",
+        "name": "Morgan Stanley\u201d refers to Morgan Stanley Asia Limited",
         "normalized": "Morgan Stanley",
         "roles": [
           "other"
@@ -22949,7 +22567,7 @@
     "ticker": 1209,
     "company": "China Resources Mixc Lifestyle Services Limited",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "CCB International Capital Limited",
@@ -23050,15 +22668,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -23474,7 +23083,7 @@
     "ticker": 1365,
     "company": "China Rundong Auto Group Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Merrill Lynch Far East Limited",
@@ -23529,15 +23138,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -23637,7 +23237,7 @@
     "ticker": 1432,
     "company": "China Shengmu Organic Milk Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -23703,15 +23303,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -24458,7 +24049,7 @@
     "ticker": 2439,
     "company": "China Treasures New Materials Group Ltd.",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 18,
     "banks": [
       {
         "name": "Soochow Securities International Capital Limited",
@@ -24632,15 +24223,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -25006,7 +24588,7 @@
     "ticker": 6169,
     "company": "China YuHua Education Corporation Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "CITIC CLSA Capital Markets Limited",
@@ -25091,15 +24673,6 @@
       {
         "name": "BOCOM International Asset Management Limited",
         "normalized": "BOCOM International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BOCOM Investment may transfer the Shares so subscribed in certain limited",
-        "normalized": "BOCOM Investment may transfer the Shares so subscribed in certain",
         "roles": [
           "other"
         ],
@@ -25613,7 +25186,7 @@
     "ticker": 1420,
     "company": "Chuan Holdings Limited",
     "success": true,
-    "banksFound": 4,
+    "banksFound": 3,
     "banks": [
       {
         "name": "VBG Capital Limited",
@@ -25637,15 +25210,6 @@
         ],
         "isLead": true,
         "rawRole": "Joint Global Coordinators, Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "International Underwriters \tVBG Capital Limited",
-        "normalized": "International Underwriters VBG Capital",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Hong Kong Underwriters"
       },
       {
         "name": "UOB Kay Hian (Hong Kong) Limited",
@@ -27525,7 +27089,7 @@
     "ticker": 400,
     "company": "Cogobuy Group",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "UBS Securities Hong Kong Limited",
@@ -27580,15 +27144,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "The Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -27621,7 +27176,7 @@
     "ticker": 1778,
     "company": "Colour Life Services Group Co., Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "Merrill Lynch Far East Limited",
@@ -27684,15 +27239,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -28380,17 +27926,8 @@
     "ticker": 1932,
     "company": "CPM Group Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 9,
     "banks": [
-      {
-        "name": "Lead Managers . . . . . . . . . . . . . . . . . . . . . . .Innovax Securities Limited",
-        "normalized": "Lead Managers . . . . . . . . . . . . . . . . . . . . . . .Innovax Securities",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners and Joint"
-      },
       {
         "name": "Sinolink Securities (Hong Kong) Company Limited",
         "normalized": "Sinolink Securities  Company",
@@ -28403,15 +27940,6 @@
       {
         "name": "Gransing Securities Co., Limited",
         "normalized": "Gransing Securities Co.",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners and Joint"
-      },
-      {
-        "name": "Other Hong Kong Underwriters. . . . . . . . . . . .China Finance KAB Limited",
-        "normalized": "Other Hong Kong Underwriters. . . . . . . . . . . .China Finance KAB",
         "roles": [
           "bookrunner"
         ],
@@ -28928,7 +28456,7 @@
     "ticker": 2232,
     "company": "Crystal International Group Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -28967,15 +28495,6 @@
       },
       {
         "name": "HSBC Life (International) Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC Nominees (Hong Kong) Limited",
         "normalized": "HSBC",
         "roles": [
           "other"
@@ -29025,7 +28544,7 @@
     "ticker": 6066,
     "company": "CSC Financial Co., Ltd.",
     "success": true,
-    "banksFound": 31,
+    "banksFound": 30,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -29258,15 +28777,6 @@
       },
       {
         "name": "CITIC Bank International Limited",
-        "normalized": "CITIC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CITIC Group injected assets valued at RMB227.0 billion into CITIC Pacific Limited",
         "normalized": "CITIC",
         "roles": [
           "other"
@@ -29666,7 +29176,7 @@
         "rawRole": "Joint Bookrunners"
       },
       {
-        "name": "China \tGalaxy \tInternational \tSecurities (Hong Kong) Co., Limited",
+        "name": "Galaxy International Securities (Hong Kong) Co., Limited",
         "normalized": "China Galaxy",
         "roles": [
           "lead_manager"
@@ -29807,7 +29317,7 @@
     "ticker": 2487,
     "company": "Cutia Therapeutics - B",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -29943,7 +29453,7 @@
         "rawRole": "Fallback: sponsor"
       },
       {
-        "name": "China International Capital Corporation Limited (“CICC Limited",
+        "name": "China International Capital Corporation Limited (\u201cCICC Limited",
         "normalized": "CICC",
         "roles": [
           "sponsor"
@@ -29954,15 +29464,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
         "roles": [
           "other"
         ],
@@ -30133,18 +29634,8 @@
     "ticker": 1073,
     "company": "Da Yu Financial Holdings Limited",
     "success": true,
-    "banksFound": 1,
-    "banks": [
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      }
-    ]
+    "banksFound": 0,
+    "banks": []
   },
   {
     "ticker": 6111,
@@ -30289,7 +29780,7 @@
     "ticker": 3699,
     "company": "Everbright Grand China Assets Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "China Everbright Capital Limited",
@@ -30336,15 +29827,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -31021,7 +30503,7 @@
     "ticker": 2418,
     "company": "Deewin Tianxia Co., Ltd",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -31125,15 +30607,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -33038,7 +32511,7 @@
     "ticker": 1405,
     "company": "DPC Dash Ltd",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Merrill Lynch (Asia Pacific) Limited",
@@ -33069,15 +32542,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "HSBC Trustee (C.I.) Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       },
       {
         "name": "JP Morgan Securities (Asia Pacific) Limited",
@@ -33916,7 +33380,7 @@
     "ticker": 2442,
     "company": "Easy Smart Group Holdings Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "Grande Capital Limited",
@@ -33927,7 +33391,7 @@
           "bookrunner"
         ],
         "isLead": true,
-        "rawRole": "Sole Sponsor and sponsor — overall coordinator"
+        "rawRole": "Sole Sponsor and sponsor \u2014 overall coordinator"
       },
       {
         "name": "Head & Shoulders Securities Limited",
@@ -33992,15 +33456,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -34008,7 +33463,7 @@
     "ticker": 2505,
     "company": "EDA Group Holdings Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "CMB International Capital Limited",
@@ -34146,15 +33601,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -34276,7 +33722,7 @@
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Sole Sponsor, Sole Overall Coordinator and Sponsor – OC"
+        "rawRole": "Sole Sponsor, Sole Overall Coordinator and Sponsor \u2013 OC"
       },
       {
         "name": "Credit Suisse (Hong Kong) Limited",
@@ -34585,7 +34031,7 @@
     "ticker": 1821,
     "company": "ESR Cayman Limited",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 18,
     "banks": [
       {
         "name": "Deutsche Securities Asia Limited",
@@ -34675,7 +34121,7 @@
         "rawRole": "Joint Bookrunners"
       },
       {
-        "name": "Crédit Agricole Corporate and Investment Bank",
+        "name": "Cr\u00e9dit Agricole Corporate and Investment Bank",
         "normalized": "Credit Agricole",
         "roles": [
           "bookrunner"
@@ -34754,15 +34200,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CLSA Capital Markets Limited and Morgan Stanley Asia Limited",
-        "normalized": "Morgan Stanley",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -34770,7 +34207,7 @@
     "ticker": 6883,
     "company": "Eternal Beauty Holdings Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "BNP Paribas Securities (Asia) Limited",
@@ -34849,15 +34286,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
         "roles": [
           "other"
         ],
@@ -35000,7 +34428,7 @@
     "ticker": 1549,
     "company": "Ever Harvest Group Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "Guotai Junan Capital Limited",
@@ -35052,15 +34480,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -35272,7 +34691,7 @@
     "ticker": 6178,
     "company": "Everbright Securities Company Limited",
     "success": true,
-    "banksFound": 29,
+    "banksFound": 28,
     "banks": [
       {
         "name": "China Everbright Capital Limited",
@@ -35541,15 +34960,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Futures Company Limited",
         "normalized": "Futures Company",
         "roles": [
@@ -35564,7 +34974,7 @@
     "ticker": 1952,
     "company": "Everest Medicines Limited - B",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Goldman Sachs (Asia) L.L.C.",
@@ -35653,15 +35063,6 @@
       },
       {
         "name": "Merrill Lynch (Asia Pacific) Limited",
-        "normalized": "Bank of America",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Merrill Lynch Far East Limited pursuant to which OrbiMed Partners Master Fund Limited",
         "normalized": "Bank of America",
         "roles": [
           "other"
@@ -35865,7 +35266,7 @@
     "ticker": 1962,
     "company": "Evergreen Products Group Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 10,
     "banks": [
       {
         "name": "CIMB Securities Limited",
@@ -35952,24 +35353,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -37113,10 +36496,10 @@
     "ticker": 6088,
     "company": "FIT Hon Teng Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
-        "name": "China  International  Capital  Corporation Hong Kong Securities Limited",
+        "name": "China International Capital Corporation Hong Kong Securities Limited",
         "normalized": "CICC",
         "roles": [
           "sponsor",
@@ -37188,15 +36571,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "China International Capital Corporation Hong Kong Securities Limited",
-        "normalized": "CICC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -37204,7 +36578,7 @@
     "ticker": 6865,
     "company": "Flat Glass Group Co., Ltd.",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -37240,15 +36614,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -38398,7 +37763,7 @@
         "rawRole": "Co-Lead Manager"
       },
       {
-        "name": "Financial adviser to our Company \tGrande Capital Limited",
+        "name": "Grande Capital Limited",
         "normalized": "Financial adviser to our Company Grande Capital",
         "roles": [
           "bookrunner"
@@ -38519,7 +37884,7 @@
     "ticker": 2497,
     "company": "Fujing Holdings Co., Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "Grande Capital Limited",
@@ -38664,15 +38029,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -38928,7 +38284,7 @@
     "ticker": 2212,
     "company": "Future Bright Mining Holdings Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 14,
     "banks": [
       {
         "name": "Guotai Junan Capital Limited",
@@ -39002,24 +38358,6 @@
       {
         "name": "Future Bright Mining Holdings Limited",
         "normalized": "Future Bright Mining Holdings",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Future Bright (International) is a private investment holding company with limited",
-        "normalized": "Future Bright (International) is a private investment holding company with",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Future Bright (Xiangyang) was established in the PRC as an WFOE with limited",
-        "normalized": "Future Bright (Xiangyang) was established in the PRC as an WFOE with",
         "roles": [
           "other"
         ],
@@ -40433,7 +39771,7 @@
     "ticker": 1776,
     "company": "GF Securities Co., Ltd.",
     "success": true,
-    "banksFound": 30,
+    "banksFound": 29,
     "banks": [
       {
         "name": "GF Capital (Hong Kong) Limited",
@@ -40675,15 +40013,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -40912,7 +40241,7 @@
     "ticker": 2531,
     "company": "GL-Carlink Technology Holding Limited",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "CCB International Capital Limited",
@@ -41047,15 +40376,6 @@
       {
         "name": "CITIC Bank International Limited",
         "normalized": "CITIC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Future Inc. (“Carlink BVI”) was incorporated in BVI with liability limited",
-        "normalized": "Future Inc. (“Carlink BVI”) was incorporated in BVI with liability",
         "roles": [
           "other"
         ],
@@ -41388,7 +40708,7 @@
     "ticker": 2246,
     "company": "GOGOX HOLDINGS LIMITED",
     "success": true,
-    "banksFound": 21,
+    "banksFound": 20,
     "banks": [
       {
         "name": "UBS Securities Hong Kong Limited",
@@ -41541,8 +40861,8 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BOCOM AM”) and CMF Six Limited",
-        "normalized": "BOCOM AM”) and CMF Six",
+        "name": "BOCOM AM\u201d) and CMF Six Limited",
+        "normalized": "BOCOM AM\u201d) and CMF Six",
         "roles": [
           "other"
         ],
@@ -41579,15 +40899,6 @@
       {
         "name": "BOCOM International Asset Management Limited",
         "normalized": "BOCOM International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -42015,7 +41326,7 @@
     "ticker": 9979,
     "company": "Greentown Management Holdings Company Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "Credit Suisse (Hong Kong) Limited",
@@ -42117,15 +41428,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -42133,7 +41435,7 @@
     "ticker": 2869,
     "company": "Greentown Service Group Co. Ltd.",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "Merrill Lynch Far East Limited",
@@ -42211,15 +41513,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -42314,7 +41607,7 @@
     "ticker": 1872,
     "company": "Guan Chao Holdings Limited",
     "success": true,
-    "banksFound": 3,
+    "banksFound": 2,
     "banks": [
       {
         "name": "Titan Financial Services Limited",
@@ -42330,16 +41623,6 @@
       {
         "name": "Great Roc Capital Securities Limited",
         "normalized": "Great Roc Capital Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Public Offer Underwriters \tTitan Financial Services Limited",
-        "normalized": "Public Offer Underwriters Titan Financial Services",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -42511,7 +41794,7 @@
     "ticker": 3689,
     "company": "Guangdong Kanghua Healthcare Co., Ltd.",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -42576,15 +41859,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -42887,7 +42161,7 @@
     "ticker": 1364,
     "company": "Guming Holdings Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "Goldman Sachs (Asia) L.L.C.",
@@ -43005,15 +42279,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
         "roles": [
           "other"
         ],
@@ -43162,7 +42427,7 @@
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Joint Sponsors and Sponsor–Overall Coordinators"
+        "rawRole": "Joint Sponsors and Sponsor\u2013Overall Coordinators"
       },
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -43174,7 +42439,7 @@
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Joint Sponsors and Sponsor–Overall Coordinators"
+        "rawRole": "Joint Sponsors and Sponsor\u2013Overall Coordinators"
       },
       {
         "name": "CMB International Capital Limited",
@@ -43290,7 +42555,7 @@
     "ticker": 2329,
     "company": "Guorui Properties Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -43333,15 +42598,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Future Land Development Holdings Limited",
         "normalized": "Future Land Development Holdings",
         "roles": [
@@ -43356,7 +42612,7 @@
     "ticker": 2611,
     "company": "Guotai Junan Securities Co., Ltd.",
     "success": true,
-    "banksFound": 43,
+    "banksFound": 42,
     "banks": [
       {
         "name": "Guotai Junan Capital Limited",
@@ -43754,15 +43010,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BOCOM Investment is a connected client of BOCOM International Securities Limited",
-        "normalized": "BOCOM International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Futures (Hong Kong) Limited",
         "normalized": "Futures",
         "roles": [
@@ -44021,7 +43268,7 @@
         "rawRole": "Joint Sponsors"
       },
       {
-        "name": "Compliance Advisor \tAnglo Chinese Corporate Finance, Limited",
+        "name": "Anglo Chinese Corporate Finance, Limited",
         "normalized": "Compliance Advisor Anglo Chinese Corporate Finance",
         "roles": [
           "sponsor"
@@ -44185,7 +43432,7 @@
     "ticker": 2865,
     "company": "Hainan Drinda New Energy Technology Co., Ltd.",
     "success": true,
-    "banksFound": 20,
+    "banksFound": 19,
     "banks": [
       {
         "name": "Huatai Financial Holdings (Hong Kong) Limited",
@@ -44384,15 +43631,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -44400,7 +43638,7 @@
     "ticker": 1905,
     "company": "Haitong UniTrust International Leasing Co., Ltd.",
     "success": true,
-    "banksFound": 66,
+    "banksFound": 63,
     "banks": [
       {
         "name": "Haitong International Capital Limited",
@@ -44569,15 +43807,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Citigroup Global Markets Limited",
         "normalized": "Citi",
         "roles": [
@@ -44662,15 +43891,6 @@
       },
       {
         "name": "Haitong UniFortune to Haitong UT Holding Limited",
-        "normalized": "Haitong",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Haitong UT Capital further entered into an agreement with Haitong UT Holding Limited",
         "normalized": "Haitong",
         "roles": [
           "other"
@@ -44950,15 +44170,6 @@
       },
       {
         "name": "Haitong Capital Investment Company Limited",
-        "normalized": "Haitong",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Haitong UT Leasing HK Limited acquired 100% equity interest in Haitong Unitrust No.1 Limited",
         "normalized": "Haitong",
         "roles": [
           "other"
@@ -45482,7 +44693,7 @@
     "ticker": 9699,
     "company": "Hangzhou SF Intra-city Industrial Co., Ltd.",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -45573,15 +44784,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC Provident Fund Trustee (Hong Kong) Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -45784,7 +44986,7 @@
     "ticker": 3903,
     "company": "Hanhua Financial Holding Co., Ltd.",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -45844,15 +45046,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Trustees Limited",
-        "normalized": "Bank of China  Trustees",
         "roles": [
           "other"
         ],
@@ -48000,7 +47193,7 @@
     "ticker": 3678,
     "company": "Holly Futures Co., Ltd.",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "Guotai Junan Capital Limited",
@@ -48052,15 +47245,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -48563,7 +47747,7 @@
     "ticker": 6858,
     "company": "Honma Golf Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -48617,15 +47801,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -48782,7 +47957,7 @@
     "ticker": 9930,
     "company": "Horizon Construction Development Limited",
     "success": true,
-    "banksFound": 18,
+    "banksFound": 17,
     "banks": [
       {
         "name": "Huatai Financial Holdings (Hong Kong) Limited",
@@ -48935,15 +48110,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -49409,7 +48575,7 @@
     "ticker": 6886,
     "company": "HTSC",
     "success": true,
-    "banksFound": 21,
+    "banksFound": 20,
     "banks": [
       {
         "name": "Huatai Financial Holdings (Hong Kong) Limited",
@@ -49580,15 +48746,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -50982,7 +50139,7 @@
     "ticker": 1419,
     "company": "Human Health Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "BOCOM International (Asia) Limited",
@@ -51027,15 +50184,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -51257,7 +50405,7 @@
     "ticker": 6661,
     "company": "Huzhou Gas Co., Ltd.",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "BOCOM International (Asia) Limited",
@@ -51407,15 +50555,6 @@
         ],
         "isLead": true,
         "rawRole": "Fallback: sponsor, coordinator, bookrunner"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -51665,7 +50804,7 @@
     "ticker": 1650,
     "company": "Hygieia Group Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "Fortune Financial Capital Limited",
@@ -51764,15 +50903,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -52897,7 +52027,7 @@
     "ticker": 3700,
     "company": "Inke Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -52985,15 +52115,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -53558,7 +52679,7 @@
         "rawRole": "Fallback: sponsor, coordinator"
       },
       {
-        "name": "CLSA Limited and AMTD Global Markets Limited",
+        "name": "AMTD Global Markets Limited",
         "normalized": "CITIC",
         "roles": [
           "coordinator"
@@ -54222,7 +53343,7 @@
     "ticker": 2633,
     "company": "Jacobson Pharma Corporation Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -54239,15 +53360,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -54309,7 +53421,7 @@
     "ticker": 2161,
     "company": "JBM (Healthcare) Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "China Galaxy International Securities (Hong Kong) Co., Limited",
@@ -54397,15 +53509,6 @@
       {
         "name": "HSBC Investment Bank Asia Limited",
         "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -55911,7 +55014,7 @@
     "ticker": 2625,
     "company": "Jiangsu Horizon Chain Supermarket Company Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "Red Solar Capital Limited",
@@ -55986,15 +55089,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -57257,7 +56351,7 @@
     "ticker": 1153,
     "company": "Jiayuan Services Holdings Limited",
     "success": true,
-    "banksFound": 27,
+    "banksFound": 26,
     "banks": [
       {
         "name": "Haitong International Capital Limited",
@@ -57466,15 +56560,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -58931,7 +58016,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "CITIC-Prudential Life Insurance Company Limited (“CITIC-Prudential”) is a limited",
+        "name": "CITIC-Prudential Life Insurance Company Limited (\u201cCITIC-Prudential\u201d) is a limited",
         "normalized": "CITIC",
         "roles": [
           "other"
@@ -60135,7 +59220,7 @@
     "ticker": 2483,
     "company": "K Cash Corporation Limited",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "DBS Asia Capital Limited",
@@ -60270,15 +59355,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -60396,7 +59472,7 @@
     "ticker": 2168,
     "company": "Kaisa Property Holdings Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "CLSA Capital Markets Limited",
@@ -60501,15 +59577,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
         "roles": [
@@ -60534,7 +59601,7 @@
     "ticker": 2225,
     "company": "Kakiko Group Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "Dakin Capital Limited",
@@ -60604,15 +59671,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -60995,7 +60053,7 @@
     "ticker": 3650,
     "company": "Keep Inc.",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -61085,15 +60143,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -61101,19 +60150,8 @@
     "ticker": 1134,
     "company": "Kelfred Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
-      {
-        "name": "members will be maintained by our Hong Kong Branch Share Registrar, Tricor Investor Services Limited",
-        "normalized": "members will be maintained by our Hong Kong Branch Share Registrar, Tricor Investor Services",
-        "roles": [
-          "sponsor",
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": true,
-        "rawRole": "professional adviser. It is emphasised that none of our Company, the Sole Sponsor, the Joint Lead Managers, the Joint Bookrunners, the Underwriters, any of their respective directors, agents or advisers"
-      },
       {
         "name": "Cinda International Capital Limited",
         "normalized": "Cinda International",
@@ -62270,7 +61308,7 @@
     "ticker": 1797,
     "company": "Koolearn Technology Holding Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "Citigroup Global Markets Asia Limited",
@@ -62388,15 +61426,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -62871,7 +61900,7 @@
     "ticker": 9998,
     "company": "Kwan Yong Holdings Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "SPDB International Capital Limited",
@@ -62923,15 +61952,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -63299,7 +62319,7 @@
     "ticker": 2105,
     "company": "Laekna, Inc. - B",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -63392,15 +62412,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
         "roles": [
           "other"
         ],
@@ -63676,7 +62687,7 @@
     "ticker": 1533,
     "company": "Lanzhou Zhuangyuan Pasture Co., Ltd.",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "GF Capital (Hong Kong) Limited",
@@ -63691,15 +62702,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -63789,7 +62791,7 @@
     "ticker": 1683,
     "company": "LC Group Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 5,
     "banks": [
       {
         "name": "Ample Capital Limited",
@@ -63831,24 +62833,6 @@
       {
         "name": "Supreme China Securities Limited",
         "normalized": "China Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Placing Underwriters \tPacific Foundation Securities Limited",
-        "normalized": "Placing Underwriters Pacific Foundation Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Public Offer Underwriter \tPacific Foundation Securities Limited",
-        "normalized": "Public Offer Underwriter Pacific Foundation Securities",
         "roles": [
           "lead_manager"
         ],
@@ -65091,7 +64075,7 @@
     "ticker": 1346,
     "company": "Lever Style Corporation",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Altus Capital Limited",
@@ -65146,15 +64130,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC Trustee (CI) Limited",
-        "normalized": "HSBC",
         "roles": [
           "other"
         ],
@@ -65296,7 +64271,7 @@
     "ticker": 1978,
     "company": "LH Group Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "China Everbright Capital Limited",
@@ -65362,15 +64337,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -66009,7 +64975,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "CITIC Shenzhen”) is a limited",
+        "name": "CITIC Shenzhen\u201d) is a limited",
         "normalized": "CITIC",
         "roles": [
           "other"
@@ -66541,7 +65507,7 @@
     "ticker": 2376,
     "company": "Lushang Life Services Co., Ltd.",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "ABCI Capital Limited",
@@ -66682,15 +65648,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -66698,7 +65655,7 @@
     "ticker": 2186,
     "company": "Luye Pharma Group Ltd.",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "UBS AG, Hong Kong Branch",
@@ -66748,15 +65705,6 @@
       {
         "name": "Bank of China Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -66850,7 +65798,7 @@
     "ticker": 2451,
     "company": "Luyuan Group Holding (Cayman) Limited",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 17,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -67019,24 +65967,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -67044,7 +65974,7 @@
     "ticker": 1461,
     "company": "LUZHENG FUTURES Company Limited",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "Qilu International Capital Limited",
@@ -67139,15 +66069,6 @@
       {
         "name": "FUTURES COMPANY LIMITED",
         "normalized": "FUTURES COMPANY",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -67409,8 +66330,8 @@
         "rawRole": "Joint Sponsors"
       },
       {
-        "name": "Core Pacific – Yamaichi International (H.K.) Limited",
-        "normalized": "Core Pacific – Yamaichi International (H.K.)",
+        "name": "Core Pacific \u2013 Yamaichi International (H.K.) Limited",
+        "normalized": "Core Pacific \u2013 Yamaichi International (H.K.)",
         "roles": [
           "lead_manager"
         ],
@@ -67653,10 +66574,10 @@
     "ticker": 2245,
     "company": "Lygend Resources & Technology Co., Ltd.",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
-        "name": "China  International  Capital  Corporation  Hong  Kong Securities Limited",
+        "name": "China International Capital Corporation Hong Kong Securities Limited",
         "normalized": "CICC",
         "roles": [
           "sponsor",
@@ -67731,16 +66652,6 @@
         "rawRole": "Joint Lead Managers"
       },
       {
-        "name": "China International Capital Corporation Hong Kong Securities Limited",
-        "normalized": "CICC",
-        "roles": [
-          "sponsor",
-          "coordinator"
-        ],
-        "isLead": true,
-        "rawRole": "Fallback: sponsor, coordinator"
-      },
-      {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
         "roles": [
@@ -67810,7 +66721,7 @@
     "ticker": 1408,
     "company": "Macau E&M Holding Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Innovax Capital Limited",
@@ -67862,15 +66773,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -67968,7 +66870,7 @@
     "ticker": 2501,
     "company": "Maiyue Technology Limited",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "Quam Capital Limited",
@@ -68123,15 +67025,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -68200,7 +67093,7 @@
     "ticker": 1746,
     "company": "Man Shun Group (Holdings) Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "China Galaxy International Securities (Hong Kong) Co., Limited",
@@ -68261,15 +67154,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -69175,17 +68059,8 @@
     "ticker": 2295,
     "company": "Maxicity Holdings Limited",
     "success": true,
-    "banksFound": 3,
+    "banksFound": 2,
     "banks": [
-      {
-        "name": "corporate finance) regulated activities “Stock Exchange” \tThe Stock Exchange of Hong Kong Limited",
-        "normalized": "corporate finance) regulated activities “Stock Exchange” The Stock Exchange of Hong Kong",
-        "roles": [
-          "sponsor"
-        ],
-        "isLead": true,
-        "rawRole": "sponsor"
-      },
       {
         "name": "Kingsway Capital Limited",
         "normalized": "Kingsway Capital",
@@ -70201,7 +69076,7 @@
     "ticker": 1357,
     "company": "Meitu, Inc.",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -70301,15 +69176,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -70733,7 +69599,7 @@
     "ticker": 2160,
     "company": "MicroPort CardioFlow Medtech Corporation - B",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Citigroup Global Markets Asia Limited",
@@ -70778,15 +69644,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Citigroup Global Markets Limited",
         "normalized": "Citi",
         "roles": [
@@ -70810,7 +69667,7 @@
     "ticker": 2172,
     "company": "MicroPort NeuroTech Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -70856,15 +69713,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -71668,7 +70516,7 @@
     "ticker": 2892,
     "company": "Million Cities Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "China Everbright Capital Limited",
@@ -71710,15 +70558,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Cities was established in the PRC as a limited",
-        "normalized": "Cities was established in the PRC as a",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Cities Development Limited",
         "normalized": "Cities Development",
         "roles": [
@@ -71728,8 +70567,8 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Cities (Int’l) Limited",
-        "normalized": "Cities (Int’l)",
+        "name": "Cities (Int\u2019l) Limited",
+        "normalized": "Cities (Int\u2019l)",
         "roles": [
           "other"
         ],
@@ -72852,7 +71691,7 @@
     "ticker": 3600,
     "company": "Modern Dental Group Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Deutsche Securities Asia Limited",
@@ -72905,15 +71744,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -73229,7 +72059,7 @@
     "ticker": 1653,
     "company": "MOS House Group Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Ample Capital Limited",
@@ -73320,15 +72150,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -73336,7 +72157,7 @@
     "ticker": 1716,
     "company": "Most Kwai Chung Limited",
     "success": true,
-    "banksFound": 4,
+    "banksFound": 3,
     "banks": [
       {
         "name": "Ever-Long Securities Company Limited",
@@ -73349,7 +72170,7 @@
         "rawRole": "Sole Sponsor"
       },
       {
-        "name": "Other Public Offer Underwriters \tCNI Securities Group Limited",
+        "name": "CNI Securities Group Limited",
         "normalized": "Other Public Offer Underwriters CNI Securities Group",
         "roles": [
           "bookrunner"
@@ -73360,15 +72181,6 @@
       {
         "name": "Chief Securities Limited",
         "normalized": "Chief Securities",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Underwriter"
-      },
-      {
-        "name": "Other Placing Underwriter \tCNI Securities Group Limited",
-        "normalized": "Other Placing Underwriter CNI Securities Group",
         "roles": [
           "bookrunner"
         ],
@@ -74052,19 +72864,8 @@
     "ticker": 9999,
     "company": "NetEase, Inc.",
     "success": true,
-    "banksFound": 17,
+    "banksFound": 16,
     "banks": [
-      {
-        "name": "Securities Limited",
-        "normalized": "Securities",
-        "roles": [
-          "sponsor",
-          "coordinator",
-          "bookrunner"
-        ],
-        "isLead": true,
-        "rawRole": "Joint Sponsors (in alphabetical order)"
-      },
       {
         "name": "Credit Suisse (Hong Kong) Limited",
         "normalized": "Credit Suisse",
@@ -74324,7 +73125,7 @@
     "ticker": 9616,
     "company": "Neusoft Education Technology Co. Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 10,
     "banks": [
       {
         "name": "CLSA Capital Markets Limited",
@@ -74410,24 +73211,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Haitong Asset Management is a connected client of Haitong International Securities Company Limited",
-        "normalized": "Haitong",
         "roles": [
           "other"
         ],
@@ -75583,8 +74366,8 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Future Capital”) is an exempted limited",
-        "normalized": "Future Capital”) is an exempted",
+        "name": "Future Capital\u201d) is an exempted limited",
+        "normalized": "Future Capital\u201d) is an exempted",
         "roles": [
           "other"
         ],
@@ -75828,7 +74611,7 @@
     "ticker": 1438,
     "company": "Nirvana Asia Ltd.",
     "success": true,
-    "banksFound": 4,
+    "banksFound": 3,
     "banks": [
       {
         "name": "UBS Securities Hong Kong Limited",
@@ -75863,15 +74646,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "UBS Securities Hong Kong Limited and DBS Asia Capital Limited",
-        "normalized": "DBS",
-        "roles": [
-          "sponsor"
-        ],
-        "isLead": true,
-        "rawRole": "Fallback: sponsor"
       }
     ]
   },
@@ -76414,7 +75188,7 @@
     "ticker": 1933,
     "company": "OneForce Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "LY Capital Limited",
@@ -76480,15 +75254,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CCB International (Holdings) Limited was wholly owned by CCB Financial Holdings Limited",
-        "normalized": "CCB International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -76496,7 +75261,7 @@
     "ticker": 2602,
     "company": "Onewo Inc.",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "CLSA Capital Markets Limited",
@@ -76605,15 +75370,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -77018,8 +75774,8 @@
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
       },
       {
-        "name": "Future’s Safe Company Limited",
-        "normalized": "Future’s Safe Company",
+        "name": "Future\u2019s Safe Company Limited",
+        "normalized": "Future\u2019s Safe Company",
         "roles": [
           "other"
         ],
@@ -77032,7 +75788,7 @@
     "ticker": 1703,
     "company": "Palace Banquet Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "Shenwan Hongyuan Capital (H.K.) Limited",
@@ -77088,15 +75844,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -77444,7 +76191,7 @@
     "ticker": 2565,
     "company": "PegBio Co., Ltd. - B",
     "success": true,
-    "banksFound": 17,
+    "banksFound": 16,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -77603,15 +76350,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -77978,7 +76716,7 @@
     "ticker": 2489,
     "company": "Persistence Resources Group Ltd",
     "success": true,
-    "banksFound": 25,
+    "banksFound": 24,
     "banks": [
       {
         "name": "Innovax Capital Limited",
@@ -78207,15 +76945,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -78353,7 +77082,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "CITIC Fund Shenzhen”) as a limited",
+        "name": "CITIC Fund Shenzhen\u201d) as a limited",
         "normalized": "CITIC",
         "roles": [
           "other"
@@ -78666,7 +77395,7 @@
     "ticker": 1949,
     "company": "Platt Nera International Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "Altus Capital Limited",
@@ -78753,15 +77482,6 @@
       {
         "name": "Zeus Securities Limited",
         "normalized": "Zeus Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Co-Lead Managers"
-      },
-      {
-        "name": "Public Offer Underwriter \tChaoShang Securities Limited",
-        "normalized": "Public Offer Underwriter ChaoShang Securities",
         "roles": [
           "lead_manager"
         ],
@@ -79559,7 +78279,7 @@
     "ticker": 9909,
     "company": "Powerlong Commercial Management Holdings Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "ABCI Capital Limited",
@@ -79651,15 +78371,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Credit Suisse Trust Limited",
         "normalized": "Credit Suisse",
         "roles": [
@@ -79683,7 +78394,7 @@
     "ticker": 2405,
     "company": "Powerwin Tech Group Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "GF Capital (Hong Kong) Limited",
@@ -79728,15 +78439,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       },
       {
         "name": "BNP Paribas Capital (Asia Pacific) Limited",
@@ -80153,7 +78855,7 @@
     "ticker": 6911,
     "company": "Pu'er Lancang Ancient Tea Co., Ltd.",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -80302,15 +79004,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -80867,7 +79560,7 @@
     "ticker": 6633,
     "company": "Qingci Games Inc.",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -80981,15 +79674,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Future Holding Limited",
         "normalized": "Future Holding",
         "roles": [
@@ -81013,7 +79697,7 @@
     "ticker": 2121,
     "company": "QINGDAO AINNOVATION TECHNOLOGY GROUP CO., LTD.",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "UBS Securities Hong Kong Limited",
@@ -81141,15 +79825,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -81157,7 +79832,7 @@
     "ticker": 6198,
     "company": "Qingdao Port International Co., Ltd.",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -81208,15 +79883,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -81658,7 +80324,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "CITIC Venture Capital”) is a limited",
+        "name": "CITIC Venture Capital\u201d) is a limited",
         "normalized": "CITIC",
         "roles": [
           "other"
@@ -82352,7 +81018,7 @@
     "ticker": 2297,
     "company": "Rainmed Medical Limited - B",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Huatai Financial Holdings (Hong Kong) Limited",
@@ -82408,15 +81074,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -82522,7 +81179,7 @@
     "ticker": 2385,
     "company": "Readboy Education Holding Company Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -82631,15 +81288,6 @@
       {
         "name": "BNP Paribas Capital (Asia Pacific) Limited",
         "normalized": "BNP Paribas",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -82848,7 +81496,7 @@
     "ticker": 2370,
     "company": "Redco Healthy Living Company Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "ABCI Capital Limited",
@@ -82950,15 +81598,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
         "roles": [
@@ -83049,7 +81688,7 @@
     "ticker": 1996,
     "company": "Redsun Properties Group Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "CCB International Capital Limited",
@@ -83148,15 +81787,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -84368,10 +82998,10 @@
     "ticker": 1417,
     "company": "Riverine China Holdings Limited",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
-        "name": "China  Industrial  Securities  International  Capital Limited",
+        "name": "China Industrial Securities International Capital Limited",
         "normalized": "China Industrial Securities",
         "roles": [
           "sponsor",
@@ -84458,15 +83088,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "China Industrial Securities International Capital Limited",
-        "normalized": "China Industrial Securities",
         "roles": [
           "other"
         ],
@@ -84586,7 +83207,7 @@
     "ticker": 2498,
     "company": "RoboSense Technology Co., Ltd",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "China Renaissance Securities (Hong Kong) Limited",
@@ -84693,15 +83314,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
         "roles": [
           "other"
         ],
@@ -85142,7 +83754,7 @@
     "ticker": 2207,
     "company": "Ronshine Service Holding Co., Ltd",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "Haitong International Capital Limited",
@@ -85244,15 +83856,6 @@
         "rawRole": "Joint Lead Managers"
       },
       {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "CITIC Securities Corporate Finance (HK) Limited",
         "normalized": "CITIC",
         "roles": [
@@ -85277,7 +83880,7 @@
     "ticker": 3789,
     "company": "Royal Deluxe Holdings Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "Frontpage Capital Limited",
@@ -85329,15 +83932,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -86000,7 +84594,7 @@
     "ticker": 1832,
     "company": "S.A.I. Leisure Group Company Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "BOCOM International (Asia) Limited",
@@ -86039,15 +84633,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -86469,7 +85054,7 @@
     "ticker": 2459,
     "company": "Sanergy Group Limited",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 18,
     "banks": [
       {
         "name": "Southwest Securities (HK) Capital Limited",
@@ -86647,15 +85232,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -86663,7 +85239,7 @@
     "ticker": 1472,
     "company": "Sang Hing Holdings (International) Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Cinda International Capital Limited",
@@ -86735,15 +85311,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -87933,7 +86500,7 @@
     "ticker": 1447,
     "company": "SFK Construction Holdings Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Innovax Capital Limited",
@@ -87977,24 +86544,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -88002,7 +86551,7 @@
     "ticker": 1637,
     "company": "SH Group (Holdings) Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "Innovax Capital Limited",
@@ -88071,15 +86620,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -88087,7 +86627,7 @@
     "ticker": 6955,
     "company": "Shandong Boan Biotechnology Co., Ltd. - B",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "UBS Securities Hong Kong Limited",
@@ -88167,15 +86707,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Bofa Investment Center Limited",
         "normalized": "Bank of America",
         "roles": [
@@ -88199,7 +86730,7 @@
     "ticker": 9977,
     "company": "Shandong Fengxiang Co., Ltd.",
     "success": true,
-    "banksFound": 26,
+    "banksFound": 24,
     "banks": [
       {
         "name": "Southwest Securities (HK) Capital Limited",
@@ -88421,15 +86952,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "ICBC International Securities Limited",
         "normalized": "ICBC International",
         "roles": [
@@ -88441,15 +86963,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -89736,7 +88249,7 @@
     "ticker": 2252,
     "company": "Shanghai MicroPort MedBot (Group) Co., Ltd. - B",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -89771,15 +88284,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -90320,7 +88824,7 @@
     "ticker": 2520,
     "company": "SHANXI INSTALLATION GROUP CO., LTD.",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "Huatai Financial Holdings (Hong Kong) Limited",
@@ -90449,15 +88953,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -90465,7 +88960,7 @@
     "ticker": 2521,
     "company": "Shenghui Cleanness Group Holdings Limited",
     "success": true,
-    "banksFound": 24,
+    "banksFound": 23,
     "banks": [
       {
         "name": "Cinda International Capital Limited",
@@ -90679,15 +89174,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -91928,7 +90414,7 @@
     "ticker": 1647,
     "company": "SHIS Limited",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Dakin Capital Limited",
@@ -91950,16 +90436,6 @@
         "rawRole": "Sole Bookrunner and Sole Lead Manager"
       },
       {
-        "name": "Public Offer Underwriters \tChina Prospect Securities Limited",
-        "normalized": "Public Offer Underwriters China Prospect Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Sole Bookrunner and Sole Lead Manager"
-      },
-      {
         "name": "China Sky Securities Limited",
         "normalized": "China Sky Securities",
         "roles": [
@@ -91972,16 +90448,6 @@
       {
         "name": "Sorrento Securities Limited",
         "normalized": "Sorrento Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Sole Bookrunner and Sole Lead Manager"
-      },
-      {
-        "name": "Placing Underwriter \tChina Prospect Securities Limited",
-        "normalized": "Placing Underwriter China Prospect Securities",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -92063,7 +90529,7 @@
     "ticker": 2621,
     "company": "Shouhui Group Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -92160,15 +90626,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -92247,7 +90704,7 @@
           "lead_manager"
         ],
         "isLead": true,
-        "rawRole": "Sole Sponsor, Sponsor – OC and Sole Overall Coordinator"
+        "rawRole": "Sole Sponsor, Sponsor \u2013 OC and Sole Overall Coordinator"
       },
       {
         "name": "Citigroup Global Markets Asia Limited",
@@ -92992,7 +91449,7 @@
     "ticker": 6933,
     "company": "Sino-Entertainment Technology Holdings Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "WAG Worldsec Corporate Finance Limited",
@@ -93098,15 +91555,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -93114,7 +91562,7 @@
     "ticker": 6677,
     "company": "Sino-Ocean Service Holding Limited",
     "success": true,
-    "banksFound": 18,
+    "banksFound": 17,
     "banks": [
       {
         "name": "Citigroup Global Markets Asia Limited",
@@ -93247,15 +91695,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -93357,7 +91796,7 @@
     "ticker": 2361,
     "company": "Sinohealth Holdings Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "BNP Paribas Securities (Asia) Limited",
@@ -93478,15 +91917,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -94212,7 +92642,7 @@
     "ticker": 2381,
     "company": "SMC Electric Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Red Sun Capital Limited",
@@ -94308,15 +92738,6 @@
         "rawRole": "Joint Lead Managers"
       },
       {
-        "name": "HSBC Nominees (Hong Kong) Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Future Limited",
         "normalized": "Future",
         "roles": [
@@ -94331,7 +92752,7 @@
     "ticker": 2239,
     "company": "SMIT Holdings Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Haitong International Capital Limited",
@@ -94375,15 +92796,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -94714,7 +93126,7 @@
     "ticker": 2227,
     "company": "Solis Holdings Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Altus Capital Limited",
@@ -94748,16 +93160,6 @@
       {
         "name": "Pacific Foundation Securities Limited",
         "normalized": "Pacific Foundation Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners and Joint Lead Managers"
-      },
-      {
-        "name": "Public Offer Underwriters \tSincere Securities Limited",
-        "normalized": "Public Offer Underwriters Sincere Securities",
         "roles": [
           "bookrunner",
           "lead_manager"
@@ -95142,7 +93544,7 @@
     "ticker": 6683,
     "company": "Star Plus Legend Holdings Limited",
     "success": true,
-    "banksFound": 23,
+    "banksFound": 22,
     "banks": [
       {
         "name": "CMBC International Capital Limited",
@@ -95364,15 +93766,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -95380,7 +93773,7 @@
     "ticker": 1560,
     "company": "Star Properties Group (Cayman Islands) Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "Guotai Junan Capital Limited",
@@ -95423,15 +93816,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -96143,7 +94527,7 @@
     "ticker": 1771,
     "company": "Sunfonda Group Holdings Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Standard Chartered Securities (Hong Kong) Limited",
@@ -96158,15 +94542,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -96852,7 +95227,7 @@
     "ticker": 9658,
     "company": "Super Hi International Holding Ltd.",
     "success": true,
-    "banksFound": 3,
+    "banksFound": 2,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -96871,15 +95246,6 @@
         ],
         "isLead": true,
         "rawRole": "Joint Sponsors"
-      },
-      {
-        "name": "Futu Trustee Limited",
-        "normalized": "Futu",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -97008,7 +95374,7 @@
     "ticker": 2152,
     "company": "Suxin Joyful Life Services Co., Ltd.",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "BOCOM International (Asia) Limited",
@@ -97137,15 +95503,6 @@
         ],
         "isLead": true,
         "rawRole": "Fallback: coordinator"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -97540,7 +95897,7 @@
     "ticker": 6811,
     "company": "Tai Hing Group Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
       {
         "name": "BOCOM International (Asia) Limited",
@@ -97579,15 +95936,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -98062,7 +96410,7 @@
     "ticker": 7855,
     "company": "TechStar Acquisition Corporation - Z",
     "success": true,
-    "banksFound": 22,
+    "banksFound": 21,
     "banks": [
       {
         "name": "CNCB (Hong Kong) Capital Limited",
@@ -98266,15 +96614,6 @@
       {
         "name": "CMB International Capital Corporation Limited",
         "normalized": "CMB International",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -98630,7 +96969,7 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Haitong International” Haitong International Securities Company Limited",
+        "name": "Haitong International\u201d Haitong International Securities Company Limited",
         "normalized": "Haitong",
         "roles": [
           "other"
@@ -99461,7 +97800,7 @@
     "ticker": 1773,
     "company": "Tianli Education International Holdings Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -99498,15 +97837,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -99967,7 +98297,7 @@
     "ticker": 9928,
     "company": "Times Neighborhood Holdings Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "Haitong International Capital Limited",
@@ -99993,15 +98323,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -101233,7 +99554,7 @@
     "ticker": 1986,
     "company": "Tsaker Chemical Group Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Haitong International Capital Limited",
@@ -101305,15 +99626,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -101829,7 +100141,7 @@
         "rawRole": "Co-Lead Managers"
       },
       {
-        "name": "China  Galaxy International  Securities  (Hong  Kong)  Co., Limited",
+        "name": "China Galaxy International Securities (Hong Kong) Co., Limited",
         "normalized": "China Galaxy",
         "roles": [
           "lead_manager"
@@ -102503,7 +100815,7 @@
     "ticker": 1711,
     "company": "Ulferts International Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 5,
     "banks": [
       {
         "name": "Emperor Capital Limited",
@@ -102534,16 +100846,6 @@
         "rawRole": "Sole Bookrunner and Lead Manager"
       },
       {
-        "name": "Public Offer Underwriters \tEmperor Securities Limited",
-        "normalized": "Public Offer Underwriters Emperor Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Sole Bookrunner and Lead Manager"
-      },
-      {
         "name": "The Bank of East Asia, Limited",
         "normalized": "The Bank of East Asia",
         "roles": [
@@ -102562,25 +100864,6 @@
         ],
         "isLead": false,
         "rawRole": "Sole Bookrunner and Lead Manager"
-      },
-      {
-        "name": "Placing Underwriters \tEmperor Securities Limited",
-        "normalized": "Placing Underwriters Emperor Securities",
-        "roles": [
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Sole Bookrunner and Lead Manager"
-      },
-      {
-        "name": "Compliance Advisor \tOctal Capital Limited",
-        "normalized": "Compliance Advisor Octal Capital",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Underwriters"
       }
     ]
   },
@@ -103009,7 +101292,7 @@
     "ticker": 2666,
     "company": "Universal Medical Financial & Technical Advisory Services Company Limited",
     "success": true,
-    "banksFound": 20,
+    "banksFound": 19,
     "banks": [
       {
         "name": "Goldman Sachs (Asia) L.L.C.",
@@ -103128,15 +101411,6 @@
       },
       {
         "name": "CITIC Partners is CCP II GP Limited",
-        "normalized": "CITIC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CITIC Capital Partners is owned as to 51% and 49% by CITIC Capital Holdings Limited",
         "normalized": "CITIC",
         "roles": [
           "other"
@@ -103311,7 +101585,7 @@
     "ticker": 6113,
     "company": "UTS Marketing Solutions Holdings Limited",
     "success": true,
-    "banksFound": 5,
+    "banksFound": 4,
     "banks": [
       {
         "name": "CLC International Limited",
@@ -103352,15 +101626,6 @@
         ],
         "isLead": false,
         "rawRole": "Co-lead Manager"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -103444,7 +101709,7 @@
     "ticker": 2260,
     "company": "Vanov Holdings Company Limited",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 18,
     "banks": [
       {
         "name": "CMBC International Capital Limited",
@@ -103616,15 +101881,6 @@
       {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -104096,7 +102352,7 @@
     "ticker": 1612,
     "company": "Vincent Medical Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "Crosby Securities Limited",
@@ -104139,15 +102395,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -104778,7 +103025,7 @@
     "ticker": 1608,
     "company": "VPower Group International Holdings Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -104837,15 +103084,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -105769,19 +104007,8 @@
     "ticker": 1793,
     "company": "Wecon Holdings Limited",
     "success": true,
-    "banksFound": 7,
+    "banksFound": 6,
     "banks": [
-      {
-        "name": "Conyers Trust Company (Cayman) Limited, in the Cayman Islands and our Company’s Hong Kong branch",
-        "normalized": "Conyers Trust Company (Cayman) Limited, in the Cayman Islands and our Company’s Hong Kong branch",
-        "roles": [
-          "sponsor",
-          "bookrunner",
-          "lead_manager"
-        ],
-        "isLead": true,
-        "rawRole": "adviser. It is emphasised that none of our Company, the Sole Sponsor, the Joint Bookrunners, the Joint Lead Managers, the Underwriters, any of their respective directors, agents or advisers or any other person"
-      },
       {
         "name": "VMS Securities Limited",
         "normalized": "VMS Securities",
@@ -106709,7 +104936,7 @@
     "ticker": 2477,
     "company": "Wellcell Holdings Co., Limited",
     "success": true,
-    "banksFound": 19,
+    "banksFound": 18,
     "banks": [
       {
         "name": "Halcyon Capital Limited",
@@ -106893,17 +105120,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "sponsor",
-          "coordinator",
-          "bookrunner"
-        ],
-        "isLead": true,
-        "rawRole": "Fallback: sponsor, coordinator, bookrunner"
       }
     ]
   },
@@ -107141,7 +105357,7 @@
     "ticker": 288,
     "company": "WH Group Limited",
     "success": true,
-    "banksFound": 37,
+    "banksFound": 36,
     "banks": [
       {
         "name": "BOCI Asia Limited",
@@ -107291,7 +105507,7 @@
         "rawRole": "(in the capacity as a Joint Bookrunner in relation to the"
       },
       {
-        "name": "Crédit Agricole Corporate and Investment Bank",
+        "name": "Cr\u00e9dit Agricole Corporate and Investment Bank",
         "normalized": "Credit Agricole",
         "roles": [
           "lead_manager"
@@ -107437,15 +105653,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Hongkong and Shanghai Banking Corporation Limited",
         "normalized": "HSBC",
         "roles": [
@@ -107514,7 +105721,7 @@
     "ticker": 1997,
     "company": "Wharf Real Estate Investment Company Limited",
     "success": true,
-    "banksFound": 3,
+    "banksFound": 2,
     "banks": [
       {
         "name": "HSBC Corporate Finance (Hong Kong) Limited",
@@ -107533,15 +105740,6 @@
         ],
         "isLead": true,
         "rawRole": "Joint Sponsors"
-      },
-      {
-        "name": "HSBC Trustee (C.I.) Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -108144,7 +106342,7 @@
     "ticker": 6100,
     "company": "Wise Talent Information Technology Co., Ltd",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -108190,15 +106388,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Guotai Junan Capital Limited",
         "normalized": "Guotai Junan Capital",
         "roles": [
@@ -108213,7 +106402,7 @@
     "ticker": 2535,
     "company": "WK Group (Holdings) Limited",
     "success": true,
-    "banksFound": 3,
+    "banksFound": 2,
     "banks": [
       {
         "name": "WK Group (Holdings) Limited",
@@ -108228,15 +106417,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -108496,7 +106676,7 @@
     "ticker": 2496,
     "company": "Wuhan YZY Biopharma Co., Ltd. - B",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "China Securities (International) Corporate Finance Company Limited",
@@ -108590,15 +106770,6 @@
         ],
         "isLead": false,
         "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -108606,7 +106777,7 @@
     "ticker": 2359,
     "company": "WuXi AppTec Co., Ltd.",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -108691,15 +106862,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -108864,7 +107026,7 @@
     "ticker": 2268,
     "company": "WuXi XDC Cayman Inc.",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -108926,15 +107088,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -110674,7 +108827,7 @@
     "ticker": 1895,
     "company": "Xinyuan Property Management Service (Cayman) Ltd.",
     "success": true,
-    "banksFound": 15,
+    "banksFound": 14,
     "banks": [
       {
         "name": "Orient Capital (Hong Kong) Limited",
@@ -110806,15 +108959,6 @@
         "rawRole": "Joint Lead Managers"
       },
       {
-        "name": "HSBC International Trustee Limited",
-        "normalized": "HSBC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "ABCI Securities Company Limited",
         "normalized": "ABCI",
         "roles": [
@@ -110926,7 +109070,7 @@
     "ticker": 2392,
     "company": "Xuan Wu Cloud Technology Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 7,
     "banks": [
       {
         "name": "CMB International Capital Limited",
@@ -110990,15 +109134,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "CITIC Securities is a joint stock company incorporated in the PRC with limited",
-        "normalized": "CITIC",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       },
       {
         "name": "CMB International Global Markets Limited",
@@ -111128,7 +109263,7 @@
     "ticker": 2473,
     "company": "XXF Group Holdings Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "Quam Capital Limited",
@@ -111238,15 +109373,6 @@
         ],
         "isLead": false,
         "rawRole": "Intermediaries"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -111307,7 +109433,7 @@
     "ticker": 1795,
     "company": "Yadong Group Holdings Limited",
     "success": true,
-    "banksFound": 8,
+    "banksFound": 5,
     "banks": [
       {
         "name": "Fortune Financial Capital Limited",
@@ -111328,26 +109454,8 @@
         "rawRole": "Joint Lead Managers"
       },
       {
-        "name": "in securities) regulated activity under the SFO) China Everbright Securities (HK) Limited",
-        "normalized": "CEB International",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
         "name": "Shenwan Hongyuan Securities (H.K.) Limited",
         "normalized": "Shenwan Hongyuan",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "in securities) regulated activity under the SFO) Fulbright Securities Limited",
-        "normalized": "in securities) regulated activity under the SFO) Fulbright Securities",
         "roles": [
           "lead_manager"
         ],
@@ -111366,15 +109474,6 @@
       {
         "name": "Aristo Securities Limited",
         "normalized": "Aristo Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Manager"
-      },
-      {
-        "name": "in securities) regulated activity under the SFO) Wilson Securities Limited",
-        "normalized": "in securities) regulated activity under the SFO) Wilson Securities",
         "roles": [
           "lead_manager"
         ],
@@ -111572,7 +109671,7 @@
     "ticker": 6869,
     "company": "Yangtze Optical Fibre and Cable Joint Stock Limited Company",
     "success": true,
-    "banksFound": 6,
+    "banksFound": 5,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -111620,15 +109719,6 @@
       {
         "name": "Bank of China (Asia) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -111872,7 +109962,7 @@
     "ticker": 9923,
     "company": "Yeahka Limited",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "CLSA Capital Markets Limited",
@@ -111962,15 +110052,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CITIC Investment is a wholly-owned subsidiary of CITIC Securities Company Limited",
-        "normalized": "CITIC",
         "roles": [
           "other"
         ],
@@ -112226,7 +110307,7 @@
     "ticker": 2306,
     "company": "YH Entertainment Group",
     "success": true,
-    "banksFound": 11,
+    "banksFound": 10,
     "banks": [
       {
         "name": "China Merchants Securities (HK) Co., Limited",
@@ -112320,15 +110401,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Bookrunners"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
       }
     ]
   },
@@ -112778,7 +110850,7 @@
     "ticker": 1579,
     "company": "Yihai International Holding Ltd.",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 8,
     "banks": [
       {
         "name": "China International Capital Corporation Hong Kong Securities Limited",
@@ -112826,15 +110898,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Bank of China (Hong Kong) Nominees Limited",
-        "normalized": "Bank of China  Nominees",
         "roles": [
           "other"
         ],
@@ -113234,7 +111297,7 @@
     "ticker": 2347,
     "company": "Yoho Group Holdings Limited",
     "success": true,
-    "banksFound": 10,
+    "banksFound": 9,
     "banks": [
       {
         "name": "CMBC International Capital Limited",
@@ -113302,15 +111365,6 @@
       {
         "name": "Haitong International Securities Company Limited",
         "normalized": "Haitong",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -113545,7 +111599,7 @@
     "ticker": 2110,
     "company": "Yue Kan Holdings Limited",
     "success": true,
-    "banksFound": 9,
+    "banksFound": 6,
     "banks": [
       {
         "name": "Red Sun Capital Limited",
@@ -113566,26 +111620,8 @@
         "rawRole": "Joint Bookrunners"
       },
       {
-        "name": "in securities) regulated activities under the SFO) Sinomax Securities Limited",
-        "normalized": "in securities) regulated activities under the SFO) Sinomax Securities",
-        "roles": [
-          "bookrunner"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Bookrunners"
-      },
-      {
         "name": "Aristo Securities Limited",
         "normalized": "Aristo Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "in securities) regulated activities under the SFO) ChaoShang Securities Limited",
-        "normalized": "in securities) regulated activities under the SFO) ChaoShang Securities",
         "roles": [
           "lead_manager"
         ],
@@ -113618,15 +111654,6 @@
         ],
         "isLead": false,
         "rawRole": "Joint Lead Managers"
-      },
-      {
-        "name": "in securities) regulated activities under the SFO) Red Eagle Securities Limited",
-        "normalized": "in securities) regulated activities under the SFO) Red Eagle Securities",
-        "roles": [
-          "lead_manager"
-        ],
-        "isLead": false,
-        "rawRole": "Joint Lead Managers"
       }
     ]
   },
@@ -113634,7 +111661,7 @@
     "ticker": 6626,
     "company": "Yuexiu Services Group Limited",
     "success": true,
-    "banksFound": 22,
+    "banksFound": 21,
     "banks": [
       {
         "name": "ABCI Capital Limited",
@@ -113812,15 +111839,6 @@
       {
         "name": "Bank of China (Asia) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -115736,7 +113754,7 @@
     "ticker": 2271,
     "company": "Zhong An Intelligent Living Service Limited",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "China Merchants Securities (HK) Co., Limited",
@@ -115823,15 +113841,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
         "roles": [
           "other"
         ],
@@ -116412,7 +114421,7 @@
     "ticker": 2772,
     "company": "Zhongliang Holdings Group Company Limited",
     "success": true,
-    "banksFound": 22,
+    "banksFound": 21,
     "banks": [
       {
         "name": "CCB International Capital Limited",
@@ -116587,15 +114596,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
-        "normalized": "BANK OF CHINA  NOMINEES",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "Guotai Junan Capital Limited",
         "normalized": "Guotai Junan Capital",
         "roles": [
@@ -116628,7 +114628,7 @@
     "ticker": 1471,
     "company": "Zhongmiao Holdings (Qingdao) Co., Ltd.",
     "success": true,
-    "banksFound": 16,
+    "banksFound": 15,
     "banks": [
       {
         "name": "CITIC Securities (Hong Kong) Limited",
@@ -116757,15 +114757,6 @@
         "rawRole": "Fallback extraction"
       },
       {
-        "name": "Futures Limited",
-        "normalized": "Futures",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
         "name": "CLSA Limited",
         "normalized": "CITIC",
         "roles": [
@@ -116836,7 +114827,7 @@
     "ticker": 2433,
     "company": "Zhongtian Construction (Hunan) Group Limited",
     "success": true,
-    "banksFound": 14,
+    "banksFound": 13,
     "banks": [
       {
         "name": "Grande Capital Limited",
@@ -116964,15 +114955,6 @@
       {
         "name": "Bank of China (Asia) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -117531,7 +115513,7 @@
         "rawRole": "Joint Sponsors"
       },
       {
-        "name": "China \tSecurities \t(International) \tCorporate \tFinance Company Limited",
+        "name": "Securities (International) Corporate Finance Company Limited",
         "normalized": "China Securities",
         "roles": [
           "sponsor",
@@ -117569,7 +115551,7 @@
     "ticker": 1855,
     "company": "ZONBONG LANDSCAPE Environmental Limited",
     "success": true,
-    "banksFound": 13,
+    "banksFound": 12,
     "banks": [
       {
         "name": "China Tonghai Capital Limited",
@@ -117679,15 +115661,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "Futures Limited",
-        "normalized": "Futures",
         "roles": [
           "other"
         ],
@@ -117897,7 +115870,7 @@
         "rawRole": "Joint Sponsors, Sponsor-Overall Coordinators and Overall Coordinators"
       },
       {
-        "name": "China \tMerchants \tSecurities \t(HK) \tCo., Limited",
+        "name": "Merchants Securities (HK) Co., Limited",
         "normalized": "China Merchants Securities  Co.",
         "roles": [
           "coordinator",
@@ -117964,7 +115937,7 @@
     "ticker": 2190,
     "company": "Zylox-Tonbridge Medical Technology Co., Ltd. - B",
     "success": true,
-    "banksFound": 12,
+    "banksFound": 11,
     "banks": [
       {
         "name": "Morgan Stanley Asia Limited",
@@ -118037,15 +116010,6 @@
       {
         "name": "Bank of China (Hong Kong) Limited",
         "normalized": "Bank of China",
-        "roles": [
-          "other"
-        ],
-        "isLead": false,
-        "rawRole": "Fallback extraction"
-      },
-      {
-        "name": "CITIC is a wholly-owned subsidiary of CITIC Securities Company Limited",
-        "normalized": "CITIC",
         "roles": [
           "other"
         ],
