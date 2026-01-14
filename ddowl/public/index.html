@@ -235,6 +235,56 @@
       border: 1px solid #333;
     }
 
+    .flag-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .flag-date {
+      font-size: 11px;
+      color: #666;
+      background: #1a1a1a;
+      padding: 3px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .flag-sources {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #222;
+    }
+
+    .source-badge {
+      display: inline-block;
+      background: #2a2a2a;
+      color: #4a9eff;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .sources-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sources-list a {
+      font-size: 11px;
+      color: #555;
+      text-decoration: none;
+    }
+
+    .sources-list a:hover {
+      color: #4a9eff;
+    }
+
     .action-box {
       background: #111;
       border: 1px solid #222;
@@ -456,6 +506,182 @@
     .toggle-panel.hidden {
       display: none;
     }
+
+    /* Report Modal */
+    .report-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .report-modal.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .report-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: #111;
+      border-bottom: 1px solid #222;
+    }
+
+    .report-modal-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .report-modal-status {
+      font-size: 12px;
+      color: #666;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .report-modal-status .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2ed573;
+      animation: pulse 1s infinite;
+    }
+
+    .report-modal-status.complete .status-dot {
+      animation: none;
+      background: #2ed573;
+    }
+
+    .report-modal-close {
+      background: none;
+      border: 1px solid #333;
+      color: #888;
+      padding: 8px 16px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .report-modal-close:hover {
+      background: #222;
+      color: #fff;
+    }
+
+    .report-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background: #0a0a0a;
+    }
+
+    .report-content {
+      max-width: 800px;
+      margin: 0 auto;
+      font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #d0d0d0;
+      white-space: pre-wrap;
+    }
+
+    .report-content h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: #fff;
+      font-family: inherit;
+    }
+
+    .report-content h2 {
+      font-size: 18px;
+      margin: 24px 0 12px 0;
+      color: #fff;
+      font-family: inherit;
+      border-bottom: 1px solid #333;
+      padding-bottom: 8px;
+    }
+
+    .report-content strong {
+      color: #fff;
+    }
+
+    .report-content em {
+      color: #888;
+    }
+
+    .report-content a {
+      color: #4a9eff;
+    }
+
+    .report-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      background: #4a9eff;
+      animation: blink 0.8s infinite;
+      vertical-align: text-bottom;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    .report-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 24px;
+      background: #111;
+      border-top: 1px solid #222;
+    }
+
+    .report-modal-footer button {
+      padding: 10px 20px;
+      font-size: 12px;
+    }
+
+    .btn-secondary {
+      background: #222;
+      color: #888;
+      border: 1px solid #333;
+    }
+
+    .btn-secondary:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-generate {
+      background: #1a472a;
+      color: #2ed573;
+      border: 1px solid #2ed573;
+      margin-left: 12px;
+    }
+
+    .btn-generate:hover {
+      background: #2ed573;
+      color: #000;
+    }
+
+    .btn-generate:disabled {
+      background: #1a1a1a;
+      color: #444;
+      border-color: #333;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -519,10 +745,38 @@
           <div class="action-text" id="actionText"></div>
         </div>
 
-        <button class="btn-primary download-btn" onclick="downloadReport()">
-          Export Report
-        </button>
+        <div style="display: flex; gap: 12px; margin-top: 20px;">
+          <button class="btn-primary download-btn" onclick="downloadReport()" style="margin-top: 0; flex: 1;">
+            Export JSON
+          </button>
+          <button class="btn-generate" id="generateReportBtn" onclick="openReportModal()" disabled style="flex: 1;">
+            Generate Report
+          </button>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Report Generation Modal -->
+  <div class="report-modal" id="reportModal">
+    <div class="report-modal-header">
+      <span class="report-modal-title" id="reportModalTitle">Generating Report...</span>
+      <div class="report-modal-status" id="reportModalStatus">
+        <div class="status-dot"></div>
+        <span>Writing...</span>
+      </div>
+      <button class="report-modal-close" onclick="closeReportModal()">Close</button>
+    </div>
+    <div class="report-modal-body">
+      <div class="report-content" id="reportContent"></div>
+    </div>
+    <div class="report-modal-footer">
+      <button class="btn-secondary" id="copyReportBtn" onclick="copyReport()" disabled>
+        Copy to Clipboard
+      </button>
+      <button class="btn-primary" id="downloadWordBtn" onclick="downloadWord()" disabled>
+        Download Word
+      </button>
     </div>
   </div>
 
@@ -603,12 +857,15 @@
       logEntries = 0;
       urlsProcessed = 0;
       currentReport = null;
+      currentFindings = [];
+      currentSubjectName = '';
       document.getElementById('redFlagsList').innerHTML = '';
       document.getElementById('amberFlagsList').innerHTML = '';
       document.getElementById('redCount').textContent = '0';
       document.getElementById('amberCount').textContent = '0';
       document.getElementById('greenCount').textContent = '0';
       document.getElementById('activityLog').innerHTML = '';
+      document.getElementById('generateReportBtn').disabled = true;
 
       // Show activity panel
       document.getElementById('activityPanel').classList.add('active');
@@ -619,118 +876,214 @@
       addLogEntry('search', `Starting screening for: ${name}`);
       updateActivityStats('Initializing...');
 
-      // Start SSE connection
-      const eventSource = new EventSource(`/api/screen/v3?name=${encodeURIComponent(name)}`);
+      // Retry state
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+      let lastQueryIndex = 0;
+      let eventSource = null;
 
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
+      function connectSSE() {
+        // Include resumeFrom if reconnecting after a disconnect
+        const resumeParam = retryCount > 0 && lastQueryIndex > 0
+          ? `&resumeFrom=${lastQueryIndex}`
+          : '';
+        eventSource = new EventSource(`/api/screen/v3?name=${encodeURIComponent(name)}${resumeParam}`);
 
-        // === STAGE 0: SEARCH ===
-        if (data.type === 'query_start') {
-          addLogEntry('search', `━━━ QUERY ${data.queryIndex}/${data.totalQueries} ━━━`);
-          addLogEntry('search', `${data.query}`);
-          updateActivityStats(`Query ${data.queryIndex}/${data.totalQueries}`);
-        }
+        eventSource.onmessage = (event) => {
+          retryCount = 0; // Reset retry count on successful message
+          const data = JSON.parse(event.data);
 
-        if (data.type === 'search_results') {
-          addLogEntry('search', `→ Found ${data.found} results`);
-        }
+          // Track query progress for potential retry
+          if (data.queryIndex) lastQueryIndex = data.queryIndex;
 
-        // === STAGE 1: TRIAGE ===
-        if (data.type === 'triage_start') {
-          addLogEntry('fetch', `[TRIAGE] Classifying ${data.count} results...`);
-        }
-
-        if (data.type === 'triage_item') {
-          const icon = data.classification === 'GREEN' ? '✓' : data.classification === 'YELLOW' ? '?' : '!';
-          const color = data.classification === 'GREEN' ? 'analyze' : data.classification === 'YELLOW' ? 'fetch' : 'red';
-          const title = data.title.length > 35 ? data.title.slice(0, 35) + '...' : data.title;
-          addLogEntry(color, `  ${icon} ${data.classification}: ${title}`);
-          addLogEntry(color, `    Reason: ${data.reason} → ${data.action}`);
-        }
-
-        if (data.type === 'triage_summary') {
-          addLogEntry('search', `[TRIAGE] Done: ${data.green} skipped, ${data.toInvestigate} to check`);
-        }
-
-        // === STAGE 2: QUICK SCAN ===
-        if (data.type === 'quick_scan_start') {
-          addLogEntry('fetch', `[QUICK SCAN] ${data.title}`);
-          addLogEntry('fetch', `  Why: ${data.triageReason}`);
-          urlsProcessed++;
-        }
-
-        if (data.type === 'quick_scan_result') {
-          if (data.shouldAnalyze) {
-            addLogEntry('amber', `  → PROCEED: ${data.reason}`);
-          } else {
-            addLogEntry('analyze', `  → SKIP: ${data.reason}`);
+          // === STAGE 0: SEARCH ===
+          if (data.type === 'query_start') {
+            addLogEntry('search', `━━━ QUERY ${data.queryIndex}/${data.totalQueries} ━━━`);
+            addLogEntry('search', `${data.query}`);
+            updateActivityStats(`Query ${data.queryIndex}/${data.totalQueries}`);
           }
-        }
 
-        // === STAGE 3: DEEP ANALYSIS ===
-        if (data.type === 'analyze_start') {
-          addLogEntry('fetch', `[ANALYZE] ${data.title}`);
-          addLogEntry('fetch', `  From triage: ${data.fromTriage}`);
-        }
-
-        if (data.type === 'analyze_result') {
-          if (data.action === 'SKIP') {
-            addLogEntry('analyze', `  → SKIP: ${data.reason}`);
-          } else if (data.isAdverse) {
-            const color = data.severity === 'RED' ? 'red' : 'amber';
-            addLogEntry(color, `  ★ ${data.severity} FLAG: ${data.headline}`);
-            addLogEntry(color, `    ${data.summary}`);
-            addResultToUI({
-              url: data.url,
-              title: data.title,
-              severity: data.severity,
-              summary: data.headline + ' - ' + data.summary
-            });
-          } else {
-            addLogEntry('analyze', `  → CLEAR: No adverse info`);
+          // === PAGE-BY-PAGE SEARCH RESULTS ===
+          if (data.type === 'search_page') {
+            const engine = data.engine === 'google' ? 'Google' : 'Baidu';
+            addLogEntry('search', `📄 ${engine} Page ${data.page}/${data.maxPages}: ${data.results.length} results`);
+            // Show each URL on this page
+            for (const r of data.results) {
+              addLogEntry('search', `   → ${r.url}`, r.url);
+            }
           }
-        }
 
-        if (data.type === 'analyze_error') {
-          addLogEntry('error', `  → ERROR: ${data.error}`);
-        }
+          if (data.type === 'search_page_empty') {
+            const engine = data.engine === 'google' ? 'Google' : 'Baidu';
+            addLogEntry('search', `📄 ${engine}: ${data.message}`);
+          }
 
-        // === COMPLETION ===
-        if (data.type === 'complete') {
-          const stats = data.stats || {};
-          addLogEntry('result', `━━━ SCREENING COMPLETE ━━━`);
-          addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
-          addLogEntry('result', `Total fetched: ${stats.totalFetched || 0}`);
-          addLogEntry('result', `Total analyzed: ${stats.totalAnalyzed || 0}`);
-          addLogEntry('result', `Findings: ${stats.red || 0} RED, ${stats.amber || 0} AMBER`);
-          document.getElementById('statusDot').classList.remove('active');
-          updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
+          if (data.type === 'search_results') {
+            addLogEntry('search', `→ Total: ${data.found} results`);
+          }
+
+          if (data.type === 'duplicates_skipped') {
+            addLogEntry('analyze', `  ↳ Skipped ${data.count} duplicate URLs (already processed)`);
+          }
+
+          // Handle query errors (continue processing)
+          if (data.type === 'query_error') {
+            addLogEntry('error', `Query ${data.queryIndex} failed: ${data.error}`);
+          }
+
+          // Handle skipped queries (from reconnect)
+          if (data.type === 'query_skipped') {
+            addLogEntry('search', `↷ Query ${data.queryIndex} skipped (${data.reason})`);
+          }
+
+          // === STAGE 1: PRE-SCREENING ===
+          if (data.type === 'triage_start') {
+            addLogEntry('fetch', `Pre-screening ${data.count} results...`);
+          }
+
+          if (data.type === 'triage_item') {
+            const title = data.title.length > 40 ? data.title.slice(0, 40) + '...' : data.title;
+            if (data.classification === 'GREEN') {
+              addLogEntry('analyze', `✓ Cleared: ${title}`);
+            } else if (data.classification === 'YELLOW') {
+              addLogEntry('fetch', `⚡ Review: ${title}`);
+            } else {
+              addLogEntry('red', `⚠ Flagged: ${title}`);
+            }
+          }
+
+          if (data.type === 'triage_summary') {
+            addLogEntry('search', `Pre-screen: ${data.green} cleared, ${data.toInvestigate} for review`);
+          }
+
+          // === STAGE 2: QUICK SCAN ===
+          if (data.type === 'quick_scan_start') {
+            const title = data.title.length > 45 ? data.title.slice(0, 45) + '...' : data.title;
+            addLogEntry('fetch', `Quick scanning: ${title}`);
+            urlsProcessed++;
+          }
+
+          if (data.type === 'quick_scan_result') {
+            if (data.shouldAnalyze) {
+              addLogEntry('amber', `→ Needs deep analysis: ${data.reason}`);
+            } else {
+              addLogEntry('analyze', `→ Cleared: ${data.reason}`);
+            }
+          }
+
+          // === STAGE 3: DEEP ANALYSIS ===
+          if (data.type === 'analyze_start') {
+            const title = data.title.length > 45 ? data.title.slice(0, 45) + '...' : data.title;
+            addLogEntry('fetch', `Deep analyzing: ${title}`);
+          }
+
+          if (data.type === 'analyze_result') {
+            if (data.action === 'SKIP') {
+              addLogEntry('analyze', `→ Cleared: ${data.reason}`);
+            } else if (data.isAdverse) {
+              const color = data.severity === 'RED' ? 'red' : 'amber';
+              addLogEntry(color, `★ ${data.severity}: ${data.headline}`);
+              addResultToUI({
+                url: data.url,
+                title: data.title,
+                severity: data.severity,
+                summary: data.headline + ' - ' + data.summary
+              });
+            } else {
+              addLogEntry('analyze', `→ Clear: No adverse information found`);
+            }
+          }
+
+          if (data.type === 'analyze_error') {
+            addLogEntry('error', `  → ERROR: ${data.error}`);
+          }
+
+          // === CONSOLIDATION ===
+          if (data.type === 'consolidating') {
+            addLogEntry('fetch', `Consolidating ${data.count} findings...`);
+            updateActivityStats('Consolidating...');
+          }
+
+          if (data.type === 'consolidated') {
+            if (data.before !== data.after) {
+              addLogEntry('result', `Consolidated: ${data.before} findings → ${data.after} unique incidents`);
+            }
+          }
+
+          // === COMPLETION ===
+          if (data.type === 'complete') {
+            const stats = data.stats || {};
+            addLogEntry('result', `━━━ SCREENING COMPLETE ━━━`);
+            addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
+            addLogEntry('result', `Total cleared: ${stats.totalCleared || 0}`);
+            addLogEntry('result', `Findings: ${stats.red || 0} RED, ${stats.amber || 0} AMBER`);
+
+            // Update clear count in UI
+            greenCount = stats.totalCleared || 0;
+            document.getElementById('greenCount').textContent = greenCount;
+
+            // Store findings for report generation
+            currentSubjectName = name;
+            currentFindings = data.findings || [];
+
+            // Display consolidated findings
+            if (data.findings && data.findings.length > 0) {
+              // Clear existing results first
+              document.getElementById('redFlagsList').innerHTML = '';
+              document.getElementById('amberFlagsList').innerHTML = '';
+              redCount = 0;
+              amberCount = 0;
+              document.getElementById('redCount').textContent = '0';
+              document.getElementById('amberCount').textContent = '0';
+
+              // Add consolidated findings to UI
+              for (const finding of data.findings) {
+                addConsolidatedResultToUI(finding);
+              }
+
+              // Enable Generate Report button
+              document.getElementById('generateReportBtn').disabled = false;
+
+              saveToScreeningLog(name, {
+                flags: {
+                  red: data.findings.filter(f => f.severity === 'RED'),
+                  amber: data.findings.filter(f => f.severity === 'AMBER')
+                },
+                totalResultsAnalyzed: stats.totalAnalyzed
+              });
+            } else {
+              // No findings - disable report generation
+              document.getElementById('generateReportBtn').disabled = true;
+            }
+
+            document.getElementById('statusDot').classList.remove('active');
+            document.getElementById('searchBtn').disabled = false;
+            updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
+            eventSource.close();
+          }
+
+          if (data.type === 'error') {
+            addLogEntry('error', `[ERROR] ${data.message}`);
+            eventSource.close();
+            resetUI();
+          }
+        };
+
+        eventSource.onerror = () => {
           eventSource.close();
-
-          if (data.findings && data.findings.length > 0) {
-            saveToScreeningLog(name, {
-              flags: {
-                red: data.findings.filter(f => f.severity === 'RED'),
-                amber: data.findings.filter(f => f.severity === 'AMBER')
-              },
-              totalResultsAnalyzed: stats.totalAnalyzed
-            });
+          if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
+            setTimeout(connectSSE, 2000 * retryCount);
+          } else {
+            addLogEntry('error', 'Max retries exceeded. Please try again.');
+            resetUI();
           }
-        }
+        };
+      }
 
-        if (data.type === 'error') {
-          addLogEntry('error', `[ERROR] ${data.message}`);
-          eventSource.close();
-          resetUI();
-        }
-      };
-
-      eventSource.onerror = () => {
-        addLogEntry('error', 'Connection lost');
-        eventSource.close();
-        resetUI();
-      };
+      // Start the connection
+      connectSSE();
     }
 
     function addResultToUI(result) {
@@ -756,6 +1109,51 @@
           <span class="flag-category">${escapeHtml(result.category)}</span>
           <span>${new URL(result.url).hostname}</span>
         </div>
+      `;
+      list.appendChild(item);
+
+      document.getElementById('resultsSection').classList.add('active');
+    }
+
+    // Add consolidated finding to UI (with source count badge)
+    function addConsolidatedResultToUI(finding) {
+      const listId = finding.severity === 'RED' ? 'redFlagsList' : 'amberFlagsList';
+      const list = document.getElementById(listId);
+
+      if (finding.severity === 'RED') {
+        redCount++;
+        document.getElementById('redCount').textContent = redCount;
+      } else {
+        amberCount++;
+        document.getElementById('amberCount').textContent = amberCount;
+      }
+
+      // Build sources list
+      const sources = finding.sources || [];
+      const sourcesHtml = sources.length > 1
+        ? `<div class="flag-sources">
+            <span class="source-badge">${sources.length} sources</span>
+            <div class="sources-list">
+              ${sources.map(s => `<a href="${s.url}" target="_blank">${escapeHtml(s.title || new URL(s.url).hostname)}</a>`).join('')}
+            </div>
+          </div>`
+        : sources.length === 1
+          ? `<div class="flag-sources"><a href="${sources[0].url}" target="_blank">${new URL(sources[0].url).hostname}</a></div>`
+          : '';
+
+      const dateRangeHtml = finding.dateRange
+        ? `<span class="flag-date">${escapeHtml(finding.dateRange)}</span>`
+        : '';
+
+      const item = document.createElement('div');
+      item.className = `flag-item ${finding.severity.toLowerCase()}`;
+      item.innerHTML = `
+        <div class="flag-header">
+          <div class="flag-title">${escapeHtml(finding.headline)}</div>
+          ${dateRangeHtml}
+        </div>
+        <div class="flag-summary">${escapeHtml(finding.summary)}</div>
+        ${sourcesHtml}
       `;
       list.appendChild(item);
 
@@ -835,6 +1233,227 @@
     document.getElementById('nameInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') startScreening();
     });
+
+    // ============================================================
+    // REPORT GENERATION
+    // ============================================================
+
+    let currentFindings = [];
+    let currentSubjectName = '';
+    let reportContent = '';
+    let reportGenerating = false;
+
+    function openReportModal() {
+      if (currentFindings.length === 0) {
+        alert('No findings to generate report from');
+        return;
+      }
+
+      const modal = document.getElementById('reportModal');
+      const content = document.getElementById('reportContent');
+      const status = document.getElementById('reportModalStatus');
+      const title = document.getElementById('reportModalTitle');
+
+      // Reset modal state
+      content.innerHTML = '<span class="report-cursor"></span>';
+      reportContent = '';
+      reportGenerating = true;
+
+      title.textContent = `Generating Report for ${currentSubjectName}`;
+      status.classList.remove('complete');
+      status.querySelector('span').textContent = 'Writing...';
+
+      document.getElementById('copyReportBtn').disabled = true;
+      document.getElementById('downloadWordBtn').disabled = true;
+
+      modal.classList.add('active');
+
+      // Start streaming report generation
+      generateReport();
+    }
+
+    function closeReportModal() {
+      document.getElementById('reportModal').classList.remove('active');
+      reportGenerating = false;
+    }
+
+    async function generateReport() {
+      const content = document.getElementById('reportContent');
+      const status = document.getElementById('reportModalStatus');
+
+      try {
+        const response = await fetch('/api/report/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subjectName: currentSubjectName,
+            findings: currentFindings
+          })
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Process SSE messages
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.type === 'chunk') {
+                  reportContent += data.content;
+                  renderReport();
+                }
+
+                if (data.type === 'complete') {
+                  reportGenerating = false;
+                  status.classList.add('complete');
+                  status.querySelector('span').textContent = 'Complete';
+                  document.getElementById('copyReportBtn').disabled = false;
+                  document.getElementById('downloadWordBtn').disabled = false;
+                  // Remove cursor
+                  const cursor = content.querySelector('.report-cursor');
+                  if (cursor) cursor.remove();
+                }
+
+                if (data.type === 'error') {
+                  reportGenerating = false;
+                  status.querySelector('span').textContent = 'Error: ' + data.message;
+                  const cursor = content.querySelector('.report-cursor');
+                  if (cursor) cursor.remove();
+                }
+              } catch (e) {
+                // Ignore parse errors
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Report generation error:', error);
+        status.querySelector('span').textContent = 'Error: ' + error.message;
+        reportGenerating = false;
+      }
+    }
+
+    function renderReport() {
+      const content = document.getElementById('reportContent');
+      // Simple markdown rendering
+      let html = reportContent
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/_(.+?)_/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+      content.innerHTML = html + (reportGenerating ? '<span class="report-cursor"></span>' : '');
+      content.scrollTop = content.scrollHeight;
+    }
+
+    function copyReport() {
+      navigator.clipboard.writeText(reportContent).then(() => {
+        const btn = document.getElementById('copyReportBtn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = originalText, 2000);
+      });
+    }
+
+    async function downloadWord() {
+      const btn = document.getElementById('downloadWordBtn');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        // Use docx library via CDN
+        const { Document, Paragraph, TextRun, HeadingLevel, Packer } = docx;
+
+        // Parse report content into document structure
+        const lines = reportContent.split('\n');
+        const children = [];
+
+        for (const line of lines) {
+          if (line.startsWith('# ')) {
+            children.push(new Paragraph({
+              text: line.slice(2),
+              heading: HeadingLevel.HEADING_1
+            }));
+          } else if (line.startsWith('## ')) {
+            children.push(new Paragraph({
+              text: line.slice(3),
+              heading: HeadingLevel.HEADING_2
+            }));
+          } else if (line.startsWith('**') && line.endsWith('**')) {
+            children.push(new Paragraph({
+              children: [new TextRun({ text: line.slice(2, -2), bold: true })]
+            }));
+          } else if (line.trim()) {
+            // Handle inline formatting
+            const runs = [];
+            let remaining = line;
+
+            // Simple bold handling
+            const boldRegex = /\*\*(.+?)\*\*/g;
+            let lastIndex = 0;
+            let match;
+
+            while ((match = boldRegex.exec(line)) !== null) {
+              if (match.index > lastIndex) {
+                runs.push(new TextRun(line.slice(lastIndex, match.index)));
+              }
+              runs.push(new TextRun({ text: match[1], bold: true }));
+              lastIndex = match.index + match[0].length;
+            }
+
+            if (lastIndex < line.length) {
+              runs.push(new TextRun(line.slice(lastIndex)));
+            }
+
+            if (runs.length > 0) {
+              children.push(new Paragraph({ children: runs }));
+            } else {
+              children.push(new Paragraph({ text: line }));
+            }
+          } else {
+            children.push(new Paragraph({ text: '' }));
+          }
+        }
+
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: children
+          }]
+        });
+
+        const blob = await Packer.toBlob(doc);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `DD-Report-${currentSubjectName}-${Date.now()}.docx`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        btn.textContent = 'Download Word';
+        btn.disabled = false;
+      } catch (error) {
+        console.error('Word generation error:', error);
+        alert('Failed to generate Word document: ' + error.message);
+        btn.textContent = 'Download Word';
+        btn.disabled = false;
+      }
+    }
   </script>
+  <!-- docx library for Word export -->
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.min.js"></script>
 </body>
 </html>

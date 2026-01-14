@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { SearchResult } from './types.js';
+import { searchBaidu, isBaiduAvailable } from './baiduSearcher.js';
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY || '';
 const SERPER_URL = 'https://google.serper.dev/search';
@@ -30,8 +31,7 @@ export async function searchGoogle(
       SERPER_URL,
       {
         q: query,
-        gl: 'cn', // China
-        hl: 'zh-cn', // Chinese
+        hl: 'zh-cn', // Chinese language preference
         num: resultsPerPage,
         page: page,
       },
@@ -58,31 +58,128 @@ export async function searchGoogle(
   }
 }
 
+// Callback type for progress reporting
+export type SearchProgressCallback = (event: {
+  type: 'page_start' | 'page_results' | 'page_end' | 'search_complete';
+  engine: 'google' | 'baidu';
+  page?: number;
+  maxPages?: number;
+  results?: SearchResult[];
+  totalSoFar?: number;
+}) => void;
+
 export async function searchAllPages(
   query: string,
-  maxPages: number = 10
+  maxPages: number = 10,
+  onProgress?: SearchProgressCallback
 ): Promise<SearchResult[]> {
   const allResults: SearchResult[] = [];
   const seenUrls = new Set<string>();
 
+  // Run Serper (Google) search
   for (let page = 1; page <= maxPages; page++) {
+    onProgress?.({ type: 'page_start', engine: 'google', page, maxPages });
+
     const results = await searchGoogle(query, page);
 
     if (results.length === 0) {
-      // No more results
+      onProgress?.({ type: 'page_end', engine: 'google', page, maxPages, results: [], totalSoFar: allResults.length });
       break;
     }
 
+    const newResults: SearchResult[] = [];
     for (const result of results) {
       if (!seenUrls.has(result.link)) {
         seenUrls.add(result.link);
         allResults.push(result);
+        newResults.push(result);
       }
     }
 
-    // Small delay to avoid rate limiting
+    onProgress?.({ type: 'page_results', engine: 'google', page, maxPages, results: newResults, totalSoFar: allResults.length });
+
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
+  onProgress?.({ type: 'search_complete', engine: 'google', totalSoFar: allResults.length });
   return allResults;
+}
+
+/**
+ * Search both Google (Serper) and Baidu, with progress callback
+ * Runs sequentially so we can report progress in order
+ */
+export async function searchAllEngines(
+  query: string,
+  maxGooglePages: number = 10,
+  maxBaiduPages: number = 3,
+  onProgress?: SearchProgressCallback
+): Promise<SearchResult[]> {
+  const seenUrls = new Set<string>();
+  const allResults: SearchResult[] = [];
+
+  // Run Google search first with progress reporting
+  const googleResults = await searchAllPages(query, maxGooglePages, onProgress);
+
+  // Merge Google results
+  for (const result of googleResults) {
+    if (!seenUrls.has(result.link)) {
+      seenUrls.add(result.link);
+      allResults.push(result);
+    }
+  }
+
+  // Run Baidu search with progress reporting
+  if (isBaiduAvailable()) {
+    const baiduResults = await searchBaiduPages(query, maxBaiduPages, onProgress);
+    let baiduUnique = 0;
+    for (const result of baiduResults) {
+      if (!seenUrls.has(result.link)) {
+        seenUrls.add(result.link);
+        allResults.push(result);
+        baiduUnique++;
+      }
+    }
+    if (baiduUnique > 0) {
+      onProgress?.({ type: 'search_complete', engine: 'baidu', totalSoFar: baiduUnique });
+    }
+  }
+
+  return allResults;
+}
+
+/**
+ * Helper: Search Baidu with pagination
+ */
+async function searchBaiduPages(
+  query: string,
+  maxPages: number,
+  onProgress?: SearchProgressCallback
+): Promise<SearchResult[]> {
+  const results: SearchResult[] = [];
+  const seenUrls = new Set<string>();
+
+  for (let page = 1; page <= maxPages; page++) {
+    onProgress?.({ type: 'page_start', engine: 'baidu', page, maxPages });
+
+    const pageResults = await searchBaidu(query, page);
+    if (pageResults.length === 0) {
+      onProgress?.({ type: 'page_end', engine: 'baidu', page, maxPages, results: [], totalSoFar: results.length });
+      break;
+    }
+
+    const newResults: SearchResult[] = [];
+    for (const result of pageResults) {
+      if (!seenUrls.has(result.link)) {
+        seenUrls.add(result.link);
+        results.push(result);
+        newResults.push(result);
+      }
+    }
+
+    onProgress?.({ type: 'page_results', engine: 'baidu', page, maxPages, results: newResults, totalSoFar: results.length });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  return results;
 }

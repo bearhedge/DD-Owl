@@ -1,8 +1,80 @@
 // src/triage.ts
 import axios from 'axios';
 
+// LLM Configuration for Triage with Fallback Chain
+// Priority: Kimi K2 → DeepSeek → Gemini
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
-const KIMI_URL = 'https://api.moonshot.ai/v1/chat/completions';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+
+interface LLMProvider {
+  name: string;
+  url: string;
+  model: string;
+  apiKey: string;
+  timeout: number;
+  isGemini?: boolean;
+}
+
+// Build provider list in priority order (only include configured providers)
+function getProviders(): LLMProvider[] {
+  const providers: LLMProvider[] = [];
+
+  // 1. DeepSeek (primary - cheaper)
+  if (DEEPSEEK_API_KEY) {
+    providers.push({
+      name: 'DeepSeek',
+      url: 'https://api.deepseek.com/v1/chat/completions',
+      model: 'deepseek-chat',
+      apiKey: DEEPSEEK_API_KEY,
+      timeout: 120000,
+    });
+  }
+
+  // 2. Kimi (fallback for content moderation issues)
+  if (KIMI_API_KEY) {
+    providers.push({
+      name: 'Kimi',
+      url: 'https://api.moonshot.ai/v1/chat/completions',
+      model: 'moonshot-v1-8k',
+      apiKey: KIMI_API_KEY,
+      timeout: 120000,
+    });
+  }
+
+  // 3. Gemini (last resort fallback)
+  if (GEMINI_API_KEY) {
+    providers.push({
+      name: 'Gemini',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      model: 'gemini-2.0-flash',
+      apiKey: GEMINI_API_KEY,
+      timeout: 120000,
+      isGemini: true,
+    });
+  }
+
+  return providers;
+}
+
+// Check if error is content moderation related (should trigger fallback)
+function isContentModerationError(error: any): boolean {
+  const errorMessage = error?.response?.data?.error?.message || error?.message || '';
+  const errorCode = error?.response?.data?.error?.code || '';
+
+  // DeepSeek content moderation
+  if (errorMessage.includes('Content Exists Risk')) return true;
+  if (errorCode === 'content_filter') return true;
+
+  // Kimi content moderation
+  if (errorMessage.includes('content policy')) return true;
+  if (errorMessage.includes('sensitive')) return true;
+
+  // Rate limits should also trigger fallback
+  if (error?.response?.status === 429) return true;
+
+  return false;
+}
 
 export interface SearchResult {
   title: string;
@@ -23,6 +95,42 @@ export interface TriageOutput {
   green: TriageResult[];
 }
 
+// Helper to call Gemini API (different format from OpenAI-compatible APIs)
+async function callGeminiAPI(provider: LLMProvider, prompt: string): Promise<string> {
+  const response = await axios.post(
+    `${provider.url}?key=${provider.apiKey}`,
+    {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.1 },
+    },
+    {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: provider.timeout,
+    }
+  );
+  return response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// Helper to call OpenAI-compatible APIs (DeepSeek, Kimi)
+async function callOpenAICompatibleAPI(provider: LLMProvider, prompt: string): Promise<string> {
+  const response = await axios.post(
+    provider.url,
+    {
+      model: provider.model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${provider.apiKey}`,
+      },
+      timeout: provider.timeout,
+    }
+  );
+  return response.data.choices?.[0]?.message?.content || '';
+}
+
 export async function triageSearchResults(
   results: SearchResult[],
   subjectName: string
@@ -31,11 +139,11 @@ export async function triageSearchResults(
     return { red: [], yellow: [], green: [] };
   }
 
-  // Fix #5: Validate API key before making request
-  if (!KIMI_API_KEY) {
+  const providers = getProviders();
+  if (providers.length === 0) {
     return {
       red: [],
-      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'api key not configured' })),
+      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'no api keys configured' })),
       green: []
     };
   }
@@ -44,17 +152,46 @@ export async function triageSearchResults(
     `${i + 1}. Title: ${r.title}\n   Snippet: ${r.snippet}`
   ).join('\n\n');
 
-  const prompt = `You are screening search results for adverse media about "${subjectName}".
+  const prompt = `You are a senior due diligence analyst screening search results about "${subjectName}".
 
-For each result, classify as:
-- RED: Subject DIRECTLY involved in adverse activity (crime, fraud, sanctions, regulatory action)
-- YELLOW: Unclear or ambiguous, needs more investigation
-- GREEN: Obviously irrelevant (poetry, fiction, recipes, awards, generic company news)
+⚠️ CRITICAL RULE - READ CAREFULLY:
+The EXACT name "${subjectName}" MUST appear in the title or snippet to be flagged RED or YELLOW.
+If the article is about a DIFFERENT person (e.g., 罗保铭, 王建祥, 张新起), mark it GREEN even if it contains crime keywords.
+Do NOT flag articles just because they contain words like "corruption", "bribery", "fraud" - the subject name MUST be present.
 
-IMPORTANT:
-- When in doubt between YELLOW and GREEN, choose YELLOW
-- Only GREEN if clearly NO connection to adverse media
-- Subject just being mentioned in company news is GREEN unless adverse
+CLASSIFICATION RULES:
+
+1. NAME DETECTION - Does the exact name "${subjectName}" appear in title or snippet?
+   NO → GREEN with reason "No name match" (STOP HERE - do not continue)
+   YES → Continue to step 2
+
+2. SUBJECT VERIFICATION - Is it about "${subjectName}" or a different person?
+   Article is about someone else → GREEN "Different individual"
+   Cannot determine → YELLOW "Name match - verify identity"
+   Confirmed about "${subjectName}" → Continue to step 3
+
+3. ADVERSE CONTENT - What type of content about "${subjectName}"?
+   Clearly adverse (crime, fraud, sanctions, arrest) → RED with specific reason
+   Possibly adverse or unclear → YELLOW with specific reason
+   Neutral/positive content → GREEN "Neutral mention"
+
+USE THESE STANDARD REASONS:
+GREEN reasons:
+- "No name match" (name not found)
+- "Different individual" (clearly different person)
+- "Neutral mention" (same person, no adverse info)
+- "Partial match only" (name is substring of other text)
+
+YELLOW reasons:
+- "Name match - verify identity" (name found but cannot confirm same person)
+- "Name match - context unclear" (same person but unclear if adverse)
+- "Possible adverse mention" (hints at issues, needs verification)
+
+RED reasons:
+- "Criminal activity mentioned" (crime, fraud, theft)
+- "Regulatory action mentioned" (sanctions, fines, bans)
+- "Legal proceedings mentioned" (lawsuit, prosecution, arrest)
+- "Financial misconduct mentioned" (fraud, manipulation, embezzlement)
 
 SEARCH RESULTS:
 ${resultsText}
@@ -62,42 +199,66 @@ ${resultsText}
 Return JSON only:
 {
   "classifications": [
-    {"index": 1, "classification": "GREEN", "reason": "award ceremony"},
-    {"index": 2, "classification": "YELLOW", "reason": "regulatory mention unclear"},
-    {"index": 3, "classification": "RED", "reason": "fraud investigation"}
+    {"index": 1, "classification": "GREEN", "reason": "No name match"},
+    {"index": 2, "classification": "YELLOW", "reason": "Name match - verify identity"},
+    {"index": 3, "classification": "RED", "reason": "Criminal activity mentioned"}
   ]
 }`;
 
-  // Fix #1: Wrap axios call in try-catch for network errors, timeouts, or API errors
-  let response;
-  try {
-    response = await axios.post(
-      KIMI_URL,
-      {
-        model: 'moonshot-v1-8k',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${KIMI_API_KEY}`,
-        },
-        timeout: 60000,
+  // Try each provider in order until one succeeds
+  let rawText = '';
+  let lastError = '';
+
+  for (const provider of providers) {
+    console.log(`[PRE-SCREEN] Trying ${provider.name} (${provider.model})...`);
+
+    try {
+      if (provider.isGemini) {
+        rawText = await callGeminiAPI(provider, prompt);
+      } else {
+        rawText = await callOpenAICompatibleAPI(provider, prompt);
       }
-    );
-  } catch {
+
+      console.log(`[PRE-SCREEN] ✓ ${provider.name} succeeded`);
+      break; // Success! Exit the loop
+
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error?.message
+        || error?.response?.status
+        || error?.message
+        || 'unknown error';
+
+      console.error(`[PRE-SCREEN] ✗ ${provider.name} failed: ${errorMessage}`);
+      lastError = `${provider.name}: ${errorMessage}`;
+
+      // Check if we should try the next provider
+      if (isContentModerationError(error)) {
+        console.log(`[PRE-SCREEN] Content moderation error, trying next provider...`);
+        continue;
+      }
+
+      // For other errors (network, timeout), also try next provider
+      continue;
+    }
+  }
+
+  // If all providers failed
+  if (!rawText) {
+    console.error(`[PRE-SCREEN] All providers failed. Last error: ${lastError}`);
     return {
       red: [],
-      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'api failed' })),
+      yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: `all apis failed: ${lastError}` })),
       green: []
     };
   }
+  console.log('Triage LLM response (first 500 chars):', rawText.slice(0, 500));
 
-  const text = response.data.choices?.[0]?.message?.content || '';
+  // Strip markdown code blocks that DeepSeek wraps around JSON
+  const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     // Fallback: treat all as YELLOW
+    console.error('No JSON found in triage response. Full text:', text);
     return {
       red: [],
       yellow: results.map(r => ({ ...r, classification: 'YELLOW' as const, reason: 'parse failed' })),

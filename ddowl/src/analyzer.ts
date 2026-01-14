@@ -5,10 +5,16 @@ import puppeteer, { Browser } from 'puppeteer';
 import { SearchResult, AnalyzedResult } from './types.js';
 import { detectCategory } from './searchStrings.js';
 
-// Kimi/Moonshot API configuration
+// LLM Configuration - supports DeepSeek (preferred) or Kimi fallback
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
-const KIMI_URL = 'https://api.moonshot.ai/v1/chat/completions';
-const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-8k';
+
+// Use DeepSeek if available, otherwise fall back to Kimi
+const LLM_API_KEY = DEEPSEEK_API_KEY || KIMI_API_KEY;
+const LLM_URL = DEEPSEEK_API_KEY
+  ? 'https://api.deepseek.com/v1/chat/completions'
+  : 'https://api.moonshot.ai/v1/chat/completions';
+const LLM_MODEL = DEEPSEEK_API_KEY ? 'deepseek-chat' : (process.env.KIMI_MODEL || 'moonshot-v1-8k');
 
 // Shared browser instance for Puppeteer fallback
 let browser: Browser | null = null;
@@ -134,6 +140,37 @@ async function fetchWithPuppeteer(url: string): Promise<string> {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
     await new Promise(r => setTimeout(r, 500));
 
+    // Dismiss any login/subscription popups that block content
+    const closeSelectors = [
+      '.close', '.modal-close', '[class*="close"]', '[class*="Close"]',
+      '.login-close', '.popup-close', '.dialog-close',
+      'button[aria-label="Close"]', 'button[aria-label="关闭"]',
+      '.modal .close-btn', '.overlay-close',
+      'i.close', 'span.close', 'div.close',
+      '[class*="dismiss"]', '[class*="cancel"]'
+    ];
+
+    for (const selector of closeSelectors) {
+      try {
+        const closeBtn = await page.$(selector);
+        if (closeBtn) {
+          const isVisible = await closeBtn.evaluate((el: Element) => {
+            const style = window.getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+          });
+          if (isVisible) {
+            await closeBtn.click();
+            await new Promise(r => setTimeout(r, 300));
+            break; // Only need to close one popup
+          }
+        }
+      } catch { /* ignore selector errors */ }
+    }
+
+    // Also try pressing Escape key to dismiss modals
+    await page.keyboard.press('Escape');
+    await new Promise(r => setTimeout(r, 200));
+
     const text = await page.evaluate(() => {
       const body = document.body;
       if (!body) return '';
@@ -200,22 +237,24 @@ Answer in JSON:
 
   try {
     const response = await axios.post(
-      KIMI_URL,
+      LLM_URL,
       {
-        model: KIMI_MODEL,
+        model: LLM_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${KIMI_API_KEY}`,
+          'Authorization': `Bearer ${LLM_API_KEY}`,
         },
         timeout: 30000,
       }
     );
 
-    const text = response.data.choices?.[0]?.message?.content || '';
+    const rawText = response.data.choices?.[0]?.message?.content || '';
+    // Strip markdown code blocks that DeepSeek wraps around JSON
+    const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -244,7 +283,7 @@ export async function analyzeWithLLM(
     return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Unable to fetch content' };
   }
 
-  if (!KIMI_API_KEY) {
+  if (!LLM_API_KEY) {
     return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'LLM API key not configured' };
   }
 
@@ -281,22 +320,24 @@ Severity guide:
 
   try {
     const response = await axios.post(
-      KIMI_URL,
+      LLM_URL,
       {
-        model: KIMI_MODEL,
+        model: LLM_MODEL,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${KIMI_API_KEY}`,
+          'Authorization': `Bearer ${LLM_API_KEY}`,
         },
         timeout: 60000,
       }
     );
 
-    const text = response.data.choices?.[0]?.message?.content || '';
+    const rawText = response.data.choices?.[0]?.message?.content || '';
+    // Strip markdown code blocks that DeepSeek wraps around JSON
+    const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
 
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);

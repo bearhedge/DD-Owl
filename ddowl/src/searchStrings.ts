@@ -50,18 +50,32 @@ export const SEARCH_TEMPLATES = [
 
   // Traditional Chinese - Set 9: Misc
   `"{NAME}" 賄 | 濫 | 假帳 | 調查 | 違反 | 誹謗 | 醜聞 | 爭議 | 獄 | 誤導 | 操縱 | 黑社會 | 黑錢 | 賭 | 盜 | 竊`,
+
+  // Violence/Seizure/Fundraising (Simplified)
+  `"{NAME}" 暴力 | 强占 | 霸占 | 非法集资 | 受贿 | 行贿 | 找换 | 外汇 | 崩盘 | 瓦解 | 跑路 | 卷款`,
+
+  // Violence/Seizure/Fundraising (Traditional)
+  `"{NAME}" 暴力 | 強佔 | 霸佔 | 非法集資 | 受賄 | 行賄 | 找換 | 外匯 | 崩盤 | 瓦解 | 跑路 | 捲款`,
+
+  // Direct site searches for high-value sources (often missed by generic search)
+  `site:hkexnews.hk "{NAME}"`,           // HKEX filings
+  `site:sfc.hk "{NAME}"`,                // SFC Hong Kong regulatory
+  `site:zhihu.com "{NAME}"`,             // Zhihu (Chinese Quora)
+  `site:collection.news "{NAME}"`,       // Apple Daily archive
+  `site:weibo.com "{NAME}"`,             // Weibo
+  `site:caixin.com "{NAME}"`,            // Caixin financial news
 ];
 
 // Category mapping for clearer reporting
 export const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  'Criminal': ['谋杀', '强奸', '抢劫', '盗窃', '攻击', '強姦', '搶劫', '盜竊', '攻擊'],
-  'Financial Crime': ['洗钱', '内幕交易', '操纵股价', '贪污', '贿赂', '洗錢', '內幕交易', '操縱股價', '貪污', '賄賂'],
+  'Criminal': ['谋杀', '强奸', '抢劫', '盗窃', '攻击', '強姦', '搶劫', '盜竊', '攻擊', '暴力', '强占', '霸占', '強佔', '霸佔'],
+  'Financial Crime': ['洗钱', '内幕交易', '操纵股价', '贪污', '贿赂', '洗錢', '內幕交易', '操縱股價', '貪污', '賄賂', '非法集资', '非法集資', '找换', '找換', '外汇', '外匯', '崩盘', '崩盤', '跑路', '卷款', '捲款'],
   'Fraud': ['诈骗', '欺诈', '骗局', '造假', '詐騙', '詐欺', '騙局'],
   'Sanctions/Legal': ['制裁', '资产冻结', '禁令', '被起诉', '判决', '資產凍結', '被起訴', '判決'],
   'Terrorism': ['恐怖主义', '恐怖分子', '极端主义', '恐怖主義', '極端主義'],
   'Labor Issues': ['强迫劳动', '童工', '奴隶', '剥削', '強迫勞動', '奴隸', '剝削'],
   'Regulatory': ['证监会', '警告', '处罚', '裁罚', '證監會', '處罰', '裁罰'],
-  'Corruption': ['腐败', '回扣', '舞弊', '腐敗'],
+  'Corruption': ['腐败', '回扣', '舞弊', '腐敗', '受贿', '行贿', '受賄', '行賄'],
   'Drug Related': ['毒贩', '药物成瘾', '麻药', '毒販', '藥物成癮', '麻藥'],
 };
 
