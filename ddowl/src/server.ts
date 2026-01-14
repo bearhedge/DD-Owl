@@ -436,6 +436,9 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
     let totalAnalyzed = 0;
     let totalCleared = 0;
 
+    // Initialize metrics tracker
+    const tracker = new MetricsTracker(subjectName);
+
     for (let i = 0; i < SEARCH_TEMPLATES.length; i++) {
       try {
         // Skip queries already completed before reconnect
@@ -482,6 +485,7 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
 
         const searchResults = await searchAllEngines(query, 20, 10, searchProgress);
       totalSearchResults += searchResults.length;
+      tracker.recordQuery(searchResults.length);
 
       sendEvent({
         type: 'search_results',
@@ -563,6 +567,8 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
         skipped: triage.green.length,
         toInvestigate: triage.red.length + triage.yellow.length
       });
+
+      tracker.recordTriage(triage.red.length, triage.yellow.length, triage.green.length);
 
       // Count cleared results
       totalCleared += triage.green.length;
@@ -705,6 +711,7 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
     if (allFindings.length > 0) {
       sendEvent({ type: 'consolidating', count: allFindings.length });
       consolidatedFindings = await consolidateFindings(allFindings, subjectName);
+      tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
       sendEvent({
         type: 'consolidated',
         before: allFindings.length,
@@ -731,34 +738,29 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
       triageLog
     });
 
-    // Save complete activity log to JSON file for auditing
+    // Finalize metrics
+    const metrics = tracker.finalize();
+
+    // Evaluate against benchmark if applicable
+    const benchmarkResult = evaluateBenchmark(subjectName, consolidatedFindings, metrics.runId);
+    if (benchmarkResult) {
+      saveBenchmarkResult(benchmarkResult);
+      sendEvent({
+        type: 'benchmark',
+        recall: benchmarkResult.recall,
+        matched: benchmarkResult.matchedIssues,
+        missed: benchmarkResult.missedIssues,
+      });
+    }
+
+    // Save complete screening log
     try {
-      const fs = await import('fs');
-      const sanitizedName = subjectName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
-      const runId = `${sanitizedName}-${Date.now()}`;
-      const logPath = path.join(__dirname, '../runs', `screening-${runId}.json`);
-
-      const logData = {
-        runId,
-        subject: subjectName,
-        timestamp: new Date().toISOString(),
-        totalEvents: eventLog.length,
-        stats: {
-          totalSearchResults,
-          totalSkippedDuplicates,
-          totalFetched,
-          totalAnalyzed,
-          totalCleared,
-          findings: consolidatedFindings.length,
-          red: redFindings.length,
-          amber: amberFindings.length
-        },
+      const logPath = saveLog(subjectName, metrics.runId, {
+        metrics,
         findings: consolidatedFindings,
+        eventLog,
         triageLog,
-        eventLog
-      };
-
-      fs.writeFileSync(logPath, JSON.stringify(logData, null, 2));
+      });
       console.log(`[LOG] Saved screening log to ${logPath}`);
     } catch (logError) {
       console.error('[LOG] Failed to save screening log:', logError);
