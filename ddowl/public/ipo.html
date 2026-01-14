@@ -235,6 +235,11 @@
     .banks-cell {
       line-height: 1.8;
     }
+    .size-cell {
+      color: #4a9eff;
+      font-weight: 600;
+      text-align: right;
+    }
     .export-btn {
       background: #1a1a1a;
       color: #888;
@@ -359,8 +364,9 @@
           <thead>
             <tr>
               <th data-sort="ticker" style="width: 70px;">Ticker</th>
-              <th data-sort="company" style="width: 220px;">Company</th>
-              <th data-sort="date" style="width: 100px;">Prospectus</th>
+              <th data-sort="company" style="width: 240px;">Company</th>
+              <th data-sort="date" style="width: 80px;">Date</th>
+              <th data-sort="sizeHKDm" style="width: 100px;">Size (HKDm)</th>
               <th>Sponsors</th>
               <th>Others</th>
             </tr>
@@ -391,15 +397,15 @@
       });
     });
 
-    // Load CSV data
+    // Load enriched CSV data (already grouped by deal)
     async function loadData() {
       try {
-        const response = await fetch('/baseline-export.csv');
+        const response = await fetch('/baseline-enriched.csv');
         const text = await response.text();
         const lines = text.split('\n');
         const headers = parseCSVLine(lines[0]);
 
-        rawData = [];
+        allData = [];
         for (let i = 1; i < lines.length; i++) {
           if (!lines[i].trim()) continue;
           const values = parseCSVLine(lines[i]);
@@ -407,89 +413,29 @@
           headers.forEach((h, idx) => {
             row[h] = values[idx] || '';
           });
-          rawData.push(row);
+
+          // Parse enriched format
+          allData.push({
+            ticker: row.ticker,
+            company: row.company,
+            companyCn: row.company_cn || '',
+            type: row.type,
+            date: row.date,
+            shares: parseFloat(row.shares) || null,
+            price: parseFloat(row.price_hkd) || null,
+            sizeHKDm: parseFloat(row.size_hkdm) || null,
+            sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
+            others: row.others ? row.others.split('; ').filter(Boolean) : []
+          });
         }
 
-        // Group by deal
-        groupByDeal();
         populateYearFilter();
         applyFilters();
       } catch (err) {
         console.error('Failed to load data:', err);
         document.getElementById('table-body').innerHTML =
-          '<tr><td colspan="5" class="empty-state">Failed to load data</td></tr>';
+          '<tr><td colspan="6" class="empty-state">Failed to load data</td></tr>';
       }
-    }
-
-    function groupByDeal() {
-      const deals = new Map();
-
-      for (const row of rawData) {
-        const key = row.ticker;
-        let deal = deals.get(key);
-
-        if (!deal) {
-          deal = {
-            ticker: row.ticker,
-            company: cleanCompanyName(row.company),
-            date: row.date,
-            sponsors: new Set(),
-            others: new Set()
-          };
-          deals.set(key, deal);
-        }
-
-        const bank = cleanBankName(row.bank_normalized);
-        if (!bank || isGarbageBank(bank)) continue;
-
-        if (row.is_sponsor === 'Y') {
-          deal.sponsors.add(bank);
-          deal.others.delete(bank);
-        } else if (!deal.sponsors.has(bank)) {
-          deal.others.add(bank);
-        }
-      }
-
-      allData = Array.from(deals.values()).map(d => ({
-        ticker: d.ticker,
-        company: d.company,
-        date: d.date,
-        sponsors: Array.from(d.sponsors).sort(),
-        others: Array.from(d.others).sort()
-      }));
-    }
-
-    function cleanCompanyName(name) {
-      if (!name) return '';
-      // Remove -W, -B, -S suffixes
-      return name.replace(/\s+-\s*[WBS]$/i, '').trim();
-    }
-
-    function cleanBankName(name) {
-      if (!name) return '';
-      return name
-        .replace(/\s+/g, ' ')
-        .replace(/\s*Company$/i, '')
-        .replace(/\s*Co\.?$/i, '')
-        .replace(/\s*Limited$/i, '')
-        .replace(/\s*Ltd\.?$/i, '')
-        .trim();
-    }
-
-    function isGarbageBank(name) {
-      if (!name || name.length < 3) return true;
-      // Filter out garbage/prose
-      const garbage = [
-        /^futures$/i,
-        /^securities$/i,
-        /^capital$/i,
-        /is a$/i,
-        /Limited:$/i,
-        /Financial adviser/i,
-        /joint stock/i,
-        /into a/i,
-      ];
-      return garbage.some(p => p.test(name));
     }
 
     function parseCSVLine(line) {
@@ -578,9 +524,9 @@
           };
           aVal = parseDate(aVal);
           bVal = parseDate(bVal);
-        } else if (sortColumn === 'ticker') {
-          aVal = parseInt(aVal) || 0;
-          bVal = parseInt(bVal) || 0;
+        } else if (sortColumn === 'ticker' || sortColumn === 'sizeHKDm') {
+          aVal = parseFloat(aVal) || 0;
+          bVal = parseFloat(bVal) || 0;
         } else {
           aVal = String(aVal).toLowerCase();
           bVal = String(bVal).toLowerCase();
@@ -598,19 +544,28 @@
       const tbody = document.getElementById('table-body');
 
       if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No results found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No results found</td></tr>';
         return;
       }
 
       tbody.innerHTML = pageData.map(row => `
         <tr>
           <td class="ticker">${row.ticker}</td>
-          <td class="company-name">${escapeHtml(row.company)}</td>
+          <td class="company-name" title="${escapeHtml(row.company)}">${escapeHtml(row.company)}</td>
           <td class="date-cell">${formatDate(row.date)}</td>
+          <td class="size-cell">${formatSize(row.sizeHKDm)}</td>
           <td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join('') || '-'}</td>
           <td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join('') || '-'}</td>
         </tr>
       `).join('');
+    }
+
+    function formatSize(size) {
+      if (!size) return '-';
+      if (size >= 1000) {
+        return (size / 1000).toFixed(1) + 'B';
+      }
+      return size.toFixed(0) + 'M';
     }
 
     function formatDate(dateStr) {
