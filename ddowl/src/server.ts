@@ -70,6 +70,9 @@ const PORT = process.env.PORT || 8080;
 // Initialize log directories
 initLogDirectories();
 
+// Track active screenings to prevent duplicates
+const activeScreenings = new Map<string, AbortController>();
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
@@ -789,6 +792,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const variationsParam = req.query.variations as string;
   const language = (req.query.language as string) || 'both';
 
+  // Cancel any existing screening for this subject
+  const screeningKey = subjectName.toLowerCase();
+  if (activeScreenings.has(screeningKey)) {
+    console.log(`[V4] Cancelling existing screening for: ${subjectName}`);
+    activeScreenings.get(screeningKey)!.abort();
+    activeScreenings.delete(screeningKey);
+  }
+
   if (!subjectName || subjectName.trim().length < 2) {
     res.status(400).json({ error: 'Name required (2+ chars)' });
     return;
@@ -848,6 +859,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   // Abort controller for cancelling operations on client disconnect
   const abortController = new AbortController();
   const { signal } = abortController;
+
+  // Register this screening (for deduplication)
+  activeScreenings.set(screeningKey, abortController);
 
   // Handle client disconnect
   res.on('close', () => {
@@ -955,6 +969,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     if (allResults.length === 0) {
       clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
       sendEvent({ type: 'complete', stats: { totalResults: 0, findings: 0 }, findings: [] });
       res.end();
       return;
@@ -1036,6 +1051,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     if (passed.length === 0) {
       clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
       sendEvent({ type: 'complete', stats: { totalResults: allResults.length, programmaticEliminated: progEliminated.length, findings: 0 }, findings: [] });
       res.end();
       return;
@@ -1080,6 +1096,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     if (toProcess.length === 0) {
       clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
       sendEvent({ type: 'complete', stats: { totalResults: allResults.length, findings: 0 }, findings: [] });
       res.end();
       return;
@@ -1268,9 +1285,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
     }
 
+    activeScreenings.delete(screeningKey);
     res.end();
   } catch (error) {
     clearInterval(heartbeat);
+    activeScreenings.delete(screeningKey);
     console.error('[V4] Screening error:', error);
     sendEvent({ type: 'error', message: 'Screening failed' });
     res.end();
