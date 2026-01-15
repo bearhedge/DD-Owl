@@ -429,7 +429,7 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   // Heartbeat to prevent timeout (5s for better connection stability)
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 5000);
+  }, 2000);
 
   try {
     const allFindings: RawFinding[] = [];
@@ -855,7 +855,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   // Heartbeat
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 5000);
+  }, 2000);
 
   // Abort controller for cancelling operations on client disconnect
   const abortController = new AbortController();
@@ -1533,7 +1533,7 @@ app.post('/api/report/generate', async (req: Request, res: Response) => {
   // Heartbeat to prevent timeout (5s for better connection stability)
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 5000);
+  }, 2000);
 
   try {
     console.log(`[REPORT] Starting report generation for ${subjectName} with ${findings.length} findings`);
