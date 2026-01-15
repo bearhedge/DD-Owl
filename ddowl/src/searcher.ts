@@ -24,7 +24,8 @@ export interface SerperResponse {
 export async function searchGoogle(
   query: string,
   page: number = 1,
-  resultsPerPage: number = 10
+  resultsPerPage: number = 10,
+  signal?: AbortSignal
 ): Promise<SearchResult[]> {
   try {
     const response = await axios.post<SerperResponse>(
@@ -41,6 +42,7 @@ export async function searchGoogle(
           'Content-Type': 'application/json',
         },
         timeout: 30000,
+        signal,
       }
     );
 
@@ -53,7 +55,11 @@ export async function searchGoogle(
       link: result.link,
       snippet: result.snippet || '',
     }));
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'CanceledError' || signal?.aborted) {
+      console.log(`Search cancelled for query "${query}" page ${page}`);
+      return [];
+    }
     console.error(`Search error for query "${query}" page ${page}:`, error);
     return [];
   }

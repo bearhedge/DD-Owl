@@ -950,7 +950,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           return;
         }
 
-        const pageResults = await searchGoogle(query, page, 10);
+        const pageResults = await searchGoogle(query, page, 10, signal);
 
         sendEvent({
           type: 'search_page',
