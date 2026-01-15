@@ -845,6 +845,17 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     res.write(': keepalive\n\n');
   }, 5000);
 
+  // Abort controller for cancelling operations on client disconnect
+  const abortController = new AbortController();
+  const { signal } = abortController;
+
+  // Handle client disconnect
+  res.on('close', () => {
+    console.log(`[V4] Client disconnected for: ${subjectName}`);
+    abortController.abort();
+    clearInterval(heartbeat);
+  });
+
   try {
     const tracker = new MetricsTracker(subjectName);
     const startTime = Date.now();
