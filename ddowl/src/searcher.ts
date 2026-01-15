@@ -40,6 +40,7 @@ export async function searchGoogle(
           'X-API-KEY': SERPER_API_KEY,
           'Content-Type': 'application/json',
         },
+        timeout: 30000,
       }
     );
 
@@ -196,30 +197,42 @@ export interface BatchSearchResult {
 }
 
 export type BatchSearchProgressCallback = (event: {
-  type: 'query_start' | 'query_complete' | 'all_complete';
+  type: 'query_start' | 'query_page' | 'query_complete' | 'all_complete';
   queryIndex?: number;
   totalQueries?: number;
   query?: string;
+  page?: number;          // Current page being fetched
+  pageResults?: number;   // Results from this page
   resultsFound?: number;
   totalResultsSoFar?: number;
 }) => void;
 
 /**
  * Run all search queries (dirty word templates) and gather all URLs.
- * Searches BOTH Google (Serper) AND Baidu for each query.
+ * Searches Google (Serper) for each query.
  * This is the first step: gather everything, categorize later.
+ *
+ * @param nameVariants - Array of name variants to search (e.g., ["许楚家", "許楚家"])
  */
 export async function searchAll(
-  subject: string,
+  nameVariants: string[],
   searchTemplates: string[],
   onProgress?: BatchSearchProgressCallback
 ): Promise<BatchSearchResult[]> {
   const allResults: BatchSearchResult[] = [];
-  const hasBaidu = isBaiduAvailable();
 
   for (let i = 0; i < searchTemplates.length; i++) {
     const template = searchTemplates[i];
-    const query = template.replace('{name}', subject);
+
+    // Build query with all name variants using OR
+    // e.g., ("许楚家" OR "許楚家") 诈骗|詐騙...
+    let query: string;
+    if (nameVariants.length === 1) {
+      query = template.replace('{NAME}', nameVariants[0]);
+    } else {
+      const orClause = '(' + nameVariants.map(n => `"${n}"`).join(' OR ') + ')';
+      query = template.replace('"{NAME}"', orClause);
+    }
 
     onProgress?.({
       type: 'query_start',
@@ -228,8 +241,36 @@ export async function searchAll(
       query,
     });
 
-    // Search Google (Serper) - 1 page, 10 results
-    const googleResults = await searchGoogle(query, 1, 10);
+    // Search Google (Serper) - up to 5 pages, stop early if no more results
+    const MAX_PAGES = 5;
+    const googleResults: SearchResult[] = [];
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const pageResults = await searchGoogle(query, page, 10);
+
+      // Log each page fetch
+      onProgress?.({
+        type: 'query_page',
+        queryIndex: i + 1,
+        totalQueries: searchTemplates.length,
+        page,
+        pageResults: pageResults.length,
+      });
+
+      if (pageResults.length === 0) {
+        break; // No more results
+      }
+
+      googleResults.push(...pageResults);
+
+      if (pageResults.length < 10) {
+        break; // Last page (partial results)
+      }
+
+      // Small delay between pages
+      await new Promise(r => setTimeout(r, 200));
+    }
+
     for (const r of googleResults) {
       allResults.push({
         url: r.link,
@@ -239,27 +280,27 @@ export async function searchAll(
       });
     }
 
-    // Search Baidu if available - 1 page
-    let baiduCount = 0;
-    if (hasBaidu) {
-      const baiduResults = await searchBaidu(query, 1);
-      for (const r of baiduResults) {
-        allResults.push({
-          url: r.link,
-          title: r.title,
-          snippet: r.snippet,
-          query: template,
-        });
-        baiduCount++;
-      }
-    }
+    // Baidu disabled for now
+    // let baiduCount = 0;
+    // if (hasBaidu) {
+    //   const baiduResults = await searchBaidu(query, 1);
+    //   for (const r of baiduResults) {
+    //     allResults.push({
+    //       url: r.link,
+    //       title: r.title,
+    //       snippet: r.snippet,
+    //       query: template,
+    //     });
+    //     baiduCount++;
+    //   }
+    // }
 
     onProgress?.({
       type: 'query_complete',
       queryIndex: i + 1,
       totalQueries: searchTemplates.length,
       query,
-      resultsFound: googleResults.length + baiduCount,
+      resultsFound: googleResults.length,
       totalResultsSoFar: allResults.length,
     });
 

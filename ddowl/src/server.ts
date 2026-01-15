@@ -44,6 +44,7 @@ import { initLogDirectories, saveScreeningLog as saveLog, loadScreeningLog as lo
 import { MetricsTracker } from './metrics/tracker.js';
 import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
 import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown } from './eliminator.js';
+import { getChineseVariants } from './utils/chinese.js';
 
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -802,6 +803,19 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     });
   }
 
+  // For Chinese language: auto-generate Simplified/Traditional variants
+  if (language === 'chinese' || language === 'both') {
+    const currentNames = [...nameVariations];
+    for (const name of currentNames) {
+      const variants = getChineseVariants(name);
+      for (const variant of variants) {
+        if (!nameVariations.includes(variant)) {
+          nameVariations.push(variant);
+        }
+      }
+    }
+  }
+
   // Build search templates based on language selection
   let selectedTemplates: string[] = [];
   if (language === 'chinese') {
@@ -860,36 +874,46 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 1: GATHER ALL URLs
     // ========================================
-    const totalSearches = nameVariations.length * selectedTemplates.length;
+    const totalSearches = selectedTemplates.length;
+    const nameVariantsDisplay = nameVariations.length > 1
+      ? `${nameVariations.length} name variants using OR (${nameVariations.join(', ')})`
+      : nameVariations[0];
     sendEvent({
       type: 'phase',
       phase: 1,
       name: 'GATHER',
-      message: `Gathering results for ${nameVariations.length} name variation(s), ${selectedTemplates.length} templates each (${totalSearches} total searches)...`
+      message: `Gathering results for ${nameVariantsDisplay}, ${selectedTemplates.length} templates (${totalSearches} searches)...`
     });
 
-    // Search all name variations
+    // Search with all name variants combined using OR in each query
+    // e.g., ("许楚家" OR "許楚家") 诈骗|詐騙...
     const allResults: BatchSearchResult[] = [];
     let searchesDone = 0;
 
-    for (const nameVar of nameVariations) {
-      const results = await searchAll(nameVar, selectedTemplates, (event) => {
-        if (event.type === 'query_complete') {
-          searchesDone++;
-          sendEvent({
-            type: 'search_progress',
-            queryIndex: searchesDone,
-            totalQueries: totalSearches,
-            query: event.query,
-            resultsFound: event.resultsFound,
-            totalSoFar: allResults.length + (event.totalResultsSoFar || 0),
-            nameVariation: nameVar,
-          });
-          tracker.recordQuery(event.resultsFound || 0);
-        }
-      });
-      allResults.push(...results);
-    }
+    const results = await searchAll(nameVariations, selectedTemplates, (event) => {
+      if (event.type === 'query_page') {
+        // Log each page fetch for debugging pagination
+        sendEvent({
+          type: 'search_page',
+          queryIndex: event.queryIndex,
+          totalQueries: event.totalQueries,
+          page: event.page,
+          pageResults: event.pageResults,
+        });
+      } else if (event.type === 'query_complete') {
+        searchesDone++;
+        sendEvent({
+          type: 'search_progress',
+          queryIndex: searchesDone,
+          totalQueries: totalSearches,
+          query: event.query,
+          resultsFound: event.resultsFound,
+          totalSoFar: event.totalResultsSoFar || 0,
+        });
+        tracker.recordQuery(event.resultsFound || 0);
+      }
+    });
+    allResults.push(...results);
 
     // Track all gathered URLs with full details AND send per-result events for auditing
     for (let i = 0; i < allResults.length; i++) {

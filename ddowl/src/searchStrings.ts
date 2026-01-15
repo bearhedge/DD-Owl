@@ -75,6 +75,23 @@ export function buildSearchQuery(template: string, subjectName: string): string 
   return template.replace('{NAME}', subjectName);
 }
 
+/**
+ * Build search query with multiple name variants using OR
+ * e.g., ("许楚家" OR "許楚家") 诈骗|詐騙...
+ */
+export function buildSearchQueryWithVariants(template: string, nameVariants: string[]): string {
+  if (nameVariants.length === 0) return template;
+  if (nameVariants.length === 1) return template.replace('{NAME}', nameVariants[0]);
+
+  // Build OR clause: ("name1" OR "name2" OR "name3")
+  const orClause = '(' + nameVariants.map(n => `"${n}"`).join(' OR ') + ')';
+
+  // Template has "{NAME}" - replace with OR clause (without extra quotes since we added them)
+  // Template format: "{NAME}" 诈骗|詐騙...
+  // We need to replace "{NAME}" with the OR clause
+  return template.replace('"{NAME}"', orClause);
+}
+
 export function detectCategory(text: string): string {
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
     for (const keyword of keywords) {
