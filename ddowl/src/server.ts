@@ -21,13 +21,13 @@ import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
 import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery } from './searchStrings.js';
-import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult } from './searcher.js';
+import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult, searchGoogle } from './searcher.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
 import { triageSearchResults, TriageResult, categorizeAll, CategorizedResult } from './triage.js';
 import { consolidateFindings } from './consolidator.js';
 import { generateFullReport } from './reportGenerator.js';
-import { RawFinding, ConsolidatedFinding } from './types.js';
+import { RawFinding, ConsolidatedFinding, SearchResult } from './types.js';
 import { extractFinding, isSameFinding, mergeFindings, Finding } from './extract.js';
 import { detectCategory } from './searchStrings.js';
 import { DDOwlReport, DDOwlReportV2, Issue, AnalyzedResult } from './types.js';
@@ -791,6 +791,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const subjectName = req.query.name as string;
   const variationsParam = req.query.variations as string;
   const language = (req.query.language as string) || 'both';
+  const resumeFrom = parseInt(req.query.resumeFrom as string) || 0;
 
   // Cancel any existing screening for this subject
   const screeningKey = subjectName.toLowerCase();
@@ -911,34 +912,82 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     });
 
     // Search with all name variants combined using OR in each query
-    // e.g., ("许楚家" OR "許楚家") 诈骗|詐騙...
+    // Skip queries before resumeFrom (already completed in previous connection)
     const allResults: BatchSearchResult[] = [];
-    let searchesDone = 0;
+    let searchesDone = resumeFrom;
 
-    const results = await searchAll(nameVariations, selectedTemplates, (event) => {
-      if (event.type === 'query_page') {
-        // Log each page fetch for debugging pagination
+    for (let i = 0; i < selectedTemplates.length; i++) {
+      // Skip already-completed queries on resume
+      if (i < resumeFrom) {
+        sendEvent({
+          type: 'query_skipped',
+          queryIndex: i + 1,
+          reason: 'Already completed before reconnect'
+        });
+        continue;
+      }
+
+      const template = selectedTemplates[i];
+
+      // Build query with all name variants using OR
+      let query: string;
+      if (nameVariations.length === 1) {
+        query = template.replace('{NAME}', nameVariations[0]);
+      } else {
+        const orClause = '(' + nameVariations.map(n => `"${n}"`).join(' OR ') + ')';
+        query = template.replace('"{NAME}"', orClause);
+      }
+
+      // Search Google (Serper) - up to 5 pages
+      const MAX_PAGES = 5;
+      const googleResults: SearchResult[] = [];
+
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        // Check if aborted
+        if (signal.aborted) {
+          console.log(`[V4] Search aborted for: ${subjectName}`);
+          activeScreenings.delete(screeningKey);
+          return;
+        }
+
+        const pageResults = await searchGoogle(query, page, 10);
+
         sendEvent({
           type: 'search_page',
-          queryIndex: event.queryIndex,
-          totalQueries: event.totalQueries,
-          page: event.page,
-          pageResults: event.pageResults,
+          queryIndex: i + 1,
+          totalQueries: selectedTemplates.length,
+          page,
+          pageResults: pageResults.length,
         });
-      } else if (event.type === 'query_complete') {
-        searchesDone++;
-        sendEvent({
-          type: 'search_progress',
-          queryIndex: searchesDone,
-          totalQueries: totalSearches,
-          query: event.query,
-          resultsFound: event.resultsFound,
-          totalSoFar: event.totalResultsSoFar || 0,
-        });
-        tracker.recordQuery(event.resultsFound || 0);
+
+        if (pageResults.length === 0) break;
+        googleResults.push(...pageResults);
+        if (pageResults.length < 10) break;
+        await new Promise(r => setTimeout(r, 200));
       }
-    });
-    allResults.push(...results);
+
+      for (const r of googleResults) {
+        allResults.push({
+          url: r.link,
+          title: r.title,
+          snippet: r.snippet,
+          query: template,
+        });
+      }
+
+      searchesDone++;
+      sendEvent({
+        type: 'search_progress',
+        queryIndex: i + 1,
+        totalQueries: selectedTemplates.length,
+        query,
+        resultsFound: googleResults.length,
+        totalSoFar: allResults.length,
+      });
+      tracker.recordQuery(googleResults.length);
+
+      await new Promise(r => setTimeout(r, 500));
+    }
 
     // Track all gathered URLs with full details AND send per-result events for auditing
     for (let i = 0; i < allResults.length; i++) {
