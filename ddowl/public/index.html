@@ -781,10 +781,6 @@
       cursor: not-allowed;
     }
 
-    .lang-flag {
-      font-size: 18px;
-    }
-
     .lang-label {
       flex: 1;
       font-size: 14px;
@@ -827,8 +823,7 @@
           >
           <div class="language-selector" id="languageSelector">
             <button type="button" class="language-btn" onclick="toggleLanguageDropdown(event)">
-              <span class="lang-icon">🌐</span>
-              <span class="lang-name" id="selectedLangName">Chinese</span>
+              <span class="lang-name" id="selectedLangName">中文</span>
               <span class="lang-arrow">▼</span>
             </button>
             <div class="language-dropdown">
@@ -949,18 +944,33 @@
     let logEntries = 0;
     let urlsProcessed = 0;
 
-    // Language Selector
+    // Language Selector - native names, grouped by region
     const LANGUAGES = [
-      { code: 'chinese', name: 'Chinese', flag: '🇨🇳', enabled: true },
-      { code: 'english', name: 'English', flag: '🇬🇧', enabled: false },
-      { code: 'thai', name: 'Thai', flag: '🇹🇭', enabled: false },
-      { code: 'vietnamese', name: 'Vietnamese', flag: '🇻🇳', enabled: false },
-      { code: 'khmer', name: 'Khmer', flag: '🇰🇭', enabled: false },
-      { code: 'german', name: 'German', flag: '🇩🇪', enabled: false },
-      { code: 'japanese', name: 'Japanese', flag: '🇯🇵', enabled: false },
-      { code: 'korean', name: 'Korean', flag: '🇰🇷', enabled: false },
-      { code: 'french', name: 'French', flag: '🇫🇷', enabled: false },
-      { code: 'spanish', name: 'Spanish', flag: '🇪🇸', enabled: false },
+      // East Asia
+      { code: 'chinese', name: '中文', enabled: true },
+      { code: 'japanese', name: '日本語', enabled: false },
+      { code: 'korean', name: '한국어', enabled: false },
+      // Southeast Asia
+      { code: 'thai', name: 'ไทย', enabled: false },
+      { code: 'vietnamese', name: 'Tiếng Việt', enabled: false },
+      { code: 'indonesian', name: 'Bahasa Indonesia', enabled: false },
+      { code: 'malay', name: 'Bahasa Melayu', enabled: false },
+      { code: 'khmer', name: 'ខ្មែរ', enabled: false },
+      { code: 'burmese', name: 'မြန်မာ', enabled: false },
+      { code: 'tagalog', name: 'Tagalog', enabled: false },
+      { code: 'lao', name: 'ລາວ', enabled: false },
+      // South Asia
+      { code: 'hindi', name: 'हिन्दी', enabled: false },
+      { code: 'tamil', name: 'தமிழ்', enabled: false },
+      // Europe
+      { code: 'english', name: 'English', enabled: false },
+      { code: 'german', name: 'Deutsch', enabled: false },
+      { code: 'french', name: 'Français', enabled: false },
+      { code: 'spanish', name: 'Español', enabled: false },
+      { code: 'portuguese', name: 'Português', enabled: false },
+      { code: 'russian', name: 'Русский', enabled: false },
+      // Middle East
+      { code: 'arabic', name: 'العربية', enabled: false },
     ];
 
     let selectedLanguage = 'chinese';
@@ -993,7 +1003,6 @@
       list.innerHTML = filtered.map(lang => `
         <div class="lang-option ${lang.code === selectedLanguage ? 'selected' : ''} ${!lang.enabled ? 'disabled' : ''}"
              onclick="${lang.enabled ? `selectLanguage('${lang.code}')` : ''}">
-          <span class="lang-flag">${lang.flag}</span>
           <span class="lang-label">${lang.name}</span>
           ${!lang.enabled ? '<span class="lang-badge">soon</span>' : ''}
           ${lang.code === selectedLanguage ? '<span class="lang-check">✓</span>' : ''}
