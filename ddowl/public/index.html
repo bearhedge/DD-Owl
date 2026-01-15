@@ -700,6 +700,7 @@
       </header>
 
       <div class="search-box">
+        <!-- Main row: Name + Language + Screen -->
         <div class="input-group">
           <input
             type="text"
@@ -707,28 +708,30 @@
             placeholder="Enter subject name (e.g., 徐明星)"
             maxlength="20"
           >
+          <select id="languageSelect" style="padding: 14px 16px; font-size: 14px; font-family: inherit; border: 1px solid #333; border-radius: 6px; background: #0a0a0a; color: #fff; outline: none; cursor: pointer; min-width: 110px;">
+            <option value="chinese">Chinese</option>
+            <option value="english" disabled>English</option>
+          </select>
           <button class="btn-primary" id="searchBtn" onclick="startScreening()">
             Screen
           </button>
         </div>
-        <div style="margin-top: 16px; display: flex; gap: 12px; align-items: flex-start;">
-          <div style="flex: 1;">
-            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">Name Variations</label>
-            <input
-              type="text"
-              id="variationsInput"
-              placeholder="e.g., Xu Mingxing, 徐明星"
-              style="width: 100%;"
-            >
+
+        <!-- Name Variations Section -->
+        <div style="margin-top: 16px;">
+          <label style="display: block; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Name Variations</label>
+          <div id="variationsContainer">
+            <div class="variation-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+              <input
+                type="text"
+                class="variation-input"
+                placeholder="e.g., Xu Mingxing"
+                style="flex: 1;"
+              >
+              <button type="button" onclick="removeVariation(this)" style="padding: 10px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #666; cursor: pointer; font-size: 16px;" title="Remove">×</button>
+            </div>
           </div>
-          <div style="min-width: 150px;">
-            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">Language</label>
-            <select id="languageSelect" style="width: 100%; padding: 14px 18px; font-size: 14px; font-family: inherit; border: 1px solid #333; border-radius: 6px; background: #0a0a0a; color: #fff; outline: none;">
-              <option value="both">Both (10/name)</option>
-              <option value="chinese">Chinese (10/name)</option>
-              <option value="english">English (1/name)</option>
-            </select>
-          </div>
+          <button type="button" onclick="addVariation()" style="padding: 10px 16px; background: transparent; border: 1px dashed #333; border-radius: 6px; color: #666; cursor: pointer; font-size: 13px; width: 100%; transition: all 0.2s;" onmouseover="this.style.borderColor='#555'; this.style.color='#999'" onmouseout="this.style.borderColor='#333'; this.style.color='#666'">+ Add variation</button>
         </div>
       </div>
 
@@ -860,9 +863,46 @@
       btn.textContent = panel.classList.contains('active') ? 'Hide Log' : 'Show Log';
     }
 
+    // Name variation management
+    function addVariation() {
+      const container = document.getElementById('variationsContainer');
+      const row = document.createElement('div');
+      row.className = 'variation-row';
+      row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px;';
+      row.innerHTML = `
+        <input type="text" class="variation-input" placeholder="e.g., 徐明星" style="flex: 1;">
+        <button type="button" onclick="removeVariation(this)" style="padding: 10px 14px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #666; cursor: pointer; font-size: 16px;" title="Remove">×</button>
+      `;
+      container.appendChild(row);
+      row.querySelector('input').focus();
+    }
+
+    function removeVariation(btn) {
+      const container = document.getElementById('variationsContainer');
+      const rows = container.querySelectorAll('.variation-row');
+      if (rows.length > 1) {
+        btn.parentElement.remove();
+      } else {
+        // Don't remove last row, just clear it
+        btn.parentElement.querySelector('input').value = '';
+      }
+    }
+
+    function getVariations() {
+      const inputs = document.querySelectorAll('.variation-input');
+      const variations = [];
+      inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val && !variations.includes(val)) {
+          variations.push(val);
+        }
+      });
+      return variations;
+    }
+
     function startScreening() {
       const name = document.getElementById('nameInput').value.trim();
-      const variationsRaw = document.getElementById('variationsInput').value.trim();
+      const additionalVariations = getVariations();
       const language = document.getElementById('languageSelect').value;
 
       if (name.length < 2) {
@@ -870,14 +910,13 @@
         return;
       }
 
-      // Parse variations (comma-separated), always include main name
+      // Always include main name first, then additional variations
       const variations = [name];
-      if (variationsRaw) {
-        variationsRaw.split(',').forEach(v => {
-          const trimmed = v.trim();
-          if (trimmed && trimmed !== name) variations.push(trimmed);
-        });
-      }
+      additionalVariations.forEach(v => {
+        if (v !== name && !variations.includes(v)) {
+          variations.push(v);
+        }
+      });
 
       // Reset UI
       redCount = 0;
