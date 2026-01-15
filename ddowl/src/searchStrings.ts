@@ -1,70 +1,62 @@
-// DD Owl - Dirty Word Search Strings
+// DD Owl - Dirty Word Search Strings (Consolidated v2)
 // Each template has {NAME} placeholder to be replaced with subject name
 // Uses Google OR operator (|) to search multiple terms
+// Consolidated from 16 queries → 10 queries (37% API cost reduction)
 
-export const SEARCH_TEMPLATES = [
-  // Simplified Chinese - Set 1: Drug/Detention/Prosecution
-  `"{NAME}" 药物成瘾 | 被拘 | 被诉 | 轻罪 | 邪恶 | 骗局`,
+// Category names for logging (maps template index to human-readable name)
+export const TEMPLATE_CATEGORIES: Record<number, string> = {
+  0: 'Criminal Violence (犯罪暴力)',
+  1: 'Fraud & Deception (欺诈欺骗)',
+  2: 'Financial Crime (金融犯罪)',
+  3: 'Corruption & Bribery (贪腐贿赂)',
+  4: 'Regulatory & Sanctions (监管处罚)',
+  5: 'Legal Proceedings (法律诉讼)',
+  6: 'Misconduct & Discipline (不当行为)',
+  7: 'Labor & Human Rights (劳工人权)',
+  8: 'Drugs, Vice & Extremism (毒品色情极端)',
+  9: 'Authoritative Sites (权威来源)',
+};
 
-  // Simplified Chinese - Set 2: Securities/Fraud
-  `"{NAME}" 集体诉讼 | 麻药 | 内线交易 | 操纵股价 | 操纵证券 | 股价操纵 | 操纵市场 | 受骗 | 堕落 | 极端主义者 | 欺骗 | 滥用药物 | 盗窃罪 | 禁止 | 耻辱`,
+// Chinese search templates (9 thematic queries)
+export const CHINESE_TEMPLATES = [
+  // Q1: Criminal Violence (犯罪暴力)
+  `"{NAME}" 谋杀|謀殺|强奸|強姦|抢劫|搶劫|攻击|攻擊|绑架|綁架|盗窃|盜竊|窃取|竊取|被拘|拘留|收监|收監|监禁|監禁|搶|姦|盜|竊`,
 
-  // Simplified Chinese - Set 3: Violence/Extortion
-  `"{NAME}" 抢劫 | 指控 | 捕获 | 攻击 | 敲诈勒索 | 极端主义 | 毒贩 | 清算 | 滥用 | 盗窃 | 窃取 | 窃贼 | 被罚款 | 资产冻结 | 违犯`,
+  // Q2: Fraud & Deception (欺诈欺骗)
+  `"{NAME}" 诈骗|詐騙|欺诈|詐欺|骗局|騙局|造假|虛假|欺骗|欺騙|受骗|受騙|下套|误导|誤導|诈骗者|詐騙者|欺|騙`,
 
-  // Simplified Chinese - Set 4: Major Crimes
-  `"{NAME}" 诈骗者 | 谋杀 | 贪污 | 贿赂 | 违禁品 | 退回赃物 | 逃犯 | 非法交易 | 黑手党 | 不端行为 | 假释 | 偷窃 | 内幕交易 | 强奸`,
+  // Q3: Financial Crime (金融犯罪)
+  `"{NAME}" 洗钱|洗錢|内幕交易|內幕交易|操纵股价|操縱股價|操纵市场|操縱市場|非法集资|非法集資|内线交易|內線交易|崩盘|崩盤|跑路|卷款|捲款|假帐|假帳|操縱|內幕|黑社会|黑社會`,
 
-  // Simplified Chinese - Set 5: Terrorism/Money Laundering
-  `"{NAME}" 仆役 | 剥削 | 回扣 | 内幕消息 | 恐怖主义 | 恐怖分子 | 提审 | 收监 | 欺诈 | 洗钱 | 监禁 | 破产 | 被绑架 | 被贩卖 | 被起诉`,
+  // Q4: Corruption & Bribery (贪腐贿赂)
+  `"{NAME}" 贪污|貪污|贿赂|賄賂|回扣|腐败|腐敗|腐化|舞弊|受贿|受賄|行贿|行賄|黑钱|黑錢|敲诈勒索|敲詐勒索|勒索|被勒索|贿|賄`,
 
-  // Simplified Chinese - Set 6: Labor/Corruption
-  `"{NAME}" 处罚 | 刑罚| 虚假 | 刑事 | 纠纷 | 腐败 | 撤职 | 停职 | 色情 | 奴隶 | 从器件 | 强迫劳动 | 强制劳动 | 强迫劳工 | 童工 | 仆人`,
+  // Q5: Regulatory & Sanctions (监管处罚)
+  `"{NAME}" 证监会|證監會|证期局|證期局|处罚|處罰|罚款|罰款|制裁|警告|禁入|禁令|资产冻结|資產凍結|裁罚|裁罰|处分|處分|懲戒|反貪`,
 
-  // Simplified Chinese - Set 7: Legal/Regulatory
-  `"{NAME}" 裁罚 | 处分 | 舞弊 | 诉讼 | 指责 | 判决 | 投诉 | 审判 | 开庭 | 双规 | 检察官 | 监察 | 黑箱 | 违法 | 违纪`,
+  // Q6: Legal Proceedings (法律诉讼)
+  `"{NAME}" 起诉|起訴|被诉|被訴|判决|判決|审判|審判|开庭|開庭|检察官|檢察官|诉讼|訴訟|投诉|投訴|控告|指控|提审|提審|定罪|有罪|假释|假釋|官司|调查|調查|獄`,
 
-  // Traditional Chinese - Set 1
-  `"{NAME}" 濫用藥物 | 盜竊罪 | 禁令 | 恥辱 | 藥物成癮 | 被訴 | 輕罪 | 邪惡 | 騙局 | 贿 | 滥 | 假帐 | 调查 | 官司 | 违反`,
+  // Q7: Misconduct & Discipline (不当行为)
+  `"{NAME}" 撤职|撤職|停职|停職|双规|雙規|监察|監察|违法|違法|违纪|違紀|违规|違規|违反|違反|不端行为|不端行為|失格|纠纷|糾紛|案件|滥|濫|丑闻|醜聞|争议|爭議|誹謗`,
 
-  // Traditional Chinese - Set 2
-  `"{NAME}" 內線交易 | 操縱股價 | 操縱證券 | 股價操縱 | 操縱市場 | 冒犯 | 制裁 | 受騙 | 吸毒者 | 墮落 | 失格 | 性 | 拘留 | 極端主義者 | 欺騙`,
+  // Q8: Labor & Human Rights (劳工人权)
+  `"{NAME}" 强迫劳动|強迫勞動|强制劳动|強制勞動|强迫劳工|強迫勞工|童工|奴隶|奴隸|剥削|剝削|被贩卖|被販賣|仆人|僕人|仆役|僕役`,
 
-  // Traditional Chinese - Set 3
-  `"{NAME}" 政治敏感 | 敲詐勒索 | 有罪 | 極端主義 | 毒販 | 濫用 | 盜竊 | 竊取 | 竊賊 | 被罰款 | 資產凍結 | 走私 | 違犯 | 集體訴訟 | 麻藥`,
-
-  // Traditional Chinese - Set 4
-  `"{NAME}" 退回贓物 | 造假 | 重罪 | 非法 | 黑手黨 | 下套 | 不端行為 | 假釋 | 偷竊 | 內幕交易 | 強姦 | 搶劫 | 捕獲 | 控告 | 攻擊`,
-
-  // Traditional Chinese - Set 5
-  `"{NAME}" 收監 | 詐欺 | 洗錢 | 監禁 | 破產 | 腐化 | 被勒索 | 被綁架 | 被販賣 | 被起訴 | 詐騙者 | 謀殺 | 貪污 | 賄賂 | 違禁品`,
-
-  // Traditional Chinese - Set 6
-  `"{NAME}" 撤職 | 停職 | 奴隸 | 從器件 | 強迫勞動 | 強制勞動 | 強迫勞工 | 僕人 | 僕役 | 剝削 | 內幕消息 | 勒索 | 定罪 | 恐怖主義 | 提審`,
-
-  // Traditional Chinese - Set 7
-  `"{NAME}" 指責 | 判決 | 投訴 | 審判 | 開庭 | 雙規 | 檢察官 | 監察 | 違法 | 違紀 | 處罰 | 虛假 | 糾紛 | 案件 | 腐敗`,
-
-  // Traditional Chinese - Set 8: Regulatory
-  `"{NAME}" 欺 | 騙 | 搶 | 姦 | 證監會 | 警告 | 避稅 | 逃稅 | 內幕 | 證期局 | 反貪 | 懲戒 | 裁罰 | 處分 | 訴訟`,
-
-  // Traditional Chinese - Set 9: Misc
-  `"{NAME}" 賄 | 濫 | 假帳 | 調查 | 違反 | 誹謗 | 醜聞 | 爭議 | 獄 | 誤導 | 操縱 | 黑社會 | 黑錢 | 賭 | 盜 | 竊`,
-
-  // Violence/Seizure/Fundraising (Simplified)
-  `"{NAME}" 暴力 | 强占 | 霸占 | 非法集资 | 受贿 | 行贿 | 找换 | 外汇 | 崩盘 | 瓦解 | 跑路 | 卷款`,
-
-  // Violence/Seizure/Fundraising (Traditional)
-  `"{NAME}" 暴力 | 強佔 | 霸佔 | 非法集資 | 受賄 | 行賄 | 找換 | 外匯 | 崩盤 | 瓦解 | 跑路 | 捲款`,
-
-  // Direct site searches for high-value sources (often missed by generic search)
-  `site:hkexnews.hk "{NAME}"`,           // HKEX filings
-  `site:sfc.hk "{NAME}"`,                // SFC Hong Kong regulatory
-  `site:zhihu.com "{NAME}"`,             // Zhihu (Chinese Quora)
-  `site:collection.news "{NAME}"`,       // Apple Daily archive
-  `site:weibo.com "{NAME}"`,             // Weibo
-  `site:caixin.com "{NAME}"`,            // Caixin financial news
+  // Q9: Drugs, Vice & Extremism (毒品色情极端)
+  `"{NAME}" 毒贩|毒販|麻药|麻藥|药物成瘾|藥物成癮|滥用药物|濫用藥物|吸毒者|色情|赌|賭|走私|违禁品|違禁品|恐怖主义|恐怖主義|恐怖分子|极端主义|極端主義`,
 ];
+
+// English search templates (deferred to later phase)
+export const ENGLISH_TEMPLATES: string[] = [];
+
+// Archive site searches (1 query)
+export const SITE_TEMPLATES = [
+  `site:gov.cn OR site:hkexnews.hk OR site:sfc.hk OR site:caixin.com "{NAME}"`,
+];
+
+// Combined for backwards compatibility
+export const SEARCH_TEMPLATES = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
 
 // Category mapping for clearer reporting
 export const CATEGORY_KEYWORDS: Record<string, string[]> = {

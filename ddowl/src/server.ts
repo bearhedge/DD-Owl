@@ -20,7 +20,7 @@ import cors from 'cors';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import { SEARCH_TEMPLATES, buildSearchQuery } from './searchStrings.js';
+import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery } from './searchStrings.js';
 import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult } from './searcher.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
@@ -785,10 +785,32 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
 
 app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const subjectName = req.query.name as string;
+  const variationsParam = req.query.variations as string;
+  const language = (req.query.language as string) || 'both';
 
   if (!subjectName || subjectName.trim().length < 2) {
     res.status(400).json({ error: 'Name required (2+ chars)' });
     return;
+  }
+
+  // Parse name variations (comma-separated), always include main name
+  const nameVariations = [subjectName];
+  if (variationsParam) {
+    variationsParam.split(',').forEach(v => {
+      const trimmed = v.trim();
+      if (trimmed && trimmed !== subjectName) nameVariations.push(trimmed);
+    });
+  }
+
+  // Build search templates based on language selection
+  let selectedTemplates: string[] = [];
+  if (language === 'chinese') {
+    selectedTemplates = [...CHINESE_TEMPLATES, ...SITE_TEMPLATES];
+  } else if (language === 'english') {
+    selectedTemplates = [...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
+  } else {
+    // 'both' - all templates
+    selectedTemplates = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
   }
 
   // SSE setup
@@ -838,25 +860,56 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 1: GATHER ALL URLs
     // ========================================
-    sendEvent({ type: 'phase', phase: 1, name: 'GATHER', message: 'Gathering all search results...' });
-
-    const allResults = await searchAll(subjectName, SEARCH_TEMPLATES, (event) => {
-      if (event.type === 'query_complete') {
-        sendEvent({
-          type: 'search_progress',
-          queryIndex: event.queryIndex,
-          totalQueries: event.totalQueries,
-          query: event.query,
-          resultsFound: event.resultsFound,
-          totalSoFar: event.totalResultsSoFar,
-        });
-        tracker.recordQuery(event.resultsFound || 0);
-      }
+    const totalSearches = nameVariations.length * selectedTemplates.length;
+    sendEvent({
+      type: 'phase',
+      phase: 1,
+      name: 'GATHER',
+      message: `Gathering results for ${nameVariations.length} name variation(s), ${selectedTemplates.length} templates each (${totalSearches} total searches)...`
     });
 
-    // Track all gathered URLs with full details
-    for (const r of allResults) {
+    // Search all name variations
+    const allResults: BatchSearchResult[] = [];
+    let searchesDone = 0;
+
+    for (const nameVar of nameVariations) {
+      const results = await searchAll(nameVar, selectedTemplates, (event) => {
+        if (event.type === 'query_complete') {
+          searchesDone++;
+          sendEvent({
+            type: 'search_progress',
+            queryIndex: searchesDone,
+            totalQueries: totalSearches,
+            query: event.query,
+            resultsFound: event.resultsFound,
+            totalSoFar: allResults.length + (event.totalResultsSoFar || 0),
+            nameVariation: nameVar,
+          });
+          tracker.recordQuery(event.resultsFound || 0);
+        }
+      });
+      allResults.push(...results);
+    }
+
+    // Track all gathered URLs with full details AND send per-result events for auditing
+    for (let i = 0; i < allResults.length; i++) {
+      const r = allResults[i];
       urlTracker.gathered.push({ url: r.url, title: r.title, snippet: r.snippet, query: r.query });
+
+      // Find which template this result came from
+      const templateIndex = selectedTemplates.findIndex(t => r.query === t || r.query.includes(t.replace('{NAME}', '')));
+      const category = TEMPLATE_CATEGORIES[templateIndex] || `Query ${templateIndex + 1}`;
+
+      // Send per-result event for detailed audit logging
+      sendEvent({
+        type: 'search_result',
+        index: i + 1,
+        total: allResults.length,
+        category,
+        url: r.url,
+        title: r.title,
+        snippet: (r.snippet || '').substring(0, 200),
+      });
     }
 
     sendEvent({
@@ -881,18 +934,59 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     const { passed, eliminated: progEliminated, bypassed } = eliminateObviousNoise(allResults, subjectName);
     const breakdown = getEliminationBreakdown(progEliminated, bypassed);
 
-    // Track programmatic elimination results
+    // Track programmatic elimination results AND send per-item events for auditing
+    const ruleNames: Record<string, string> = {
+      'noise_domain': 'Rule 1: Noise domain (job site/aggregator)',
+      'noise_title_pattern': 'Rule 2: Job posting keyword in title',
+      'name_char_separation': 'Rule 3: Name characters separated',
+      'missing_dirty_word': 'Rule 4: Missing dirty word',
+      'gov_domain_bypass': 'Bypass: Government domain (.gov.cn)',
+    };
+
+    let elimIndex = 0;
+    const totalItems = passed.length + bypassed.length + progEliminated.length;
+
     for (const r of passed) {
       urlTracker.programmaticElimination.passed.push({ url: r.url, title: r.title, query: r.query });
+      elimIndex++;
+      sendEvent({
+        type: 'elimination_item',
+        index: elimIndex,
+        total: totalItems,
+        status: 'PASSED',
+        url: r.url,
+        title: r.title,
+        rule: null,
+      });
     }
     for (const r of bypassed) {
       urlTracker.programmaticElimination.bypassed.push({ url: r.url, title: r.title, query: r.query });
+      elimIndex++;
+      sendEvent({
+        type: 'elimination_item',
+        index: elimIndex,
+        total: totalItems,
+        status: 'BYPASSED',
+        url: r.url,
+        title: r.title,
+        rule: ruleNames[r.reason] || r.reason,
+      });
     }
     for (const r of progEliminated) {
       const bucket = urlTracker.programmaticElimination.eliminated[r.reason as keyof typeof urlTracker.programmaticElimination.eliminated];
       if (bucket) {
         bucket.push({ url: r.url, title: r.title, query: r.query });
       }
+      elimIndex++;
+      sendEvent({
+        type: 'elimination_item',
+        index: elimIndex,
+        total: totalItems,
+        status: 'ELIMINATED',
+        url: r.url,
+        title: r.title,
+        rule: ruleNames[r.reason] || r.reason,
+      });
     }
 
     sendEvent({
@@ -930,17 +1024,18 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     tracker.recordTriage(categorized.red.length, categorized.amber.length, categorized.green.length);
 
-    // Track categorizations with full details
+    // Track categorizations with full details AND send per-item events
     for (const item of categorized.red) {
       urlTracker.categorized.red.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
-      sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason });
+      sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
     }
     for (const item of categorized.amber) {
       urlTracker.categorized.amber.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
-      sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason });
+      sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
     }
     for (const item of categorized.green) {
       urlTracker.categorized.green.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
+      sendEvent({ type: 'categorized_item', category: 'GREEN', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
     }
 
     // ========================================
@@ -1184,25 +1279,21 @@ app.get('/api/import-results', (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/deal-pdf-url/:ticker', (req: Request, res: Response) => {
+app.get('/api/deal-pdf-url/:ticker', async (req: Request, res: Response) => {
   const ticker = parseInt(req.params.ticker);
-  const excelPath = path.join(__dirname, '../../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
 
   try {
-    const workbook = xlsx.readFile(excelPath);
-    const indexSheet = workbook.Sheets['Index'];
-    const rows = xlsx.utils.sheet_to_json(indexSheet, { header: 1 }) as any[][];
+    const dbPath = path.join(__dirname, '../data/ddowl.db');
+    const Database = (await import('better-sqlite3')).default;
+    const db = new Database(dbPath, { readonly: true });
 
-    for (let i = 2; i < rows.length; i++) {
-      const row = rows[i];
-      if (row && row[1] === ticker) {
-        res.json({ url: row[4] || null });
-        return;
-      }
-    }
-    res.json({ url: null });
+    const deal = db.prepare('SELECT prospectus_url FROM ipo_deals WHERE ticker = ?').get(ticker) as any;
+    db.close();
+
+    res.json({ url: deal?.prospectus_url || null });
   } catch (e) {
-    res.status(500).json({ error: 'Failed to read Excel' });
+    console.error('Failed to get PDF URL:', e);
+    res.status(500).json({ error: 'Failed to get PDF URL' });
   }
 });
 

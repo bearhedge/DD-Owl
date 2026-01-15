@@ -711,6 +711,25 @@
             Screen
           </button>
         </div>
+        <div style="margin-top: 16px; display: flex; gap: 12px; align-items: flex-start;">
+          <div style="flex: 1;">
+            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">Name Variations</label>
+            <input
+              type="text"
+              id="variationsInput"
+              placeholder="e.g., Xu Mingxing, 徐明星"
+              style="width: 100%;"
+            >
+          </div>
+          <div style="min-width: 150px;">
+            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;">Language</label>
+            <select id="languageSelect" style="width: 100%; padding: 14px 18px; font-size: 14px; font-family: inherit; border: 1px solid #333; border-radius: 6px; background: #0a0a0a; color: #fff; outline: none;">
+              <option value="both">Both (8/name)</option>
+              <option value="chinese">Chinese (6/name)</option>
+              <option value="english">English (2/name)</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="results-section" id="resultsSection">
@@ -843,10 +862,21 @@
 
     function startScreening() {
       const name = document.getElementById('nameInput').value.trim();
+      const variationsRaw = document.getElementById('variationsInput').value.trim();
+      const language = document.getElementById('languageSelect').value;
 
       if (name.length < 2) {
         alert('Please enter a valid name (2+ characters)');
         return;
+      }
+
+      // Parse variations (comma-separated), always include main name
+      const variations = [name];
+      if (variationsRaw) {
+        variationsRaw.split(',').forEach(v => {
+          const trimmed = v.trim();
+          if (trimmed && trimmed !== name) variations.push(trimmed);
+        });
       }
 
       // Reset UI
@@ -886,7 +916,9 @@
         const resumeParam = retryCount > 0 && lastQueryIndex > 0
           ? `&resumeFrom=${lastQueryIndex}`
           : '';
-        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${resumeParam}`);
+        const variationsParam = variations.length > 1 ? `&variations=${encodeURIComponent(variations.join(','))}` : '';
+        const languageParam = `&language=${language}`;
+        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}`);
 
         eventSource.onmessage = (event) => {
           retryCount = 0; // Reset retry count on successful message
@@ -895,7 +927,80 @@
           // Track query progress for potential retry
           if (data.queryIndex) lastQueryIndex = data.queryIndex;
 
-          // === STAGE 0: SEARCH ===
+          // === V4 PHASE EVENTS ===
+          if (data.type === 'phase') {
+            addLogEntry('search', `━━━ PHASE ${data.phase}: ${data.name} ━━━`);
+            addLogEntry('search', data.message);
+            updateActivityStats(`Phase ${data.phase}: ${data.name}`);
+          }
+
+          if (data.type === 'search_progress') {
+            addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries}: ${data.resultsFound} results`);
+            addLogEntry('search', `  ${data.query.slice(0, 60)}...`);
+            updateActivityStats(`Searching ${data.queryIndex}/${data.totalQueries} (${data.totalSoFar} total)`);
+          }
+
+          if (data.type === 'gather_complete') {
+            addLogEntry('result', `Gathered ${data.totalResults} URLs in ${(data.duration/1000).toFixed(1)}s`);
+          }
+
+          // Per-result logging for deep audit
+          if (data.type === 'search_result') {
+            const title = data.title.length > 45 ? data.title.slice(0, 45) + '...' : data.title;
+            const snippet = data.snippet.length > 60 ? data.snippet.slice(0, 60) + '...' : data.snippet;
+            addLogEntry('search', `[${data.index}/${data.total}] ${data.category}`);
+            addLogEntry('search', `   ${title}`);
+            addLogEntry('search', `   ${data.url}`, data.url);
+            addLogEntry('search', `   "${snippet}"`);
+          }
+
+          if (data.type === 'programmatic_elimination_complete') {
+            addLogEntry('analyze', `Programmatic filter: ${data.before} → ${data.after} (${data.eliminated} eliminated)`);
+            if (data.govBypassed > 0) {
+              addLogEntry('analyze', `  (.gov.cn bypassed: ${data.govBypassed})`);
+            }
+          }
+
+          // Per-item elimination logging for deep audit
+          if (data.type === 'elimination_item') {
+            const title = data.title.length > 40 ? data.title.slice(0, 40) + '...' : data.title;
+            if (data.status === 'PASSED') {
+              addLogEntry('analyze', `[${data.index}] ✓ PASS: ${title}`);
+            } else if (data.status === 'BYPASSED') {
+              addLogEntry('fetch', `[${data.index}] ⚡ BYPASS: ${title}`);
+              addLogEntry('fetch', `   ${data.rule}`);
+            } else if (data.status === 'ELIMINATED') {
+              addLogEntry('search', `[${data.index}] ✗ ELIM: ${title}`);
+              addLogEntry('search', `   ${data.rule}`);
+            }
+          }
+
+          if (data.type === 'categorize_complete') {
+            addLogEntry('result', `Categorized: ${data.red} RED, ${data.amber} AMBER, ${data.green} GREEN`);
+          }
+
+          if (data.type === 'categorized_item') {
+            const title = data.title.length > 50 ? data.title.slice(0, 50) + '...' : data.title;
+            if (data.category === 'RED') {
+              addLogEntry('red', `🔴 ${title}`);
+              addLogEntry('red', `   ${data.url}`);
+              addLogEntry('red', `   Reason: ${data.reason}`);
+            } else if (data.category === 'AMBER') {
+              addLogEntry('amber', `🟡 ${title}`);
+              addLogEntry('amber', `   ${data.url}`);
+              addLogEntry('amber', `   Reason: ${data.reason}`);
+            } else if (data.category === 'GREEN') {
+              addLogEntry('analyze', `🟢 ${title}`);
+              addLogEntry('analyze', `   ${data.url}`);
+              addLogEntry('analyze', `   Reason: ${data.reason}`);
+            }
+          }
+
+          if (data.type === 'eliminate_complete') {
+            addLogEntry('result', `Consolidated: ${data.before} → ${data.after} findings`);
+          }
+
+          // === STAGE 0: SEARCH (V3 compatibility) ===
           if (data.type === 'query_start') {
             addLogEntry('search', `━━━ QUERY ${data.queryIndex}/${data.totalQueries} ━━━`);
             addLogEntry('search', `${data.query}`);
