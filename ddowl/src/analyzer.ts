@@ -278,13 +278,15 @@ export async function analyzeWithLLM(
   content: string,
   subjectName: string,
   searchTerm: string
-): Promise<{ isAdverse: boolean; severity: 'RED' | 'AMBER' | 'GREEN'; headline: string; summary: string }> {
+): Promise<{ isAdverse: boolean; severity: 'RED' | 'AMBER' | 'GREEN' | 'REVIEW'; headline: string; summary: string }> {
   if (!content || content.length < 50) {
-    return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Unable to fetch content' };
+    console.error(`[ANALYZE FAIL] Content too short (${content?.length || 0} chars) - requires manual review`);
+    return { isAdverse: false, severity: 'REVIEW', headline: 'Content fetch failed', summary: 'Unable to fetch page content - requires manual review' };
   }
 
   if (!LLM_API_KEY) {
-    return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'LLM API key not configured' };
+    console.error('[ANALYZE FAIL] No LLM API key configured');
+    return { isAdverse: false, severity: 'REVIEW', headline: 'LLM not configured', summary: 'LLM API key not configured - requires manual review' };
   }
 
   const prompt = `You are a senior due diligence analyst writing a professional report for investment banks. Analyze this content about "${subjectName}".
@@ -342,8 +344,8 @@ Severity guide:
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error('No JSON found in response:', text.slice(0, 200));
-      return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Analysis failed - no JSON' };
+      console.error(`[ANALYZE FAIL] No JSON in LLM response: ${text.slice(0, 200)}`);
+      return { isAdverse: false, severity: 'REVIEW', headline: 'Analysis parse failed', summary: 'LLM response could not be parsed - requires manual review' };
     }
 
     const analysis = JSON.parse(jsonMatch[0]);
@@ -358,9 +360,9 @@ Severity guide:
       headline: analysis.headline || '',
       summary: analysis.summary || 'No summary',
     };
-  } catch (error) {
-    console.error('LLM analysis error:', error);
-    return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Analysis error' };
+  } catch (error: any) {
+    console.error(`[ANALYZE FAIL] LLM error: ${error?.message || error}`);
+    return { isAdverse: false, severity: 'REVIEW', headline: 'Analysis error', summary: `Analysis failed: ${error?.message || 'Unknown error'} - requires manual review` };
   }
 }
 

@@ -9,7 +9,7 @@ export interface AnalyzedResult {
   title: string;
   snippet: string;
   isAdverse: boolean;
-  severity: 'RED' | 'AMBER' | 'GREEN';
+  severity: 'RED' | 'AMBER' | 'GREEN' | 'REVIEW';
   headline: string;
   summary: string;
   searchTerm: string;
