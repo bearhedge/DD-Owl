@@ -724,8 +724,9 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
       });
     }
 
+    // REVIEW items count as AMBER - they need manual review
     const redFindings = consolidatedFindings.filter(f => f.severity === 'RED');
-    const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER');
+    const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER' || f.severity === 'REVIEW');
 
     sendEvent({
       type: 'complete',
@@ -1249,9 +1250,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
     }
 
-    // Final stats
+    // Final stats (REVIEW items count as AMBER - they need manual review)
     const redFindings = consolidatedFindings.filter(f => f.severity === 'RED');
-    const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER');
+    const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER' || f.severity === 'REVIEW');
     const totalDuration = Date.now() - startTime;
 
     // Build summary breakdown

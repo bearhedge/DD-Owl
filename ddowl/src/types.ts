@@ -69,7 +69,7 @@ export interface FindingFingerprint {
 export interface RawFinding {
   url: string;
   title: string;
-  severity: 'RED' | 'AMBER';
+  severity: 'RED' | 'AMBER' | 'REVIEW';
   headline: string;
   summary: string;
   triageClassification: string;
@@ -81,7 +81,7 @@ export interface RawFinding {
 export interface ConsolidatedFinding {
   headline: string;
   summary: string;
-  severity: 'RED' | 'AMBER';
+  severity: 'RED' | 'AMBER' | 'REVIEW';
   eventType: string;
   dateRange: string;
   sourceCount: number;
