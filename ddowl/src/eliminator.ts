@@ -68,6 +68,7 @@ const NOISE_TITLE_PATTERNS = [
  * Check if URL is a government domain (protected from elimination)
  */
 function isGovDomain(url: string): boolean {
+  if (!url) return false;
   return GOV_DOMAINS.some(d => url.includes(d));
 }
 
@@ -75,6 +76,7 @@ function isGovDomain(url: string): boolean {
  * Rule 1: Check if URL is a noise domain
  */
 function isNoiseDomain(url: string): boolean {
+  if (!url) return false;
   return NOISE_DOMAINS.some(d => url.includes(d));
 }
 
@@ -82,6 +84,7 @@ function isNoiseDomain(url: string): boolean {
  * Rule 2: Check if title contains noise patterns
  */
 function hasNoiseTitlePattern(title: string): boolean {
+  if (!title) return false;
   return NOISE_TITLE_PATTERNS.some(p => title.includes(p));
 }
 
@@ -124,7 +127,7 @@ function isMissingDirtyWord(
   if (dirtyWords.length === 0) return false;
 
   // Check if text contains subject name
-  const text = `${result.title} ${result.snippet}`;
+  const text = `${result.title || ''} ${result.snippet || ''}`;
   const hasName = text.includes(subjectName);
 
   // If name doesn't appear, let LLM decide (might still be relevant)
@@ -174,17 +177,19 @@ export function eliminateObviousNoise(
     }
 
     // Rule 3: Name character separation
-    const text = `${result.title} ${result.snippet}`;
+    const text = `${result.title || ''} ${result.snippet || ''}`;
     if (hasNameCharSeparation(text, subjectName)) {
       eliminated.push({ ...result, reason: 'name_char_separation' });
       continue;
     }
 
-    // Rule 4: Missing dirty word
-    if (isMissingDirtyWord(result, subjectName)) {
-      eliminated.push({ ...result, reason: 'missing_dirty_word' });
-      continue;
-    }
+    // Rule 4: DISABLED - was too aggressive, eliminating relevant adverse media
+    // Articles found by one category query but containing another category were being eliminated
+    // Let the LLM analyze all results properly instead
+    // if (isMissingDirtyWord(result, subjectName)) {
+    //   eliminated.push({ ...result, reason: 'missing_dirty_word' });
+    //   continue;
+    // }
 
     // Passed all rules
     passed.push(result);
