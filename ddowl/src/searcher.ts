@@ -136,21 +136,21 @@ export async function searchAllEngines(
     }
   }
 
-  // Run Baidu search with progress reporting
-  if (isBaiduAvailable()) {
-    const baiduResults = await searchBaiduPages(query, maxBaiduPages, onProgress);
-    let baiduUnique = 0;
-    for (const result of baiduResults) {
-      if (!seenUrls.has(result.link)) {
-        seenUrls.add(result.link);
-        allResults.push(result);
-        baiduUnique++;
-      }
-    }
-    if (baiduUnique > 0) {
-      onProgress?.({ type: 'search_complete', engine: 'baidu', totalSoFar: baiduUnique });
-    }
-  }
+  // Baidu disabled - Google with Chinese keywords is sufficient
+  // if (isBaiduAvailable()) {
+  //   const baiduResults = await searchBaiduPages(query, maxBaiduPages, onProgress);
+  //   let baiduUnique = 0;
+  //   for (const result of baiduResults) {
+  //     if (!seenUrls.has(result.link)) {
+  //       seenUrls.add(result.link);
+  //       allResults.push(result);
+  //       baiduUnique++;
+  //     }
+  //   }
+  //   if (baiduUnique > 0) {
+  //     onProgress?.({ type: 'search_complete', engine: 'baidu', totalSoFar: baiduUnique });
+  //   }
+  // }
 
   return allResults;
 }
