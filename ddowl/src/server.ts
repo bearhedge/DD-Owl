@@ -96,8 +96,9 @@ app.get('/api/screen', async (req: Request, res: Response) => {
 
   // Set up SSE
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
   const sendEvent = (data: any) => {
@@ -247,8 +248,9 @@ app.get('/api/screen/v2', async (req: Request, res: Response) => {
 
   // Set up SSE
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
   const sendEvent = (data: any) => {
@@ -414,8 +416,9 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
 
   // SSE setup
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
   // Collect all events for logging
@@ -430,6 +433,10 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
+    // Force flush to bypass proxy buffering
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
     heartbeatCount++;
     if (heartbeatCount % 30 === 0) {
       console.log(`[V3] [HEARTBEAT] ${heartbeatCount} pings sent for ${subjectName}`);
@@ -873,8 +880,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
   // SSE setup
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
   const eventLog: any[] = [];
@@ -888,6 +896,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
+    // Force flush to bypass proxy buffering
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
     heartbeatCount++;
     if (heartbeatCount % 30 === 0) { // Log every 30 seconds
       console.log(`[V4] [HEARTBEAT] ${heartbeatCount} pings sent for ${subjectName}`);
@@ -1572,8 +1584,9 @@ app.post('/api/report/generate', async (req: Request, res: Response) => {
 
   // Set up SSE for streaming
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
   const sendChunk = (content: string) => {
@@ -1584,6 +1597,10 @@ app.post('/api/report/generate', async (req: Request, res: Response) => {
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
+    // Force flush to bypass proxy buffering
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
     heartbeatCount++;
     if (heartbeatCount % 30 === 0) {
       console.log(`[REPORT] [HEARTBEAT] ${heartbeatCount} pings sent for ${subjectName}`);
@@ -1705,8 +1722,9 @@ app.post('/api/agent/run', async (req: Request, res: Response) => {
 
   // Set up SSE
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
   const sendEvent = (type: string, data: any) => {

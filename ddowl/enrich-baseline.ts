@@ -162,6 +162,7 @@ const BANK_FAMILIES: Record<string, string[]> = {
   'Innovax': ['Innovax Capital', 'Innovax Securities'],
   'AMTD': ['AMTD Global Markets', 'AMTD Asset Management'],
   'CEB': ['CEB International', 'China Everbright', 'China Everbright Securities'],
+  'Caitong': ['Caitong International Capital', 'Caitong International Securities'],
   'Dongxing': ['Dongxing Securities'],
   'Changjiang': ['Changjiang Corporate Finance', 'Changjiang Securities Brokerage'],
   'Fortune': ['Fortune Financial Capital', 'Fortune Securities'],

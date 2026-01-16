@@ -562,8 +562,8 @@
           <td class="company-name" title="${escapeHtml(row.companyCn ? row.company + ' (' + row.companyCn + ')' : row.company)}">${escapeHtml(row.companyCn ? row.company + ' (' + row.companyCn + ')' : row.company)}</td>
           <td class="date-cell">${formatDate(row.date)}</td>
           <td class="size-cell">${formatSize(row.sizeHKDm)}</td>
-          <td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join('') || '-'}</td>
-          <td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join('') || '-'}</td>
+          <td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>
+          <td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>
         </tr>
       `).join('');
     }
