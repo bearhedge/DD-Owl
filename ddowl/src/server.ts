@@ -1298,7 +1298,37 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             triageClassification: item.category,
           });
         } else {
-          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'CLEARED' });
+          // Check if content actually contains the subject name
+          // If triage flagged as RED/AMBER but content doesn't have the name,
+          // the fetch likely returned garbage (paywall, login, 403 page)
+          const contentLower = content.toLowerCase();
+          const subjectInContent = nameVariations.some((v: string) => content.includes(v)) ||
+            contentLower.includes(subjectName.toLowerCase());
+
+          if (!subjectInContent && (item.category === 'RED' || item.category === 'AMBER')) {
+            // Content doesn't contain subject - flag for manual review
+            urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Content mismatch' });
+            allFindings.push({
+              url: item.url,
+              title: item.title,
+              severity: 'AMBER',
+              headline: 'Content mismatch - manual review required',
+              summary: `Triage flagged as ${item.category} based on title, but fetched content does not contain subject name. Likely paywall/login page.`,
+              triageClassification: item.category,
+            });
+            sendEvent({
+              type: 'analyze_result',
+              url: item.url,
+              title: item.title,
+              isAdverse: true,
+              severity: 'AMBER',
+              headline: 'Content mismatch - manual review required',
+              action: 'FLAG',
+              _findings: allFindings,
+            });
+          } else {
+            urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'CLEARED' });
+          }
         }
       } catch (err) {
         urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Fetch/analyze error' });

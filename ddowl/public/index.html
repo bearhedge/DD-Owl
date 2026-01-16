@@ -438,6 +438,23 @@
       font-family: 'SF Mono', 'Menlo', monospace;
     }
 
+    .activity-log::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .activity-log::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    .activity-log::-webkit-scrollbar-thumb {
+      background: #666;
+      border-radius: 4px;
+    }
+
+    .activity-log::-webkit-scrollbar-thumb:hover {
+      background: #888;
+    }
+
     .log-entry {
       display: flex;
       padding: 8px 20px;
@@ -465,6 +482,7 @@
     .log-type.result { color: #2ed573; }
     .log-type.red { color: #ff4757; }
     .log-type.amber { color: #ffa502; }
+    .log-type.green { color: #2ed573; }
     .log-type.error { color: #ff4757; }
 
     .log-message {
@@ -1026,15 +1044,19 @@
       return now.toTimeString().slice(0, 8);
     }
 
-    function addLogEntry(type, message, url = null) {
+    function addLogEntry(type, message, url = null, snippet = null) {
       const log = document.getElementById('activityLog');
       const entry = document.createElement('div');
       entry.className = 'log-entry';
 
       let messageHtml = message;
       if (url) {
-        const hostname = new URL(url).hostname;
-        messageHtml = `<a href="${url}" target="_blank">${hostname}</a> - ${message}`;
+        // Show URL as visible clickable text after the message
+        messageHtml = `${message} | <a href="${url}" target="_blank" style="color: #666;">${url}</a>`;
+      }
+      if (snippet) {
+        // Add snippet in muted text
+        messageHtml += ` | <span style="color: #555;">${snippet}</span>`;
       }
 
       entry.innerHTML = `
@@ -1218,15 +1240,9 @@
             }
           }
 
-          // Per-result logging for deep audit - compact single row: domain | index | title
+          // Per-result logging - clickable full URL
           if (data.type === 'search_result') {
-            let domain = '';
-            try {
-              domain = new URL(data.url).hostname.replace('www.', '');
-            } catch (e) {
-              domain = data.url.split('/')[2] || '';
-            }
-            addLogEntry('search', `${domain} | [${data.index}/${data.total}] | ${data.title}`, data.url);
+            addLogEntry('search', `[${data.index}/${data.total}] ${data.title}`, data.url);
           }
 
           if (data.type === 'programmatic_elimination_complete') {
@@ -1236,20 +1252,14 @@
             }
           }
 
-          // Per-item elimination logging - single row per item
+          // Per-item elimination logging - clickable full URL
           if (data.type === 'elimination_item') {
-            let domain = '';
-            try {
-              domain = new URL(data.url).hostname.replace('www.', '');
-            } catch (e) {
-              domain = data.url?.split('/')[2] || '';
-            }
             if (data.status === 'PASSED') {
-              addLogEntry('analyze', `${domain} | [${data.index}] ✓ | ${data.title}`);
+              addLogEntry('analyze', `[${data.index}] PASS | ${data.title}`, data.url);
             } else if (data.status === 'BYPASSED') {
-              addLogEntry('fetch', `${domain} | [${data.index}] ⚡ BYPASS | ${data.title} | ${data.rule}`);
+              addLogEntry('fetch', `[${data.index}] BYPASS | ${data.title} | ${data.rule}`, data.url);
             } else if (data.status === 'ELIMINATED') {
-              addLogEntry('search', `${domain} | [${data.index}] ✗ ELIM | ${data.title} | ${data.rule}`);
+              addLogEntry('search', `[${data.index}] ELIM | ${data.title} | ${data.rule}`, data.url);
             }
           }
 
@@ -1262,20 +1272,14 @@
             addLogEntry('result', `Categorized: ${data.red} RED, ${data.amber} AMBER, ${data.green} GREEN`);
           }
 
-          // Categorized item - single row: domain | status | title
+          // Categorized item - colored severity, title, URL, snippet
           if (data.type === 'categorized_item') {
-            let domain = '';
-            try {
-              domain = new URL(data.url).hostname.replace('www.', '');
-            } catch (e) {
-              domain = data.url.split('/')[2] || '';
-            }
             if (data.category === 'RED') {
-              addLogEntry('red', `${domain} | 🔴 RED | ${data.title}`, data.url);
+              addLogEntry('red', `${data.title}`, data.url, data.snippet);
             } else if (data.category === 'AMBER') {
-              addLogEntry('amber', `${domain} | 🟡 AMBER | ${data.title}`, data.url);
+              addLogEntry('amber', `${data.title}`, data.url, data.snippet);
             } else if (data.category === 'GREEN') {
-              addLogEntry('analyze', `${domain} | 🟢 GREEN | ${data.title}`, data.url);
+              addLogEntry('green', `${data.title}`, data.url, data.snippet);
             }
           }
 
@@ -1347,8 +1351,7 @@
 
           // === STAGE 3: DEEP ANALYSIS ===
           if (data.type === 'analyze_start') {
-            const title = data.title;
-            addLogEntry('fetch', `Deep analyzing: ${title}`);
+            addLogEntry('fetch', `Analyzing: ${data.title}`, data.url);
           }
 
           if (data.type === 'analyze_result') {
@@ -1357,10 +1360,10 @@
               accumulatedFindings = data._findings;
             }
             if (data.action === 'SKIP') {
-              addLogEntry('analyze', `→ Cleared: ${data.reason}`);
+              addLogEntry('analyze', `Cleared: ${data.reason}`, data.url);
             } else if (data.isAdverse) {
               const color = data.severity === 'RED' ? 'red' : 'amber';
-              addLogEntry(color, `★ ${data.severity}: ${data.headline}`);
+              addLogEntry(color, `${data.severity}: ${data.headline}`, data.url);
               addResultToUI({
                 url: data.url,
                 title: data.title,
@@ -1368,7 +1371,7 @@
                 summary: data.headline + ' - ' + data.summary
               });
             } else {
-              addLogEntry('analyze', `→ Clear: No adverse information found`);
+              addLogEntry('analyze', `Clear: No adverse information found`, data.url);
             }
           }
 
