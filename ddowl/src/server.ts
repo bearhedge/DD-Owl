@@ -1464,21 +1464,45 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             triageClassification: item.category,
           });
         } else {
-          // Check if content actually contains the subject name
-          // If triage flagged as RED/AMBER but content doesn't have the name,
-          // the fetch likely returned garbage (paywall, login, 403 page)
-          const contentLower = content.toLowerCase();
-          const subjectInContent = nameVariations.some((v: string) => content.includes(v)) ||
-            contentLower.includes(subjectName.toLowerCase());
+          // LLM said "Clear" - but if triage flagged RED/AMBER, we should preserve for manual review
+          // The original categorization was based on title/snippet which may have real info
+          // that the LLM couldn't verify (403 error, paywall, garbage content, etc.)
 
-          if (!subjectInContent && (item.category === 'RED' || item.category === 'AMBER')) {
-            // Content doesn't contain subject - send as "further link" for manual review
-            // Don't clutter main findings or activity log
-            urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FURTHER', headline: 'Content mismatch' });
+          if (item.category === 'RED' || item.category === 'AMBER') {
+            // Detect suspicious content patterns
+            const contentLower = content.toLowerCase();
+            const isShortContent = content.length < 500;
+            const isErrorPage = contentLower.includes('403') || contentLower.includes('forbidden') ||
+                               contentLower.includes('access denied') || contentLower.includes('not found') ||
+                               contentLower.includes('page not available') || contentLower.includes('无法访问');
+            const subjectInContent = nameVariations.some((v: string) => content.includes(v)) ||
+              contentLower.includes(subjectName.toLowerCase());
+
+            // Determine reason for further review
+            let furtherReason = 'LLM cleared';
+            if (isShortContent) furtherReason = 'Content too short';
+            else if (isErrorPage) furtherReason = 'Possible error page';
+            else if (!subjectInContent) furtherReason = 'Subject not found in content';
+
+            // Log explicitly so it's visible
+            console.log(`[V4] FURTHER: ${item.category} article cleared by LLM (${furtherReason}): ${item.title}`);
+
+            urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FURTHER', headline: furtherReason });
             sendEvent({
               type: 'further_link',
               url: item.url,
               title: item.title,
+              reason: furtherReason,
+              originalCategory: item.category,
+              triageReason: item.reason,
+            });
+            sendEvent({
+              type: 'analyze_result',
+              url: item.url,
+              title: item.title,
+              isAdverse: false,
+              severity: 'FURTHER',
+              headline: `${furtherReason} (was ${item.category})`,
             });
           } else {
             urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'CLEARED' });

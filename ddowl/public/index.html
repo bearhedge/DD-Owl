@@ -909,6 +909,47 @@
       font-size: 11px;
       word-break: break-all;
     }
+
+    .further-link-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .further-link-category {
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    .further-link-category.red {
+      background: rgba(255, 71, 87, 0.2);
+      color: #ff4757;
+    }
+
+    .further-link-category.amber {
+      background: rgba(255, 165, 2, 0.2);
+      color: #ffa502;
+    }
+
+    .further-link-reason {
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 4px;
+      font-style: italic;
+    }
+
+    .further-link-triage {
+      color: #666;
+      font-size: 11px;
+      margin-bottom: 4px;
+      padding: 4px 8px;
+      background: #1a1a1a;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -1499,10 +1540,19 @@
             addLogEntry('error', `  → ERROR: ${data.error}`);
           }
 
-          // Further links (content mismatch - silent collection)
+          // Further links - RED/AMBER articles that LLM couldn't verify (403, paywall, etc.)
           if (data.type === 'further_link') {
-            furtherLinks.push({ url: data.url, title: data.title });
+            furtherLinks.push({
+              url: data.url,
+              title: data.title,
+              reason: data.reason || 'Content mismatch',
+              originalCategory: data.originalCategory,
+              triageReason: data.triageReason,
+            });
             document.getElementById('furtherLinksCount').textContent = furtherLinks.length;
+            // Show in log so user knows it's captured
+            const categoryTag = data.originalCategory ? `[was ${data.originalCategory}]` : '';
+            addLogEntry('warn', `FURTHER ${categoryTag}: ${data.reason || 'Needs review'}`, data.url, data.title);
           }
 
           // === CONSOLIDATION ===
@@ -1725,13 +1775,26 @@
       const modal = document.getElementById('furtherLinksModal');
       const list = document.getElementById('furtherLinksList');
 
-      // Populate list
-      list.innerHTML = furtherLinks.map(link => `
-        <div class="further-link-item">
-          <a href="${escapeHtml(link.url)}" target="_blank" class="further-link-title">${escapeHtml(link.title)}</a>
-          <div class="further-link-url">${escapeHtml(link.url)}</div>
-        </div>
-      `).join('');
+      // Populate list with enhanced info
+      list.innerHTML = furtherLinks.map(link => {
+        const categoryBadge = link.originalCategory
+          ? `<span class="further-link-category ${link.originalCategory.toLowerCase()}">${link.originalCategory}</span>`
+          : '';
+        const reasonText = link.reason ? `<div class="further-link-reason">${escapeHtml(link.reason)}</div>` : '';
+        const triageText = link.triageReason ? `<div class="further-link-triage">${escapeHtml(link.triageReason)}</div>` : '';
+
+        return `
+          <div class="further-link-item">
+            <div class="further-link-header">
+              ${categoryBadge}
+              <a href="${escapeHtml(link.url)}" target="_blank" class="further-link-title">${escapeHtml(link.title)}</a>
+            </div>
+            ${reasonText}
+            ${triageText}
+            <div class="further-link-url">${escapeHtml(link.url)}</div>
+          </div>
+        `;
+      }).join('');
 
       modal.style.display = 'flex';
     }
