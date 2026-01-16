@@ -426,10 +426,15 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  // Heartbeat to prevent timeout (5s for better connection stability)
+  // Heartbeat (1s for robust connection stability)
+  let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 2000);
+    heartbeatCount++;
+    if (heartbeatCount % 30 === 0) {
+      console.log(`[V3] [HEARTBEAT] ${heartbeatCount} pings sent for ${subjectName}`);
+    }
+  }, 1000);
 
   try {
     const allFindings: RawFinding[] = [];
@@ -866,10 +871,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  // Heartbeat
+  // Heartbeat (1s for robust connection stability)
+  let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 2000);
+    heartbeatCount++;
+    if (heartbeatCount % 30 === 0) { // Log every 30 seconds
+      console.log(`[V4] [HEARTBEAT] ${heartbeatCount} pings sent for ${subjectName}`);
+    }
+  }, 1000);
 
   // Abort controller for cancelling operations on client disconnect
   const abortController = new AbortController();
@@ -1550,10 +1560,15 @@ app.post('/api/report/generate', async (req: Request, res: Response) => {
     res.write(`data: ${JSON.stringify({ type: 'chunk', content })}\n\n`);
   };
 
-  // Heartbeat to prevent timeout (5s for better connection stability)
+  // Heartbeat (1s for robust connection stability)
+  let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
     res.write(': keepalive\n\n');
-  }, 2000);
+    heartbeatCount++;
+    if (heartbeatCount % 30 === 0) {
+      console.log(`[REPORT] [HEARTBEAT] ${heartbeatCount} pings sent for ${subjectName}`);
+    }
+  }, 1000);
 
   try {
     console.log(`[REPORT] Starting report generation for ${subjectName} with ${findings.length} findings`);

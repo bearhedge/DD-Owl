@@ -1147,6 +1147,8 @@
       let lastQueryIndex = 0;
       let eventSource = null;
       let accumulatedFindings = []; // Track findings for reconnection
+      let lastMessageTime = Date.now();
+      let healthCheckInterval = null;
 
       function connectSSE() {
         // Include resumeFrom and findings if reconnecting after a disconnect
@@ -1161,7 +1163,24 @@
         const languageParam = `&language=${language}`;
         eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}${findingsParam}`);
 
+        // Health check: detect stale connections before they die
+        lastMessageTime = Date.now();
+        healthCheckInterval = setInterval(() => {
+          const gap = Date.now() - lastMessageTime;
+          if (gap > 10000) { // 10 seconds without any message (heartbeat or data)
+            console.warn(`[SSE] No heartbeat for ${gap}ms, proactively reconnecting...`);
+            addLogEntry('warn', `Connection stale (${Math.round(gap/1000)}s), reconnecting...`);
+            eventSource.close();
+            clearInterval(healthCheckInterval);
+            if (retryCount < MAX_RETRIES) {
+              retryCount++;
+              setTimeout(connectSSE, 1000);
+            }
+          }
+        }, 5000);
+
         eventSource.onmessage = (event) => {
+          lastMessageTime = Date.now(); // Update on ANY message (including heartbeat)
           retryCount = 0; // Reset retry count on successful message
           const data = JSON.parse(event.data);
 
@@ -1367,6 +1386,8 @@
 
           // === COMPLETION ===
           if (data.type === 'complete') {
+            clearInterval(healthCheckInterval);
+            eventSource.close();
             const stats = data.stats || {};
             addLogEntry('result', `━━━ SCREENING COMPLETE ━━━`);
             addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
@@ -1426,6 +1447,7 @@
 
         eventSource.onerror = () => {
           eventSource.close();
+          clearInterval(healthCheckInterval);
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
