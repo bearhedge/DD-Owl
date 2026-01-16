@@ -373,7 +373,7 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 300px;
+      height: 70vh; /* 70% of viewport - shows up to owl's head */
       background: #0d0d0d;
       border-top: 1px solid #222;
       display: flex;
@@ -1172,7 +1172,7 @@
         lastMessageTime = Date.now();
         healthCheckInterval = setInterval(() => {
           const gap = Date.now() - lastMessageTime;
-          if (gap > 10000) { // 10 seconds without any message (heartbeat or data)
+          if (gap > 60000) { // 60 seconds without any message (allow time for Gemini categorization)
             console.warn(`[SSE] No heartbeat for ${gap}ms, proactively reconnecting...`);
             addLogEntry('warn', `Connection stale (${Math.round(gap/1000)}s), reconnecting...`);
             eventSource.close();
