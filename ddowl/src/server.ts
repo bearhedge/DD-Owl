@@ -43,8 +43,9 @@ import { validateDeals } from './validator.js';
 import { initLogDirectories, saveScreeningLog as saveLog, loadScreeningLog as loadLog, listScreeningLogs, saveBenchmarkResult, loadBenchmarkResults } from './logging/storage.js';
 import { MetricsTracker } from './metrics/tracker.js';
 import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
-import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown } from './eliminator.js';
+import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown, EliminatedResult } from './eliminator.js';
 import { getChineseVariantsLLM } from './utils/chinese.js';
+import { createSession, getSession, updateSession, deleteSession, ScreeningSession } from './session-store.js';
 
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -59,6 +60,41 @@ function isValidUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Remove common tracking params
+    const trackingParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid', 'ref', 'source'];
+    trackingParams.forEach(param => parsed.searchParams.delete(param));
+    // Remove trailing slash
+    let normalized = parsed.toString();
+    if (normalized.endsWith('/')) {
+      normalized = normalized.slice(0, -1);
+    }
+    return normalized;
+  } catch {
+    return url; // Return original if URL parsing fails
+  }
+}
+
+function deduplicateResults<T extends { url: string }>(results: T[]): { unique: T[]; duplicateCount: number } {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  let duplicateCount = 0;
+
+  for (const result of results) {
+    const normalizedUrl = normalizeUrl(result.url);
+    if (!seen.has(normalizedUrl)) {
+      seen.add(normalizedUrl);
+      unique.push(result);
+    } else {
+      duplicateCount++;
+    }
+  }
+
+  return { unique, duplicateCount };
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -804,29 +840,40 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const subjectName = req.query.name as string;
   const variationsParam = req.query.variations as string;
   const language = (req.query.language as string) || 'both';
-  const resumeFrom = parseInt(req.query.resumeFrom as string) || 0;
+  const incomingSessionId = req.query.sessionId as string;
 
-  // Parse restored findings from reconnection (base64 encoded JSON to avoid URL issues)
-  let restoredFindings: RawFinding[] = [];
+  // Session-based reconnection (preferred) - restore state from Redis
+  let existingSession: ScreeningSession | null = null;
+  if (incomingSessionId) {
+    existingSession = await getSession(incomingSessionId);
+    if (existingSession) {
+      console.log(`[V4] Resuming session ${incomingSessionId} from phase ${existingSession.currentPhase}, index ${existingSession.currentIndex}`);
+    } else {
+      console.log(`[V4] Session ${incomingSessionId} not found in Redis, starting fresh`);
+    }
+  }
+
+  // Legacy fallback: Parse restored findings from URL (base64 encoded)
+  let restoredFindings: RawFinding[] = existingSession?.findings || [];
   const findingsParam = req.query.findings as string;
-  if (findingsParam) {
+  if (!existingSession && findingsParam) {
     try {
       const decoded = Buffer.from(findingsParam, 'base64').toString('utf-8');
       restoredFindings = JSON.parse(decoded);
-      console.log(`[V4] Restored ${restoredFindings.length} findings from previous connection`);
+      console.log(`[V4] Restored ${restoredFindings.length} findings from URL param (legacy)`);
     } catch (e) {
       console.error('[V4] Failed to parse restored findings:', e);
     }
   }
 
-  // Parse restored search results from reconnection (for mid-categorize reconnects)
-  let restoredResults: BatchSearchResult[] = [];
+  // Legacy fallback: Parse restored search results from URL
+  let restoredResults: BatchSearchResult[] = existingSession?.gatheredResults || [];
   const resultsParam = req.query.results as string;
-  if (resultsParam) {
+  if (!existingSession && resultsParam) {
     try {
       const decoded = Buffer.from(resultsParam, 'base64').toString('utf-8');
       restoredResults = JSON.parse(decoded);
-      console.log(`[V4] Restored ${restoredResults.length} search results from previous connection`);
+      console.log(`[V4] Restored ${restoredResults.length} search results from URL param (legacy)`);
     } catch (e) {
       console.error('[V4] Failed to parse restored results:', e);
     }
@@ -924,6 +971,60 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     const tracker = new MetricsTracker(subjectName);
     const startTime = Date.now();
 
+    // Session handling: reuse existing session on reconnect, or create new
+    let sessionId: string;
+    let skipGather = false;
+    let skipElimination = false;
+    let skipCategorize = false;
+    let analyzeStartIndex = 0;
+    let restoredCategorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] } | null = null;
+    let restoredPassed: BatchSearchResult[] | null = null;
+
+    if (existingSession && incomingSessionId) {
+      // Reconnection: reuse existing session
+      sessionId = incomingSessionId;
+      const phase = existingSession.currentPhase;
+      console.log(`[V4] Restoring from phase: ${phase}`);
+
+      if (phase === 'eliminate' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
+        skipGather = true;
+        restoredResults = existingSession.gatheredResults;
+        sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
+      }
+
+      if (phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
+        skipElimination = true;
+        restoredPassed = existingSession.passedElimination;
+        sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
+      }
+
+      if (phase === 'analyze' || phase === 'consolidate') {
+        skipCategorize = true;
+        restoredCategorized = existingSession.categorized;
+        restoredFindings = existingSession.findings;
+        analyzeStartIndex = existingSession.currentIndex;
+        sendEvent({ type: 'phase_skipped', phase: 'categorize', reason: 'Restored from session' });
+        sendEvent({ type: 'analyze_resume', fromIndex: analyzeStartIndex, totalFindings: restoredFindings.length });
+      }
+    } else {
+      // New screening: create fresh session
+      sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      await createSession(sessionId, {
+        name: subjectName,
+        variations: nameVariations,
+        language,
+        gatheredResults: [],
+        categorized: { red: [], amber: [], green: [] },
+        passedElimination: [],
+        currentPhase: 'gather',
+        currentIndex: 0,
+        findings: [],
+      });
+    }
+
+    // Send session ID to client (for reconnection tracking)
+    sendEvent({ type: 'session', sessionId });
+
     // URL tracking for analysis - includes search query for each URL
     const urlTracker = {
       gathered: [] as { url: string; title: string; snippet: string; query: string }[],
@@ -943,38 +1044,34 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         green: [] as { url: string; title: string; query: string; reason: string }[],
       },
       eliminated: [] as { url: string; query: string; reason: string }[],
-      processed: [] as { url: string; title: string; query: string; result: 'ADVERSE' | 'CLEARED' | 'FAILED'; severity?: string; headline?: string }[],
+      processed: [] as { url: string; title: string; query: string; result: 'ADVERSE' | 'CLEARED' | 'FAILED' | 'FURTHER'; severity?: string; headline?: string }[],
     };
 
     // ========================================
     // PHASE 1: GATHER ALL URLs
     // ========================================
-    const totalSearches = selectedTemplates.length;
-    const nameVariantsDisplay = nameVariations.length > 1
-      ? `${nameVariations.length} name variants using OR (${nameVariations.join(', ')})`
-      : nameVariations[0];
-    sendEvent({
-      type: 'phase',
-      phase: 1,
-      name: 'GATHER',
-      message: `Gathering results for ${nameVariantsDisplay}, ${selectedTemplates.length} templates (${totalSearches} searches)...`
-    });
+    let allResults: BatchSearchResult[] = [];
 
-    // Search with all name variants combined using OR in each query
-    // Skip queries before resumeFrom (already completed in previous connection)
-    const allResults: BatchSearchResult[] = [];
-    let searchesDone = resumeFrom;
+    if (skipGather && restoredResults.length > 0) {
+      // Skip gather phase - use restored results from session
+      allResults = restoredResults;
+      console.log(`[V4] Skipped gather phase, using ${allResults.length} restored results`);
+    } else {
+      const totalSearches = selectedTemplates.length;
+      const nameVariantsDisplay = nameVariations.length > 1
+        ? `${nameVariations.length} name variants using OR (${nameVariations.join(', ')})`
+        : nameVariations[0];
+      sendEvent({
+        type: 'phase',
+        phase: 1,
+        name: 'GATHER',
+        message: `Gathering results for ${nameVariantsDisplay}, ${selectedTemplates.length} templates (${totalSearches} searches)...`
+      });
 
-    for (let i = 0; i < selectedTemplates.length; i++) {
-      // Skip already-completed queries on resume
-      if (i < resumeFrom) {
-        sendEvent({
-          type: 'query_skipped',
-          queryIndex: i + 1,
-          reason: 'Already completed before reconnect'
-        });
-        continue;
-      }
+      // Search with all name variants combined using OR in each query
+      let searchesDone = 0;
+
+      for (let i = 0; i < selectedTemplates.length; i++) {
 
       const template = selectedTemplates[i];
 
@@ -1066,12 +1163,16 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
     }
 
-    sendEvent({
-      type: 'gather_complete',
-      totalResults: allResults.length,
-      duration: Date.now() - startTime,
-      results: allResults, // Include results for reconnection persistence
-    });
+      sendEvent({
+        type: 'gather_complete',
+        totalResults: allResults.length,
+        duration: Date.now() - startTime,
+        results: allResults, // Include results for reconnection persistence
+      });
+
+      // Update session with gathered results (Redis)
+      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate' });
+    } // End of gather phase else block
 
     if (allResults.length === 0) {
       clearInterval(heartbeat);
@@ -1084,11 +1185,25 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 2: PROGRAMMATIC ELIMINATION (FREE)
     // ========================================
-    sendEvent({ type: 'phase', phase: 2, name: 'PROGRAMMATIC_ELIMINATION', message: `Running programmatic filters on ${allResults.length} results...` });
+    let passed: BatchSearchResult[];
+    let progEliminated: EliminatedResult[] = [];
+    let bypassed: EliminatedResult[] = [];
+    let breakdown: EliminationBreakdown;
 
-    const elimStart = Date.now();
-    const { passed, eliminated: progEliminated, bypassed } = eliminateObviousNoise(allResults, subjectName);
-    const breakdown = getEliminationBreakdown(progEliminated, bypassed);
+    if (skipElimination && restoredPassed) {
+      // Skip elimination phase - use restored results from session
+      passed = restoredPassed;
+      breakdown = { gov_domain_bypass: 0, noise_domain: 0, noise_title_pattern: 0, name_char_separation: 0, missing_dirty_word: 0 };
+      console.log(`[V4] Skipped elimination phase, using ${passed.length} restored passed results`);
+    } else {
+      sendEvent({ type: 'phase', phase: 2, name: 'PROGRAMMATIC_ELIMINATION', message: `Running programmatic filters on ${allResults.length} results...` });
+
+      const elimStart = Date.now();
+      const elimResult = eliminateObviousNoise(allResults, subjectName);
+      passed = elimResult.passed;
+      progEliminated = elimResult.eliminated;
+      bypassed = elimResult.bypassed;
+      breakdown = getEliminationBreakdown(progEliminated, bypassed);
 
     // Track programmatic elimination results AND send per-item events for auditing
     const ruleNames: Record<string, string> = {
@@ -1145,15 +1260,19 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
     }
 
-    sendEvent({
-      type: 'programmatic_elimination_complete',
-      before: allResults.length,
-      after: passed.length,
-      eliminated: progEliminated.length,
-      govBypassed: bypassed.length,
-      breakdown,
-      duration: Date.now() - elimStart,
-    });
+      sendEvent({
+        type: 'programmatic_elimination_complete',
+        before: allResults.length,
+        after: passed.length,
+        eliminated: progEliminated.length,
+        govBypassed: bypassed.length,
+        breakdown,
+        duration: Date.now() - elimStart,
+      });
+
+      // Update session with elimination results (Redis)
+      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'categorize' });
+    } // End of elimination phase else block
 
     if (passed.length === 0) {
       clearInterval(heartbeat);
@@ -1166,11 +1285,27 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 3: CATEGORIZE (batched LLM calls with progress)
     // ========================================
-    sendEvent({ type: 'phase', phase: 3, name: 'CATEGORIZE', message: `Categorizing ${passed.length} results...` });
+    let categorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] };
 
-    const categorizeStart = Date.now();
-    const categorized = await categorizeAll(passed, subjectName, (progress) => {
-      // Send progress event after each batch to keep SSE alive
+    if (skipCategorize && restoredCategorized) {
+      // Skip categorize phase - use restored results from session
+      categorized = restoredCategorized;
+      console.log(`[V4] Skipped categorize phase, using restored categorization (${categorized.red.length} RED, ${categorized.amber.length} AMBER)`);
+    } else {
+      sendEvent({ type: 'phase', phase: 3, name: 'CATEGORIZE', message: `Categorizing ${passed.length} results...` });
+
+      const categorizeStart = Date.now();
+      categorized = await categorizeAll(passed, subjectName, (progress) => {
+      // Send individual categorized_item events AS THEY HAPPEN (not after all batches)
+      for (const item of progress.batchResult.red) {
+        sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
+      }
+      for (const item of progress.batchResult.amber) {
+        sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
+      }
+      // Don't log GREEN items to reduce noise - there are many
+
+      // Send batch progress summary
       sendEvent({
         type: 'categorize_batch_complete',
         batch: progress.batchNumber,
@@ -1183,28 +1318,48 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
     });
 
-    sendEvent({
-      type: 'categorize_complete',
-      red: categorized.red.length,
-      amber: categorized.amber.length,
-      green: categorized.green.length,
-      duration: Date.now() - categorizeStart,
-    });
+      sendEvent({
+        type: 'categorize_complete',
+        red: categorized.red.length,
+        amber: categorized.amber.length,
+        green: categorized.green.length,
+        duration: Date.now() - categorizeStart,
+      });
+
+      // === DEDUPLICATE before analyze ===
+      const redDedupe = deduplicateResults(categorized.red);
+      const amberDedupe = deduplicateResults(categorized.amber);
+
+      categorized.red = redDedupe.unique;
+      categorized.amber = amberDedupe.unique;
+
+      const totalDuplicates = redDedupe.duplicateCount + amberDedupe.duplicateCount;
+      if (totalDuplicates > 0) {
+        console.log(`[V4] Deduplication: removed ${redDedupe.duplicateCount} red, ${amberDedupe.duplicateCount} amber duplicates`);
+        sendEvent({
+          type: 'dedupe',
+          redRemoved: redDedupe.duplicateCount,
+          amberRemoved: amberDedupe.duplicateCount,
+          redCount: categorized.red.length,
+          amberCount: categorized.amber.length,
+        });
+      }
+
+      // Update session with deduplicated categorized results
+      await updateSession(sessionId, { categorized, currentPhase: 'analyze' });
+    } // End of categorize phase else block
 
     tracker.recordTriage(categorized.red.length, categorized.amber.length, categorized.green.length);
 
-    // Track categorizations with full details AND send per-item events
+    // Track categorizations (events already sent during batch processing above)
     for (const item of categorized.red) {
       urlTracker.categorized.red.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
-      sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
     }
     for (const item of categorized.amber) {
       urlTracker.categorized.amber.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
-      sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
     }
     for (const item of categorized.green) {
       urlTracker.categorized.green.push({ url: item.url, title: item.title, query: item.query, reason: item.reason });
-      sendEvent({ type: 'categorized_item', category: 'GREEN', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
     }
 
     // ========================================
@@ -1227,10 +1382,16 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     if (restoredFindings.length > 0) {
       console.log(`[V4] Starting analysis with ${restoredFindings.length} restored findings`);
     }
+    if (analyzeStartIndex > 0) {
+      console.log(`[V4] Resuming analysis from index ${analyzeStartIndex}`);
+    }
     const processedUrls = new Set<string>();
 
-    for (let i = 0; i < toProcess.length; i++) {
+    for (let i = analyzeStartIndex; i < toProcess.length; i++) {
       const item = toProcess[i];
+
+      // Update session progress for reconnection (Redis)
+      await updateSession(sessionId, { currentIndex: i, findings: allFindings });
 
       // Skip duplicates
       if (processedUrls.has(item.url)) {
@@ -1255,7 +1416,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       try {
-        const content = await fetchPageContent(item.url);
+        // Timeout wrapper: max 2 minutes per URL to prevent hung URLs from killing 5-hour sessions
+        const ANALYZE_TIMEOUT_MS = 120000;
+        const content = await Promise.race([
+          fetchPageContent(item.url),
+          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('FETCH_TIMEOUT')), ANALYZE_TIMEOUT_MS))
+        ]);
         tracker.recordFetch(content.length > 100);
 
         if (content.length < 100) {
@@ -1306,34 +1472,23 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             contentLower.includes(subjectName.toLowerCase());
 
           if (!subjectInContent && (item.category === 'RED' || item.category === 'AMBER')) {
-            // Content doesn't contain subject - flag for manual review
-            urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Content mismatch' });
-            allFindings.push({
-              url: item.url,
-              title: item.title,
-              severity: 'AMBER',
-              headline: 'Content mismatch - manual review required',
-              summary: `Triage flagged as ${item.category} based on title, but fetched content does not contain subject name. Likely paywall/login page.`,
-              triageClassification: item.category,
-            });
+            // Content doesn't contain subject - send as "further link" for manual review
+            // Don't clutter main findings or activity log
+            urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FURTHER', headline: 'Content mismatch' });
             sendEvent({
-              type: 'analyze_result',
+              type: 'further_link',
               url: item.url,
               title: item.title,
-              isAdverse: true,
-              severity: 'AMBER',
-              headline: 'Content mismatch - manual review required',
-              action: 'FLAG',
-              _findings: allFindings,
             });
           } else {
             urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'CLEARED' });
           }
         }
-      } catch (err) {
-        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Fetch/analyze error' });
-        console.error(`[V4] Analysis failed for ${item.url}:`, err);
-        sendEvent({ type: 'analyze_error', url: item.url, error: 'Failed to fetch/analyze' });
+      } catch (err: any) {
+        const isTimeout = err?.message === 'FETCH_TIMEOUT';
+        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: isTimeout ? 'Timeout (2min)' : 'Fetch/analyze error' });
+        console.error(`[V4] Analysis ${isTimeout ? 'timed out' : 'failed'} for ${item.url}:`, err);
+        sendEvent({ type: 'analyze_error', url: item.url, error: isTimeout ? 'Timeout (2min) - skipped' : 'Failed to fetch/analyze' });
       }
     }
 
@@ -1440,10 +1595,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
 
     activeScreenings.delete(screeningKey);
+    await deleteSession(sessionId);
     res.end();
   } catch (error) {
     clearInterval(heartbeat);
     activeScreenings.delete(screeningKey);
+    // Delete session if we had one (sessionId may not exist if error happened early)
+    if (incomingSessionId) {
+      await deleteSession(incomingSessionId);
+    }
     console.error('[V4] Screening error:', error);
     sendEvent({ type: 'error', message: 'Screening failed' });
     res.end();

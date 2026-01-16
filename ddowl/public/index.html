@@ -150,8 +150,9 @@
     }
 
     .stat-card.red .stat-number { color: #ff4757; }
+    .stat-card.red .stat-label { color: #ff4757; }
     .stat-card.amber .stat-number { color: #ffa502; }
-    .stat-card.green .stat-number { color: #2ed573; }
+    .stat-card.amber .stat-label { color: #ffa502; }
 
     .stat-label {
       font-size: 10px;
@@ -431,11 +432,18 @@
       color: #555;
     }
 
+    .activity-panel {
+      overflow: hidden;
+    }
+
     .activity-log {
       flex: 1;
-      overflow-y: auto;
+      overflow-y: scroll;
+      overflow-x: hidden;
       padding: 0;
       font-family: 'SF Mono', 'Menlo', monospace;
+      width: 100%;
+      max-width: 100%;
     }
 
     .activity-log::-webkit-scrollbar {
@@ -457,9 +465,12 @@
 
     .log-entry {
       display: flex;
-      padding: 8px 20px;
+      padding: 8px 20px 8px 20px;
+      padding-right: 28px;
       border-bottom: 1px solid #1a1a1a;
       gap: 16px;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .log-entry:hover {
@@ -488,8 +499,8 @@
     .log-message {
       color: #888;
       flex: 1;
-      overflow: visible;
-      white-space: nowrap;
+      min-width: 0;
+      word-break: break-word;
     }
 
     .log-message a {
@@ -812,6 +823,92 @@
     .lang-check {
       color: #4a9eff;
     }
+
+    /* Further Links Button & Modal */
+    .btn-further-links {
+      padding: 12px 20px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #888;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-further-links:hover {
+      background: #222;
+      color: #fff;
+      border-color: #444;
+    }
+
+    .further-links-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .further-links-content {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .further-links-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #222;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .further-links-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .further-link-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .further-link-item:last-child {
+      border-bottom: none;
+    }
+
+    .further-link-title {
+      color: #4a9eff;
+      text-decoration: none;
+      font-size: 13px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .further-link-title:hover {
+      text-decoration: underline;
+    }
+
+    .further-link-url {
+      color: #555;
+      font-size: 11px;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -872,28 +969,24 @@
       </div>
 
       <div class="results-section" id="resultsSection">
-        <div class="stats">
+        <div class="stats" style="grid-template-columns: repeat(2, 1fr);">
           <div class="stat-card red">
             <div class="stat-number" id="redCount">0</div>
-            <div class="stat-label">Red Flags</div>
+            <div class="stat-label">Potential Flags</div>
           </div>
           <div class="stat-card amber">
             <div class="stat-number" id="amberCount">0</div>
-            <div class="stat-label">Amber</div>
-          </div>
-          <div class="stat-card green">
-            <div class="stat-number" id="greenCount">0</div>
-            <div class="stat-label">Clear</div>
+            <div class="stat-label">Potential Flags</div>
           </div>
         </div>
 
         <div class="flags-list" id="redFlags">
-          <div class="flags-header red">Red Flags</div>
+          <div class="flags-header red">Potential Flags</div>
           <div id="redFlagsList"></div>
         </div>
 
         <div class="flags-list" id="amberFlags">
-          <div class="flags-header amber">Amber Flags</div>
+          <div class="flags-header amber">Potential Flags</div>
           <div id="amberFlagsList"></div>
         </div>
 
@@ -910,7 +1003,21 @@
             Generate Report
           </button>
         </div>
+        <button class="btn-further-links" id="furtherLinksBtn" onclick="openFurtherLinksModal()" style="display: none; margin-top: 12px; width: 100%;">
+          Further Links (<span id="furtherLinksCount">0</span>)
+        </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Further Links Modal -->
+  <div class="further-links-modal" id="furtherLinksModal" style="display: none;">
+    <div class="further-links-content">
+      <div class="further-links-header">
+        <span>Further Links</span>
+        <button onclick="closeFurtherLinksModal()" style="background: none; border: none; color: #888; font-size: 20px; cursor: pointer;">&times;</button>
+      </div>
+      <div class="further-links-list" id="furtherLinksList"></div>
     </div>
   </div>
 
@@ -960,6 +1067,8 @@
     let greenCount = 0;
     let logEntries = 0;
     let urlsProcessed = 0;
+    let furtherLinks = []; // Content mismatch items for manual review
+    let sessionId = null; // For SSE reconnection (stored in Redis on server)
 
     // Language Selector - native names, grouped by region
     const LANGUAGES = [
@@ -1144,11 +1253,16 @@
       currentReport = null;
       currentFindings = [];
       currentSubjectName = '';
+      furtherLinks = [];
+      sessionId = null; // Reset for new screening
+      localStorage.removeItem('ddowl_sessionId');
+      localStorage.removeItem('ddowl_sessionName');
+      document.getElementById('furtherLinksBtn').style.display = 'none';
+      document.getElementById('furtherLinksCount').textContent = '0';
       document.getElementById('redFlagsList').innerHTML = '';
       document.getElementById('amberFlagsList').innerHTML = '';
       document.getElementById('redCount').textContent = '0';
       document.getElementById('amberCount').textContent = '0';
-      document.getElementById('greenCount').textContent = '0';
       document.getElementById('activityLog').innerHTML = '';
       document.getElementById('generateReportBtn').disabled = true;
 
@@ -1166,27 +1280,18 @@
       const MAX_RETRIES = 3;
       let lastQueryIndex = 0;
       let eventSource = null;
-      let accumulatedFindings = []; // Track findings for reconnection
-      let gatheredResults = []; // Track search results for reconnection
       let lastMessageTime = Date.now();
       let healthCheckInterval = null;
 
       function connectSSE() {
-        // Include resumeFrom and findings if reconnecting after a disconnect
-        const resumeParam = retryCount > 0 && lastQueryIndex > 0
-          ? `&resumeFrom=${lastQueryIndex}`
-          : '';
-        // Include accumulated findings on reconnect (base64 encoded, with Unicode support)
-        const findingsParam = retryCount > 0 && accumulatedFindings.length > 0
-          ? `&findings=${btoa(unescape(encodeURIComponent(JSON.stringify(accumulatedFindings))))}`
-          : '';
-        // Include gathered results on reconnect (base64 encoded, with Unicode support)
-        const resultsParam = retryCount > 0 && gatheredResults.length > 0
-          ? `&results=${btoa(unescape(encodeURIComponent(JSON.stringify(gatheredResults))))}`
-          : '';
+        // Build reconnection URL - use sessionId (stored in Redis on server)
+        // This replaces the old approach of encoding huge state in URL params
+        const sessionParam = sessionId ? `&sessionId=${sessionId}` : '';
         const variationsParam = variations.length > 1 ? `&variations=${encodeURIComponent(variations.join(','))}` : '';
         const languageParam = `&language=${language}`;
-        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}${findingsParam}${resultsParam}`);
+        const url = `/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${sessionParam}`;
+        console.log(`[SSE] Connecting: ${url}`);
+        eventSource = new EventSource(url);
 
         // Health check: detect stale connections before they die
         lastMessageTime = Date.now();
@@ -1208,6 +1313,24 @@
           lastMessageTime = Date.now(); // Update on ANY message (including heartbeat)
           retryCount = 0; // Reset retry count on successful message
           const data = JSON.parse(event.data);
+
+          // Store session ID for reconnection (stored in Redis on server)
+          if (data.type === 'session') {
+            sessionId = data.sessionId;
+            localStorage.setItem('ddowl_sessionId', sessionId);
+            localStorage.setItem('ddowl_sessionName', name);
+            console.log(`[SSE] Received session ID: ${sessionId}`);
+          }
+
+          // Handle phase skipped (reconnection)
+          if (data.type === 'phase_skipped') {
+            addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
+          }
+
+          // Handle analyze resume (reconnection)
+          if (data.type === 'analyze_resume') {
+            addLogEntry('search', `Resuming analysis from article ${data.fromIndex + 1}, ${data.totalFindings} findings restored`);
+          }
 
           // Track query progress for potential retry
           if (data.queryIndex) lastQueryIndex = data.queryIndex;
@@ -1232,16 +1355,12 @@
 
           if (data.type === 'gather_complete') {
             addLogEntry('result', `Gathered ${data.totalResults} URLs in ${(data.duration/1000).toFixed(1)}s`);
-            // Store gathered results for reconnection
-            if (data.results) {
-              gatheredResults = data.results;
-              console.log(`[SSE] Stored ${gatheredResults.length} results for potential reconnection`);
-            }
+            // Note: Results now stored in Redis on server, no client-side tracking needed
           }
 
-          // Per-result logging - clickable full URL
+          // Per-result logging - clickable full URL with snippet
           if (data.type === 'search_result') {
-            addLogEntry('search', `[${data.index}/${data.total}] ${data.title}`, data.url);
+            addLogEntry('search', `[${data.index}/${data.total}] ${data.title}`, data.url, data.snippet);
           }
 
           if (data.type === 'programmatic_elimination_complete') {
@@ -1269,6 +1388,11 @@
 
           if (data.type === 'categorize_complete') {
             addLogEntry('result', `Categorized: ${data.red} RED, ${data.amber} AMBER, ${data.green} GREEN`);
+          }
+
+          if (data.type === 'dedupe') {
+            const totalRemoved = data.redRemoved + data.amberRemoved;
+            addLogEntry('result', `Deduped: removed ${totalRemoved} duplicates (${data.redRemoved} red, ${data.amberRemoved} amber). Analyzing ${data.redCount} red + ${data.amberCount} amber unique.`);
           }
 
           // Categorized item - colored severity, title, URL, snippet
@@ -1350,14 +1474,11 @@
 
           // === STAGE 3: DEEP ANALYSIS ===
           if (data.type === 'analyze_start') {
-            addLogEntry('fetch', `Analyzing: ${data.title}`, data.url);
+            addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
           }
 
           if (data.type === 'analyze_result') {
-            // Track accumulated findings for reconnection
-            if (data._findings) {
-              accumulatedFindings = data._findings;
-            }
+            // Note: Findings now stored in Redis on server, no client-side tracking needed
             if (data.action === 'SKIP') {
               addLogEntry('analyze', `Cleared: ${data.reason}`, data.url);
             } else if (data.isAdverse) {
@@ -1370,12 +1491,18 @@
                 summary: data.headline + ' - ' + data.summary
               });
             } else {
-              addLogEntry('analyze', `Clear: No adverse information found`, data.url);
+              addLogEntry('green', `Clear`, data.url);
             }
           }
 
           if (data.type === 'analyze_error') {
             addLogEntry('error', `  → ERROR: ${data.error}`);
+          }
+
+          // Further links (content mismatch - silent collection)
+          if (data.type === 'further_link') {
+            furtherLinks.push({ url: data.url, title: data.title });
+            document.getElementById('furtherLinksCount').textContent = furtherLinks.length;
           }
 
           // === CONSOLIDATION ===
@@ -1400,9 +1527,8 @@
             addLogEntry('result', `Total cleared: ${stats.totalCleared || 0}`);
             addLogEntry('result', `Findings: ${stats.red || 0} RED, ${stats.amber || 0} AMBER`);
 
-            // Update clear count in UI
+            // Update clear count (green counter removed from UI)
             greenCount = stats.totalCleared || 0;
-            document.getElementById('greenCount').textContent = greenCount;
 
             // Store findings for report generation
             currentSubjectName = name;
@@ -1441,6 +1567,18 @@
             document.getElementById('statusDot').classList.remove('active');
             document.getElementById('searchBtn').disabled = false;
             updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
+
+            // Show Further Links button if there are any
+            if (furtherLinks.length > 0) {
+              document.getElementById('furtherLinksBtn').style.display = 'block';
+              document.getElementById('furtherLinksCount').textContent = furtherLinks.length;
+            }
+
+            // Clear session from localStorage on successful completion
+            localStorage.removeItem('ddowl_sessionId');
+            localStorage.removeItem('ddowl_sessionName');
+            sessionId = null;
+
             eventSource.close();
           }
 
@@ -1546,7 +1684,6 @@
     function showFinalResults(report) {
       document.getElementById('resultsSection').classList.add('active');
       document.getElementById('searchBtn').disabled = false;
-      document.getElementById('greenCount').textContent = report.flags.green;
 
       const actionText = document.getElementById('actionText');
       actionText.textContent = report.recommendedAction;
@@ -1582,6 +1719,33 @@
       div.textContent = text;
       return div.innerHTML;
     }
+
+    // Further Links Modal
+    function openFurtherLinksModal() {
+      const modal = document.getElementById('furtherLinksModal');
+      const list = document.getElementById('furtherLinksList');
+
+      // Populate list
+      list.innerHTML = furtherLinks.map(link => `
+        <div class="further-link-item">
+          <a href="${escapeHtml(link.url)}" target="_blank" class="further-link-title">${escapeHtml(link.title)}</a>
+          <div class="further-link-url">${escapeHtml(link.url)}</div>
+        </div>
+      `).join('');
+
+      modal.style.display = 'flex';
+    }
+
+    function closeFurtherLinksModal() {
+      document.getElementById('furtherLinksModal').style.display = 'none';
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('furtherLinksModal')?.addEventListener('click', (e) => {
+      if (e.target.classList.contains('further-links-modal')) {
+        closeFurtherLinksModal();
+      }
+    });
 
     async function saveToScreeningLog(subjectName, report) {
       try {
