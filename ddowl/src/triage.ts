@@ -458,9 +458,19 @@ Return JSON only:
 /**
  * Categorize ALL search results in batches to avoid token limits.
  */
+export interface BatchProgress {
+  batchNumber: number;
+  totalBatches: number;
+  batchSize: number;
+  processedSoFar: number;
+  totalItems: number;
+  batchResult: CategorizedOutput;
+}
+
 export async function categorizeAll(
   results: BatchSearchResult[],
-  subjectName: string
+  subjectName: string,
+  onBatchComplete?: (progress: BatchProgress) => void
 ): Promise<CategorizedOutput> {
   if (results.length === 0) {
     return { red: [], amber: [], green: [] };
@@ -468,16 +478,30 @@ export async function categorizeAll(
 
   const BATCH_SIZE = 50;
   const output: CategorizedOutput = { red: [], amber: [], green: [] };
+  const totalBatches = Math.ceil(results.length / BATCH_SIZE);
 
   // Process in batches
   for (let i = 0; i < results.length; i += BATCH_SIZE) {
     const batch = results.slice(i, i + BATCH_SIZE);
-    console.log(`[CATEGORIZE] Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(results.length/BATCH_SIZE)} (${batch.length} items)`);
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+    console.log(`[CATEGORIZE] Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
 
     const batchResult = await categorizeBatch(batch, subjectName, i);
     output.red.push(...batchResult.red);
     output.amber.push(...batchResult.amber);
     output.green.push(...batchResult.green);
+
+    // Fire callback after each batch to allow progress reporting
+    if (onBatchComplete) {
+      onBatchComplete({
+        batchNumber,
+        totalBatches,
+        batchSize: batch.length,
+        processedSoFar: Math.min(i + BATCH_SIZE, results.length),
+        totalItems: results.length,
+        batchResult,
+      });
+    }
   }
 
   console.log(`[CATEGORIZE] Done: ${output.red.length} RED, ${output.amber.length} AMBER, ${output.green.length} GREEN`);

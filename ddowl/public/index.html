@@ -1251,6 +1251,11 @@
             }
           }
 
+          if (data.type === 'categorize_batch_complete') {
+            addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
+            updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
+          }
+
           if (data.type === 'categorize_complete') {
             addLogEntry('result', `Categorized: ${data.red} RED, ${data.amber} AMBER, ${data.green} GREEN`);
           }

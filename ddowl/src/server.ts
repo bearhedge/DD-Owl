@@ -1163,12 +1163,24 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
 
     // ========================================
-    // PHASE 3: CATEGORIZE (single LLM call)
+    // PHASE 3: CATEGORIZE (batched LLM calls with progress)
     // ========================================
     sendEvent({ type: 'phase', phase: 3, name: 'CATEGORIZE', message: `Categorizing ${passed.length} results...` });
 
     const categorizeStart = Date.now();
-    const categorized = await categorizeAll(passed, subjectName);
+    const categorized = await categorizeAll(passed, subjectName, (progress) => {
+      // Send progress event after each batch to keep SSE alive
+      sendEvent({
+        type: 'categorize_batch_complete',
+        batch: progress.batchNumber,
+        totalBatches: progress.totalBatches,
+        processedSoFar: progress.processedSoFar,
+        totalItems: progress.totalItems,
+        batchRed: progress.batchResult.red.length,
+        batchAmber: progress.batchResult.amber.length,
+        batchGreen: progress.batchResult.green.length,
+      });
+    });
 
     sendEvent({
       type: 'categorize_complete',
