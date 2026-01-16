@@ -794,6 +794,19 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const language = (req.query.language as string) || 'both';
   const resumeFrom = parseInt(req.query.resumeFrom as string) || 0;
 
+  // Parse restored findings from reconnection (base64 encoded JSON to avoid URL issues)
+  let restoredFindings: RawFinding[] = [];
+  const findingsParam = req.query.findings as string;
+  if (findingsParam) {
+    try {
+      const decoded = Buffer.from(findingsParam, 'base64').toString('utf-8');
+      restoredFindings = JSON.parse(decoded);
+      console.log(`[V4] Restored ${restoredFindings.length} findings from previous connection`);
+    } catch (e) {
+      console.error('[V4] Failed to parse restored findings:', e);
+    }
+  }
+
   // Cancel any existing screening for this subject
   const screeningKey = subjectName.toLowerCase();
   if (activeScreenings.has(screeningKey)) {
@@ -1154,7 +1167,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     sendEvent({ type: 'phase', phase: 4, name: 'ANALYZE', message: `Analyzing ${toProcess.length} flagged results...` });
 
-    const allFindings: RawFinding[] = [];
+    // Initialize with restored findings from previous connection
+    const allFindings: RawFinding[] = [...restoredFindings];
+    if (restoredFindings.length > 0) {
+      console.log(`[V4] Starting analysis with ${restoredFindings.length} restored findings`);
+    }
     const processedUrls = new Set<string>();
 
     for (let i = 0; i < toProcess.length; i++) {
@@ -1211,6 +1228,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           isAdverse: analysis.isAdverse,
           severity: analysis.severity,
           headline: analysis.headline,
+          // Include accumulated findings for client to restore on reconnect
+          _findings: allFindings,
         });
 
         if (analysis.isAdverse) {

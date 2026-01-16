@@ -1146,15 +1146,20 @@
       const MAX_RETRIES = 3;
       let lastQueryIndex = 0;
       let eventSource = null;
+      let accumulatedFindings = []; // Track findings for reconnection
 
       function connectSSE() {
-        // Include resumeFrom if reconnecting after a disconnect
+        // Include resumeFrom and findings if reconnecting after a disconnect
         const resumeParam = retryCount > 0 && lastQueryIndex > 0
           ? `&resumeFrom=${lastQueryIndex}`
           : '';
+        // Include accumulated findings on reconnect (base64 encoded)
+        const findingsParam = retryCount > 0 && accumulatedFindings.length > 0
+          ? `&findings=${btoa(JSON.stringify(accumulatedFindings))}`
+          : '';
         const variationsParam = variations.length > 1 ? `&variations=${encodeURIComponent(variations.join(','))}` : '';
         const languageParam = `&language=${language}`;
-        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}`);
+        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}${findingsParam}`);
 
         eventSource.onmessage = (event) => {
           retryCount = 0; // Reset retry count on successful message
@@ -1168,6 +1173,12 @@
             addLogEntry('search', `━━━ PHASE ${data.phase}: ${data.name} ━━━`);
             addLogEntry('search', data.message);
             updateActivityStats(`Phase ${data.phase}: ${data.name}`);
+          }
+
+          if (data.type === 'search_page') {
+            // Per-page logging for pagination debugging
+            const stopReason = data.pageResults === 0 ? ' → STOP (empty)' : (data.pageResults < 10 ? ' → STOP (last page)' : '');
+            addLogEntry('search', `  Q${data.queryIndex} Page ${data.page}: ${data.pageResults} results${stopReason}`);
           }
 
           if (data.type === 'search_progress') {
@@ -1318,6 +1329,10 @@
           }
 
           if (data.type === 'analyze_result') {
+            // Track accumulated findings for reconnection
+            if (data._findings) {
+              accumulatedFindings = data._findings;
+            }
             if (data.action === 'SKIP') {
               addLogEntry('analyze', `→ Cleared: ${data.reason}`);
             } else if (data.isAdverse) {
