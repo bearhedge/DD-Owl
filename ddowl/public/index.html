@@ -1219,14 +1219,17 @@
             }
           }
 
-          // Per-result logging for deep audit
+          // Per-result logging for deep audit - compact single row
           if (data.type === 'search_result') {
             const title = data.title;
-            const snippet = data.snippet.length > 60 ? data.snippet.slice(0, 60) + '...' : data.snippet;
-            addLogEntry('search', `[${data.index}/${data.total}] ${data.category}`);
-            addLogEntry('search', `   ${title}`);
-            addLogEntry('search', `   ${data.url}`, data.url);
-            addLogEntry('search', `   "${snippet}"`);
+            // Extract domain from URL
+            let domain = '';
+            try {
+              domain = new URL(data.url).hostname.replace('www.', '');
+            } catch (e) {
+              domain = data.url.split('/')[2] || '';
+            }
+            addLogEntry('search', `[${data.index}/${data.total}] ${title} | ${domain}`, data.url);
           }
 
           if (data.type === 'programmatic_elimination_complete') {
@@ -1261,17 +1264,21 @@
 
           if (data.type === 'categorized_item') {
             const title = data.title;
+            // Extract domain from URL
+            let domain = '';
+            try {
+              domain = new URL(data.url).hostname.replace('www.', '');
+            } catch (e) {
+              domain = data.url.split('/')[2] || '';
+            }
             if (data.category === 'RED') {
-              addLogEntry('red', `🔴 ${title}`);
-              addLogEntry('red', `   ${data.url}`);
+              addLogEntry('red', `🔴 ${title} | ${domain}`, data.url);
               addLogEntry('red', `   Reason: ${data.reason}`);
             } else if (data.category === 'AMBER') {
-              addLogEntry('amber', `🟡 ${title}`);
-              addLogEntry('amber', `   ${data.url}`);
+              addLogEntry('amber', `🟡 ${title} | ${domain}`, data.url);
               addLogEntry('amber', `   Reason: ${data.reason}`);
             } else if (data.category === 'GREEN') {
-              addLogEntry('analyze', `🟢 ${title}`);
-              addLogEntry('analyze', `   ${data.url}`);
+              addLogEntry('analyze', `🟢 ${title} | ${domain}`, data.url);
               addLogEntry('analyze', `   Reason: ${data.reason}`);
             }
           }

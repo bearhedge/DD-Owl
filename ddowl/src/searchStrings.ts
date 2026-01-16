@@ -14,7 +14,8 @@ export const TEMPLATE_CATEGORIES: Record<number, string> = {
   6: 'Misconduct & Discipline (不当行为)',
   7: 'Labor & Human Rights (劳工人权)',
   8: 'Drugs, Vice & Extremism (毒品色情极端)',
-  9: 'Authoritative Sites (权威来源)',
+  9: 'Corporate & Civil Disputes (公司民事纠纷)',
+  10: 'Authoritative Sites (权威来源)',
 };
 
 // Chinese search templates (9 thematic queries)
@@ -45,6 +46,9 @@ export const CHINESE_TEMPLATES = [
 
   // Q9: Drugs, Vice & Extremism (毒品色情极端)
   `"{NAME}" 毒贩|毒販|麻药|麻藥|药物成瘾|藥物成癮|滥用药物|濫用藥物|吸毒者|色情|赌|賭|走私|违禁品|違禁品|恐怖主义|恐怖主義|恐怖分子|极端主义|極端主義`,
+
+  // Q10: Corporate & Civil Disputes (公司民事纠纷)
+  `"{NAME}" 信託|信托|侵吞|侵占|爭產|争产|私吞|挪用|盗用|盜用|清盤|清盘|破產|破产|資不抵債|资不抵债|違約|违约|民事|仲裁|控股權|控股权|股權糾紛|股权纠纷|家族|遺產|遗产`,
 ];
 
 // English search templates (deferred to later phase)

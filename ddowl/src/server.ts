@@ -1003,6 +1003,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
         sendEvent({
           type: 'search_page',
+          engine: 'google',
           queryIndex: i + 1,
           totalQueries: selectedTemplates.length,
           page,
