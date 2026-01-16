@@ -470,8 +470,7 @@
     .log-message {
       color: #888;
       flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      overflow: visible;
       white-space: nowrap;
     }
 
@@ -1222,7 +1221,7 @@
 
           // Per-result logging for deep audit
           if (data.type === 'search_result') {
-            const title = data.title.length > 45 ? data.title.slice(0, 45) + '...' : data.title;
+            const title = data.title;
             const snippet = data.snippet.length > 60 ? data.snippet.slice(0, 60) + '...' : data.snippet;
             addLogEntry('search', `[${data.index}/${data.total}] ${data.category}`);
             addLogEntry('search', `   ${title}`);
@@ -1239,7 +1238,7 @@
 
           // Per-item elimination logging for deep audit
           if (data.type === 'elimination_item') {
-            const title = data.title.length > 40 ? data.title.slice(0, 40) + '...' : data.title;
+            const title = data.title;
             if (data.status === 'PASSED') {
               addLogEntry('analyze', `[${data.index}] ✓ PASS: ${title}`);
             } else if (data.status === 'BYPASSED') {
@@ -1261,7 +1260,7 @@
           }
 
           if (data.type === 'categorized_item') {
-            const title = data.title.length > 50 ? data.title.slice(0, 50) + '...' : data.title;
+            const title = data.title;
             if (data.category === 'RED') {
               addLogEntry('red', `🔴 ${title}`);
               addLogEntry('red', `   ${data.url}`);
@@ -1327,7 +1326,7 @@
           }
 
           if (data.type === 'triage_item') {
-            const title = data.title.length > 40 ? data.title.slice(0, 40) + '...' : data.title;
+            const title = data.title;
             if (data.classification === 'GREEN') {
               addLogEntry('analyze', `✓ Cleared: ${title}`);
             } else if (data.classification === 'YELLOW') {
@@ -1343,7 +1342,7 @@
 
           // === STAGE 2: QUICK SCAN ===
           if (data.type === 'quick_scan_start') {
-            const title = data.title.length > 45 ? data.title.slice(0, 45) + '...' : data.title;
+            const title = data.title;
             addLogEntry('fetch', `Quick scanning: ${title}`);
             urlsProcessed++;
           }
@@ -1358,7 +1357,7 @@
 
           // === STAGE 3: DEEP ANALYSIS ===
           if (data.type === 'analyze_start') {
-            const title = data.title.length > 45 ? data.title.slice(0, 45) + '...' : data.title;
+            const title = data.title;
             addLogEntry('fetch', `Deep analyzing: ${title}`);
           }
 
