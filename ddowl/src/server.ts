@@ -44,7 +44,7 @@ import { initLogDirectories, saveScreeningLog as saveLog, loadScreeningLog as lo
 import { MetricsTracker } from './metrics/tracker.js';
 import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
 import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown } from './eliminator.js';
-import { getChineseVariants } from './utils/chinese.js';
+import { getChineseVariantsLLM } from './utils/chinese.js';
 
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -854,11 +854,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     });
   }
 
-  // For Chinese language: auto-generate Simplified/Traditional variants
+  // For Chinese language: auto-generate Simplified/Traditional variants using DeepSeek LLM
   if (language === 'chinese' || language === 'both') {
     const currentNames = [...nameVariations];
     for (const name of currentNames) {
-      const variants = getChineseVariants(name);
+      const variants = await getChineseVariantsLLM(name);
       for (const variant of variants) {
         if (!nameVariations.includes(variant)) {
           nameVariations.push(variant);
