@@ -1205,8 +1205,7 @@
           }
 
           if (data.type === 'search_progress') {
-            addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries}: ${data.resultsFound} results`);
-            addLogEntry('search', `  ${data.query.slice(0, 60)}...`);
+            addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries} | ${data.resultsFound} results | ${data.query}`);
             updateActivityStats(`Searching ${data.queryIndex}/${data.totalQueries} (${data.totalSoFar} total)`);
           }
 
@@ -1219,17 +1218,15 @@
             }
           }
 
-          // Per-result logging for deep audit - compact single row
+          // Per-result logging for deep audit - compact single row: domain | index | title
           if (data.type === 'search_result') {
-            const title = data.title;
-            // Extract domain from URL
             let domain = '';
             try {
               domain = new URL(data.url).hostname.replace('www.', '');
             } catch (e) {
               domain = data.url.split('/')[2] || '';
             }
-            addLogEntry('search', `[${data.index}/${data.total}] ${title} | ${domain}`, data.url);
+            addLogEntry('search', `${domain} | [${data.index}/${data.total}] | ${data.title}`, data.url);
           }
 
           if (data.type === 'programmatic_elimination_complete') {
@@ -1239,17 +1236,20 @@
             }
           }
 
-          // Per-item elimination logging for deep audit
+          // Per-item elimination logging - single row per item
           if (data.type === 'elimination_item') {
-            const title = data.title;
+            let domain = '';
+            try {
+              domain = new URL(data.url).hostname.replace('www.', '');
+            } catch (e) {
+              domain = data.url?.split('/')[2] || '';
+            }
             if (data.status === 'PASSED') {
-              addLogEntry('analyze', `[${data.index}] ✓ PASS: ${title}`);
+              addLogEntry('analyze', `${domain} | [${data.index}] ✓ | ${data.title}`);
             } else if (data.status === 'BYPASSED') {
-              addLogEntry('fetch', `[${data.index}] ⚡ BYPASS: ${title}`);
-              addLogEntry('fetch', `   ${data.rule}`);
+              addLogEntry('fetch', `${domain} | [${data.index}] ⚡ BYPASS | ${data.title} | ${data.rule}`);
             } else if (data.status === 'ELIMINATED') {
-              addLogEntry('search', `[${data.index}] ✗ ELIM: ${title}`);
-              addLogEntry('search', `   ${data.rule}`);
+              addLogEntry('search', `${domain} | [${data.index}] ✗ ELIM | ${data.title} | ${data.rule}`);
             }
           }
 
@@ -1262,9 +1262,8 @@
             addLogEntry('result', `Categorized: ${data.red} RED, ${data.amber} AMBER, ${data.green} GREEN`);
           }
 
+          // Categorized item - single row: domain | status | title
           if (data.type === 'categorized_item') {
-            const title = data.title;
-            // Extract domain from URL
             let domain = '';
             try {
               domain = new URL(data.url).hostname.replace('www.', '');
@@ -1272,14 +1271,11 @@
               domain = data.url.split('/')[2] || '';
             }
             if (data.category === 'RED') {
-              addLogEntry('red', `🔴 ${title} | ${domain}`, data.url);
-              addLogEntry('red', `   Reason: ${data.reason}`);
+              addLogEntry('red', `${domain} | 🔴 RED | ${data.title}`, data.url);
             } else if (data.category === 'AMBER') {
-              addLogEntry('amber', `🟡 ${title} | ${domain}`, data.url);
-              addLogEntry('amber', `   Reason: ${data.reason}`);
+              addLogEntry('amber', `${domain} | 🟡 AMBER | ${data.title}`, data.url);
             } else if (data.category === 'GREEN') {
-              addLogEntry('analyze', `🟢 ${title} | ${domain}`, data.url);
-              addLogEntry('analyze', `   Reason: ${data.reason}`);
+              addLogEntry('analyze', `${domain} | 🟢 GREEN | ${data.title}`, data.url);
             }
           }
 
@@ -1294,23 +1290,7 @@
             updateActivityStats(`Query ${data.queryIndex}/${data.totalQueries}`);
           }
 
-          // === PAGE-BY-PAGE SEARCH RESULTS ===
-          if (data.type === 'search_page') {
-            const engine = data.engine === 'google' ? 'Google' : 'Baidu';
-            if (data.results && data.results.length > 0) {
-              addLogEntry('search', `📄 ${engine} Page ${data.page}/${data.maxPages}: ${data.results.length} results`);
-              for (const r of data.results) {
-                addLogEntry('search', `   → ${r.url}`, r.url);
-              }
-            } else {
-              addLogEntry('search', `📄 ${engine} Page ${data.page}/${data.maxPages}: 0 results`);
-            }
-          }
-
-          if (data.type === 'search_page_empty') {
-            const engine = data.engine === 'google' ? 'Google' : 'Baidu';
-            addLogEntry('search', `📄 ${engine}: ${data.message}`);
-          }
+          // Removed duplicate search_page handler - V4 uses search_progress instead
 
           if (data.type === 'search_results') {
             addLogEntry('search', `→ Total: ${data.found} results`);

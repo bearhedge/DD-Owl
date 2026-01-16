@@ -988,7 +988,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       }
 
       // Search Google (Serper) - up to 5 pages
-      const MAX_PAGES = 5;
+      const MAX_PAGES = 10;
       const googleResults: SearchResult[] = [];
 
       for (let page = 1; page <= MAX_PAGES; page++) {

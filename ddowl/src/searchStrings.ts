@@ -15,7 +15,7 @@ export const TEMPLATE_CATEGORIES: Record<number, string> = {
   7: 'Labor & Human Rights (劳工人权)',
   8: 'Drugs, Vice & Extremism (毒品色情极端)',
   9: 'Corporate & Civil Disputes (公司民事纠纷)',
-  10: 'Authoritative Sites (权威来源)',
+  10: 'Official Sites (官方来源)',
 };
 
 // Chinese search templates (9 thematic queries)
