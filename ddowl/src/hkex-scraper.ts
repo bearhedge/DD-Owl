@@ -45,10 +45,12 @@ export async function extractBankDataFromPdf(pdfBuffer: Buffer): Promise<{
   let company = '';
   let companyChineseName = '';
 
-  // Combine all pages text
+  // Use first 2 pages for company name extraction (cover page + first content page)
+  const frontPages = result.pages.slice(0, 2).map(p => p.text).join('\n');
+  // All pages for bank extraction
   const allText = result.pages.map(p => p.text).join('\n');
 
-  // Extract company name - look for standard patterns
+  // Extract company name from front pages - look for standard patterns
   const companyPatterns = [
     // All caps company name followed by Chinese or "(Incorporated..."
     /^([A-Z][A-Z\s']+(?:HOLDINGS\s+)?LIMITED)\s*$/m,
@@ -62,7 +64,7 @@ export async function extractBankDataFromPdf(pdfBuffer: Buffer): Promise<{
   ];
 
   for (const pattern of companyPatterns) {
-    const match = allText.match(pattern);
+    const match = frontPages.match(pattern);
     if (match && match[1].length > 10 && match[1].length < 100) {
       // Clean up and normalize
       company = match[1]
@@ -72,24 +74,39 @@ export async function extractBankDataFromPdf(pdfBuffer: Buffer): Promise<{
     }
   }
 
-  // Extract Chinese name (4+ Chinese characters, but exclude common terms)
-  const chineseMatches = allText.match(/[\u4e00-\u9fa5]{4,}/g) || [];
+  // Extract Chinese company name from FRONT PAGES ONLY
+  // Look for Chinese text near English company name on cover page
+  const chineseMatches = frontPages.match(/[\u4e00-\u9fa5]{4,}/g) || [];
+
+  // First try: Find Chinese text that ends with company suffixes
   for (const match of chineseMatches) {
-    // Skip common phrases that aren't company names
-    if (!match.match(/香港|有限|責任|中華人民共和國|股份有限公司$/)) {
-      continue;
-    }
-    // Likely a company name if it's reasonably long
-    if (match.length >= 6) {
+    // Skip if it's JUST a suffix (not a real company name)
+    if (match === '有限公司' || match === '股份有限公司' || match === '股份公司') continue;
+
+    // Good patterns: ends with 有限公司, 股份有限公司, 控股, etc.
+    if (match.match(/(有限公司|股份公司|控股|集團)$/)) {
       companyChineseName = match;
       break;
     }
   }
 
-  // If no company name found, try to get the first long Chinese string
+  // Second try: Find any reasonably long Chinese string (likely company name on cover)
   if (!companyChineseName && chineseMatches.length > 0) {
-    const found = chineseMatches.find(m => m.length >= 8);
-    companyChineseName = found ?? chineseMatches[0] ?? '';
+    // Skip common non-company phrases
+    const skipPatterns = [
+      /^香港聯合交易所/,  // Hong Kong Stock Exchange
+      /^中華人民共和國/,  // PRC
+      /^根據香港/,        // According to HK
+      /^本公司/,          // This company
+      /^本集團/,          // This group
+    ];
+
+    for (const match of chineseMatches) {
+      if (match.length >= 6 && !skipPatterns.some(p => p.test(match))) {
+        companyChineseName = match;
+        break;
+      }
+    }
   }
 
   // Check ALL pages for bank data

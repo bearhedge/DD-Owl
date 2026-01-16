@@ -1,0 +1,1696 @@
+[
+  {
+    "ticker": 2256,
+    "company": "Abbisko Cayman Limited - B",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 2256,
+    "company": "Abbisko Cayman Limited - B",
+    "bank": "J.P. Morgan Securities (Asia Pacific) Limited and J.P. Morgan Securities Plc",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 1627,
+    "company": "Able Engineering Holdings Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 9926,
+    "company": "Akeso, Inc. - B",
+    "bank": "Morgan Stanley Asia Limited and J.P. Morgan Securities (Far East) Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 1849,
+    "company": "AM Group Holdings Limited",
+    "bank": "Public Offer Underwriter \tCrosby Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1977,
+    "company": "Analogue Holdings Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1496,
+    "company": "AP Rentals Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2519,
+    "company": "AuGroup (SHENZHEN) Cross-Border Business Co., Ltd.",
+    "bank": "CLSA Limited and DBS Asia Capital Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 2031,
+    "company": "Ausupreme International Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1397,
+    "company": "Baguio Green Group Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2100,
+    "company": "BAIOO Family Interactive Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6608,
+    "company": "Bairong Inc. - W",
+    "bank": "Morgan Stanley Asia Limited and CMBC International Capital Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 2139,
+    "company": "Bank of Gansu Co., Ltd.",
+    "bank": "BOCI Asia Limited and Guotai Junan Securities (Hong Kong) Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 2139,
+    "company": "Bank of Gansu Co., Ltd.",
+    "bank": "Haitong Lender is a subsidiary of Haitong International Securities Group Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (80ch)"
+  },
+  {
+    "ticker": 2139,
+    "company": "Bank of Gansu Co., Ltd.",
+    "bank": "Guotai Junan Capital Limited and BOCI Asia Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 1578,
+    "company": "Bank of Tianjin Co., Ltd",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1578,
+    "company": "Bank of Tianjin Co., Ltd",
+    "bank": "ABCI Capital Limited and CCB International Capital Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 6196,
+    "company": "Bank of Zhengzhou Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6196,
+    "company": "Bank of Zhengzhou Co., Ltd.",
+    "bank": "Citigroup Financial Products Inc. and Citigroup Global Markets Holdings Bahamas Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (87ch)"
+  },
+  {
+    "ticker": 2480,
+    "company": "Beijing Luzhu Biotechnology Co., Ltd. - B",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1599,
+    "company": "Beijing Urban Construction Design & Development Group Co., Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9669,
+    "company": "Beisen Holding Limited",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1552,
+    "company": "BHCC Holding Limited",
+    "bank": "Public Offer Underwriters \tHead & Shoulders Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 3316,
+    "company": "Binjiang Service Group Co. Ltd.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1204,
+    "company": "Boardware Intelligence Technology Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 3329,
+    "company": "BOCOM International Holdings Company Limited",
+    "bank": "BOCOM International Equity Investment Management (Shenzhen) Company Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (75ch)"
+  },
+  {
+    "ticker": 1253,
+    "company": "Broad Greenstate International Company Limited",
+    "bank": "Haitong International\u201d Haitong International Securities Company Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (71ch)"
+  },
+  {
+    "ticker": 3309,
+    "company": "C-MER Eye Care Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1381,
+    "company": "Canvest Environmental Protection Group Company Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1381,
+    "company": "Canvest Environmental Protection Group Company Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1375,
+    "company": "Central China Securities Co., Ltd.",
+    "bank": "Futures and Commodities Exchanges and China Securities Finance Corporation Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (82ch)"
+  },
+  {
+    "ticker": 1816,
+    "company": "CGN Power Co., Ltd",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2229,
+    "company": "Changgang Dunxin Enterprise Company Limited",
+    "bank": "Public Offer Underwriters \tKingsway Financial Services Group Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 2229,
+    "company": "Changgang Dunxin Enterprise Company Limited",
+    "bank": "Placing Underwriters \tKingsway Financial Services Group Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1490,
+    "company": "Cheshi Holdings Limited",
+    "bank": "Harvest \tInternational \tSecurities \tCompany Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1490,
+    "company": "Cheshi Holdings Limited",
+    "bank": "Haitong \tInternational \tSecurities \tCompany Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1490,
+    "company": "Cheshi Holdings Limited",
+    "bank": "Alpha \tInternational \tSecurities \t(HONG KONG) Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 9913,
+    "company": "Chi Kan Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1598,
+    "company": "China 21st Century Education Group Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1848,
+    "company": "China Aircraft Leasing Group Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 587,
+    "company": "China Conch Environment Protection Holdings Limited",
+    "bank": "China  International  Capital  Corporation  Hong  Kong Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (73ch)"
+  },
+  {
+    "ticker": 1257,
+    "company": "China Everbright Greentech Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2237,
+    "company": "China Graphite Group Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2799,
+    "company": "China Huarong Asset Management Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 3908,
+    "company": "China International Capital Corporation Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 3908,
+    "company": "China International Capital Corporation Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6099,
+    "company": "China Merchants Securities Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1871,
+    "company": "China Oriented International Holdings Limited",
+    "bank": "Underwriters subject to the terms and conditions of the Underwriting Agreements (including but not limited",
+    "type": "GARBAGE",
+    "reason": "Prose"
+  },
+  {
+    "ticker": 3969,
+    "company": "China Railway Signal & Communication Corporation Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1508,
+    "company": "China Reinsurance (Group) Corporation",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1209,
+    "company": "China Resources Mixc Lifestyle Services Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1365,
+    "company": "China Rundong Auto Group Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1432,
+    "company": "China Shengmu Organic Milk Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2439,
+    "company": "China Treasures New Materials Group Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6169,
+    "company": "China YuHua Education Corporation Limited",
+    "bank": "BOCOM Investment may transfer the Shares so subscribed in certain limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (73ch)"
+  },
+  {
+    "ticker": 1420,
+    "company": "Chuan Holdings Limited",
+    "bank": "International Underwriters \tVBG Capital Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 400,
+    "company": "Cogobuy Group",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1778,
+    "company": "Colour Life Services Group Co., Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1932,
+    "company": "CPM Group Limited",
+    "bank": "Lead Managers . . . . . . . . . . . . . . . . . . . . . . .Innovax Securities Limited",
+    "type": "GARBAGE",
+    "reason": "TOC"
+  },
+  {
+    "ticker": 1932,
+    "company": "CPM Group Limited",
+    "bank": "Other Hong Kong Underwriters. . . . . . . . . . . .China Finance KAB Limited",
+    "type": "GARBAGE",
+    "reason": "TOC"
+  },
+  {
+    "ticker": 6066,
+    "company": "CSC Financial Co., Ltd.",
+    "bank": "CITIC Group injected assets valued at RMB227.0 billion into CITIC Pacific Limited",
+    "type": "GARBAGE",
+    "reason": "Prose"
+  },
+  {
+    "ticker": 1620,
+    "company": "CTEH Inc.",
+    "bank": "China \tGalaxy \tInternational \tSecurities (Hong Kong) Co., Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 2487,
+    "company": "Cutia Therapeutics - B",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1073,
+    "company": "Da Yu Financial Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 3699,
+    "company": "Everbright Grand China Assets Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2418,
+    "company": "Deewin Tianxia Co., Ltd",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1405,
+    "company": "DPC Dash Ltd",
+    "bank": "HSBC Trustee (C.I.) Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 2442,
+    "company": "Easy Smart Group Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2505,
+    "company": "EDA Group Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1821,
+    "company": "ESR Cayman Limited",
+    "bank": "CLSA Capital Markets Limited and Morgan Stanley Asia Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 6883,
+    "company": "Eternal Beauty Holdings Limited",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1549,
+    "company": "Ever Harvest Group Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6178,
+    "company": "Everbright Securities Company Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1952,
+    "company": "Everest Medicines Limited - B",
+    "bank": "Merrill Lynch Far East Limited pursuant to which OrbiMed Partners Master Fund Limited",
+    "type": "GARBAGE",
+    "reason": "Prose"
+  },
+  {
+    "ticker": 1962,
+    "company": "Evergreen Products Group Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1962,
+    "company": "Evergreen Products Group Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 6088,
+    "company": "FIT Hon Teng Limited",
+    "bank": "China  International  Capital  Corporation Hong Kong Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (71ch)"
+  },
+  {
+    "ticker": 6865,
+    "company": "Flat Glass Group Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1721,
+    "company": "FSM Holdings Limited",
+    "bank": "Financial adviser to our Company \tGrande Capital Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 2497,
+    "company": "Fujing Holdings Co., Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2212,
+    "company": "Future Bright Mining Holdings Limited",
+    "bank": "Future Bright (International) is a private investment holding company with limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (82ch)"
+  },
+  {
+    "ticker": 2212,
+    "company": "Future Bright Mining Holdings Limited",
+    "bank": "Future Bright (Xiangyang) was established in the PRC as an WFOE with limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (76ch)"
+  },
+  {
+    "ticker": 1776,
+    "company": "GF Securities Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2531,
+    "company": "GL-Carlink Technology Holding Limited",
+    "bank": "Future Inc. (\u201cCarlink BVI\u201d) was incorporated in BVI with liability limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (74ch)"
+  },
+  {
+    "ticker": 2246,
+    "company": "GOGOX HOLDINGS LIMITED",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 9979,
+    "company": "Greentown Management Holdings Company Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2869,
+    "company": "Greentown Service Group Co. Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1872,
+    "company": "Guan Chao Holdings Limited",
+    "bank": "Public Offer Underwriters \tTitan Financial Services Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 3689,
+    "company": "Guangdong Kanghua Healthcare Co., Ltd.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1364,
+    "company": "Guming Holdings Limited",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 2329,
+    "company": "Guorui Properties Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2611,
+    "company": "Guotai Junan Securities Co., Ltd.",
+    "bank": "Guotai Junan Capital Limited and/or Guotai Junan Securities (Hong Kong) Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (79ch)"
+  },
+  {
+    "ticker": 2611,
+    "company": "Guotai Junan Securities Co., Ltd.",
+    "bank": "BOCOM Investment is a connected client of BOCOM International Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (80ch)"
+  },
+  {
+    "ticker": 6690,
+    "company": "Haier Smart Home Co., Ltd.",
+    "bank": "Compliance Advisor \tAnglo Chinese Corporate Finance, Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 2865,
+    "company": "Hainan Drinda New Energy Technology Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1905,
+    "company": "Haitong UniTrust International Leasing Co., Ltd.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1905,
+    "company": "Haitong UniTrust International Leasing Co., Ltd.",
+    "bank": "Haitong UniTrust Financial Leasing and Haitong UniFortune to Haitong UT Holding Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (87ch)"
+  },
+  {
+    "ticker": 1905,
+    "company": "Haitong UniTrust International Leasing Co., Ltd.",
+    "bank": "Haitong UT Capital further entered into an agreement with Haitong UT Holding Limited",
+    "type": "GARBAGE",
+    "reason": "Prose"
+  },
+  {
+    "ticker": 1905,
+    "company": "Haitong UniTrust International Leasing Co., Ltd.",
+    "bank": "Haitong UT Leasing Irish Finance Limited (together with Haitong Unitrust No.2 Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (85ch)"
+  },
+  {
+    "ticker": 1905,
+    "company": "Haitong UniTrust International Leasing Co., Ltd.",
+    "bank": "Haitong UT Leasing HK Limited acquired 100% equity interest in Haitong Unitrust No.1 Limited",
+    "type": "GARBAGE",
+    "reason": "Prose"
+  },
+  {
+    "ticker": 9699,
+    "company": "Hangzhou SF Intra-city Industrial Co., Ltd.",
+    "bank": "HSBC Provident Fund Trustee (Hong Kong) Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 3903,
+    "company": "Hanhua Financial Holding Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Trustees Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 3678,
+    "company": "Holly Futures Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6858,
+    "company": "Honma Golf Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9930,
+    "company": "Horizon Construction Development Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6886,
+    "company": "HTSC",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1419,
+    "company": "Human Health Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6661,
+    "company": "Huzhou Gas Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1650,
+    "company": "Hygieia Group Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 3700,
+    "company": "Inke Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6819,
+    "company": "IntelliCentrics Global Holdings Ltd.",
+    "bank": "CLSA Limited and AMTD Global Markets Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 2633,
+    "company": "Jacobson Pharma Corporation Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2161,
+    "company": "JBM (Healthcare) Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 9877,
+    "company": "Jenscare Scientific Co., Ltd. - B",
+    "bank": "FutureX Investment I Company Limited: FutureX Investment I Company Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (74ch)"
+  },
+  {
+    "ticker": 2625,
+    "company": "Jiangsu Horizon Chain Supermarket Company Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1153,
+    "company": "Jiayuan Services Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 6680,
+    "company": "JL Mag Rare-Earth Co., Ltd.",
+    "bank": "CITIC-Prudential Life Insurance Company Limited (\u201cCITIC-Prudential\u201d) is a limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (81ch)"
+  },
+  {
+    "ticker": 2483,
+    "company": "K Cash Corporation Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2168,
+    "company": "Kaisa Property Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2225,
+    "company": "Kakiko Group Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 3650,
+    "company": "Keep Inc.",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1134,
+    "company": "Kelfred Holdings Limited",
+    "bank": "members will be maintained by our Hong Kong Branch Share Registrar, Tricor Investor Services Limited",
+    "type": "GARBAGE",
+    "reason": "Prose"
+  },
+  {
+    "ticker": 1797,
+    "company": "Koolearn Technology Holding Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9998,
+    "company": "Kwan Yong Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2105,
+    "company": "Laekna, Inc. - B",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1533,
+    "company": "Lanzhou Zhuangyuan Pasture Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1683,
+    "company": "LC Group Holdings Limited",
+    "bank": "Placing Underwriters \tPacific Foundation Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1683,
+    "company": "LC Group Holdings Limited",
+    "bank": "Public Offer Underwriter \tPacific Foundation Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1346,
+    "company": "Lever Style Corporation",
+    "bank": "HSBC Trustee (CI) Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1978,
+    "company": "LH Group Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9959,
+    "company": "Linklogis Inc. - W",
+    "bank": "CITIC Capital (Shenzhen) Information Technology Venture Investment Fund (Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (80ch)"
+  },
+  {
+    "ticker": 2376,
+    "company": "Lushang Life Services Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2186,
+    "company": "Luye Pharma Group Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2186,
+    "company": "Luye Pharma Group Ltd.",
+    "bank": "CITIC Bank International Limited (formerly known as CITIC Bank International Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (84ch)"
+  },
+  {
+    "ticker": 2451,
+    "company": "Luyuan Group Holding (Cayman) Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2451,
+    "company": "Luyuan Group Holding (Cayman) Limited",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1461,
+    "company": "LUZHENG FUTURES Company Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2245,
+    "company": "Lygend Resources & Technology Co., Ltd.",
+    "bank": "China  International  Capital  Corporation  Hong  Kong Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (73ch)"
+  },
+  {
+    "ticker": 1408,
+    "company": "Macau E&M Holding Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2501,
+    "company": "Maiyue Technology Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1746,
+    "company": "Man Shun Group (Holdings) Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2295,
+    "company": "Maxicity Holdings Limited",
+    "bank": "corporate finance) regulated activities \u201cStock Exchange\u201d \tThe Stock Exchange of Hong Kong Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1357,
+    "company": "Meitu, Inc.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2160,
+    "company": "MicroPort CardioFlow Medtech Corporation - B",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2172,
+    "company": "MicroPort NeuroTech Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 3600,
+    "company": "Modern Dental Group Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1653,
+    "company": "MOS House Group Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1716,
+    "company": "Most Kwai Chung Limited",
+    "bank": "Other Public Offer Underwriters \tCNI Securities Group Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1716,
+    "company": "Most Kwai Chung Limited",
+    "bank": "Other Placing Underwriter \tCNI Securities Group Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 9999,
+    "company": "NetEase, Inc.",
+    "bank": "Securities Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 9616,
+    "company": "Neusoft Education Technology Co. Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9616,
+    "company": "Neusoft Education Technology Co. Limited",
+    "bank": "Haitong Asset Management is a connected client of Haitong International Securities Company Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (98ch)"
+  },
+  {
+    "ticker": 1438,
+    "company": "Nirvana Asia Ltd.",
+    "bank": "UBS Securities Hong Kong Limited and DBS Asia Capital Limited",
+    "type": "LUMPED",
+    "reason": "Combined"
+  },
+  {
+    "ticker": 1933,
+    "company": "OneForce Holdings Limited",
+    "bank": "CCB International (Holdings) Limited was wholly owned by CCB Financial Holdings Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (87ch)"
+  },
+  {
+    "ticker": 2602,
+    "company": "Onewo Inc.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1703,
+    "company": "Palace Banquet Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2565,
+    "company": "PegBio Co., Ltd. - B",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2489,
+    "company": "Persistence Resources Group Ltd",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1949,
+    "company": "Platt Nera International Limited",
+    "bank": "Public Offer Underwriter \tChaoShang Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 9909,
+    "company": "Powerlong Commercial Management Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2405,
+    "company": "Powerwin Tech Group Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 6911,
+    "company": "Pu'er Lancang Ancient Tea Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6633,
+    "company": "Qingci Games Inc.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2121,
+    "company": "QINGDAO AINNOVATION TECHNOLOGY GROUP CO., LTD.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6198,
+    "company": "Qingdao Port International Co., Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2297,
+    "company": "Rainmed Medical Limited - B",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2385,
+    "company": "Readboy Education Holding Company Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2370,
+    "company": "Redco Healthy Living Company Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1996,
+    "company": "Redsun Properties Group Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2498,
+    "company": "RoboSense Technology Co., Ltd",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 2207,
+    "company": "Ronshine Service Holding Co., Ltd",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 3789,
+    "company": "Royal Deluxe Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1832,
+    "company": "S.A.I. Leisure Group Company Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2459,
+    "company": "Sanergy Group Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1472,
+    "company": "Sang Hing Holdings (International) Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1447,
+    "company": "SFK Construction Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1447,
+    "company": "SFK Construction Holdings Limited",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 1637,
+    "company": "SH Group (Holdings) Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6955,
+    "company": "Shandong Boan Biotechnology Co., Ltd. - B",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9977,
+    "company": "Shandong Fengxiang Co., Ltd.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9977,
+    "company": "Shandong Fengxiang Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2252,
+    "company": "Shanghai MicroPort MedBot (Group) Co., Ltd. - B",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2520,
+    "company": "SHANXI INSTALLATION GROUP CO., LTD.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2521,
+    "company": "Shenghui Cleanness Group Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1647,
+    "company": "SHIS Limited",
+    "bank": "Public Offer Underwriters \tChina Prospect Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1647,
+    "company": "SHIS Limited",
+    "bank": "Placing Underwriter \tChina Prospect Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 2621,
+    "company": "Shouhui Group Limited",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 6933,
+    "company": "Sino-Entertainment Technology Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6677,
+    "company": "Sino-Ocean Service Holding Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2361,
+    "company": "Sinohealth Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2239,
+    "company": "SMIT Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2227,
+    "company": "Solis Holdings Limited",
+    "bank": "Public Offer Underwriters \tSincere Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 6683,
+    "company": "Star Plus Legend Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1560,
+    "company": "Star Properties Group (Cayman Islands) Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1771,
+    "company": "Sunfonda Group Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9658,
+    "company": "Super Hi International Holding Ltd.",
+    "bank": "Futu Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 2152,
+    "company": "Suxin Joyful Life Services Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6811,
+    "company": "Tai Hing Group Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 7855,
+    "company": "TechStar Acquisition Corporation - Z",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1980,
+    "company": "Tian Ge Interactive Holdings Limited",
+    "bank": "Haitong International\u201d Haitong International Securities Company Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (71ch)"
+  },
+  {
+    "ticker": 1773,
+    "company": "Tianli Education International Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9928,
+    "company": "Times Neighborhood Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1986,
+    "company": "Tsaker Chemical Group Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1711,
+    "company": "Ulferts International Limited",
+    "bank": "Public Offer Underwriters \tEmperor Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1711,
+    "company": "Ulferts International Limited",
+    "bank": "Placing Underwriters \tEmperor Securities Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1711,
+    "company": "Ulferts International Limited",
+    "bank": "Compliance Advisor \tOctal Capital Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 2666,
+    "company": "Universal Medical Financial & Technical Advisory Services Company Limited",
+    "bank": "CITIC Capital Partners is owned as to 51% and 49% by CITIC Capital Holdings Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (83ch)"
+  },
+  {
+    "ticker": 6113,
+    "company": "UTS Marketing Solutions Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2260,
+    "company": "Vanov Holdings Company Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1612,
+    "company": "Vincent Medical Holdings Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1608,
+    "company": "VPower Group International Holdings Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1793,
+    "company": "Wecon Holdings Limited",
+    "bank": "Conyers Trust Company (Cayman) Limited, in the Cayman Islands and our Company\u2019s Hong Kong branch",
+    "type": "SUSPICIOUS",
+    "reason": "Long (96ch)"
+  },
+  {
+    "ticker": 2477,
+    "company": "Wellcell Holdings Co., Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 288,
+    "company": "WH Group Limited",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1997,
+    "company": "Wharf Real Estate Investment Company Limited",
+    "bank": "HSBC Trustee (C.I.) Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 6100,
+    "company": "Wise Talent Information Technology Co., Ltd",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2535,
+    "company": "WK Group (Holdings) Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2496,
+    "company": "Wuhan YZY Biopharma Co., Ltd. - B",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2359,
+    "company": "WuXi AppTec Co., Ltd.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2268,
+    "company": "WuXi XDC Cayman Inc.",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1895,
+    "company": "Xinyuan Property Management Service (Cayman) Ltd.",
+    "bank": "HSBC International Trustee Limited",
+    "type": "GARBAGE",
+    "reason": "Trustee"
+  },
+  {
+    "ticker": 2392,
+    "company": "Xuan Wu Cloud Technology Holdings Limited",
+    "bank": "CITIC Securities is a joint stock company incorporated in the PRC with limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (78ch)"
+  },
+  {
+    "ticker": 2473,
+    "company": "XXF Group Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1795,
+    "company": "Yadong Group Holdings Limited",
+    "bank": "in securities) regulated activity under the SFO) China Everbright Securities (HK) Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (89ch)"
+  },
+  {
+    "ticker": 1795,
+    "company": "Yadong Group Holdings Limited",
+    "bank": "in securities) regulated activity under the SFO) Fulbright Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (77ch)"
+  },
+  {
+    "ticker": 1795,
+    "company": "Yadong Group Holdings Limited",
+    "bank": "in securities) regulated activity under the SFO) Wilson Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (74ch)"
+  },
+  {
+    "ticker": 6869,
+    "company": "Yangtze Optical Fibre and Cable Joint Stock Limited Company",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 9923,
+    "company": "Yeahka Limited",
+    "bank": "CITIC Investment is a wholly-owned subsidiary of CITIC Securities Company Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (81ch)"
+  },
+  {
+    "ticker": 2306,
+    "company": "YH Entertainment Group",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 1579,
+    "company": "Yihai International Holding Ltd.",
+    "bank": "Bank of China (Hong Kong) Nominees Limited",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2347,
+    "company": "Yoho Group Holdings Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2110,
+    "company": "Yue Kan Holdings Limited",
+    "bank": "in securities) regulated activities under the SFO) Sinomax Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (77ch)"
+  },
+  {
+    "ticker": 2110,
+    "company": "Yue Kan Holdings Limited",
+    "bank": "in securities) regulated activities under the SFO) ChaoShang Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (79ch)"
+  },
+  {
+    "ticker": 2110,
+    "company": "Yue Kan Holdings Limited",
+    "bank": "in securities) regulated activities under the SFO) Red Eagle Securities Limited",
+    "type": "SUSPICIOUS",
+    "reason": "Long (79ch)"
+  },
+  {
+    "ticker": 6626,
+    "company": "Yuexiu Services Group Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2271,
+    "company": "Zhong An Intelligent Living Service Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 2772,
+    "company": "Zhongliang Holdings Group Company Limited",
+    "bank": "BANK OF CHINA (HONG KONG) NOMINEES LIMITED",
+    "type": "GARBAGE",
+    "reason": "Nominee"
+  },
+  {
+    "ticker": 1471,
+    "company": "Zhongmiao Holdings (Qingdao) Co., Ltd.",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 2433,
+    "company": "Zhongtian Construction (Hunan) Group Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 6979,
+    "company": "ZJLD Group Inc",
+    "bank": "China \tSecurities \t(International) \tCorporate \tFinance Company Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  },
+  {
+    "ticker": 1855,
+    "company": "ZONBONG LANDSCAPE Environmental Limited",
+    "bank": "Futures Limited",
+    "type": "GARBAGE",
+    "reason": "Incomplete name"
+  },
+  {
+    "ticker": 9890,
+    "company": "ZX Inc.",
+    "bank": "China \tMerchants \tSecurities \t(HK) \tCo., Limited",
+    "type": "LUMPED",
+    "reason": "Tab"
+  }
+]

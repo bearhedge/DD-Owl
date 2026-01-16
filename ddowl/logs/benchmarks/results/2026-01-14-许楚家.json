@@ -1,0 +1,16 @@
+{
+  "subject": "许楚家",
+  "runId": "许楚家-1768417020346",
+  "timestamp": "2026-01-14T18:58:56.615Z",
+  "expectedCount": 5,
+  "foundCount": 0,
+  "recall": 0,
+  "matchedIssues": [],
+  "missedIssues": [
+    "Yang Xiancai corruption case involvement",
+    "Jingxuan Hotel violent seizure",
+    "Xinno Technology Park debt dispute",
+    "SFC concentration warning",
+    "Hui Brothers illegal fundraising"
+  ]
+}

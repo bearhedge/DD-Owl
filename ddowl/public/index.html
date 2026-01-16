@@ -1147,6 +1147,7 @@
       let lastQueryIndex = 0;
       let eventSource = null;
       let accumulatedFindings = []; // Track findings for reconnection
+      let gatheredResults = []; // Track search results for reconnection
       let lastMessageTime = Date.now();
       let healthCheckInterval = null;
 
@@ -1159,9 +1160,13 @@
         const findingsParam = retryCount > 0 && accumulatedFindings.length > 0
           ? `&findings=${btoa(JSON.stringify(accumulatedFindings))}`
           : '';
+        // Include gathered results on reconnect (base64 encoded)
+        const resultsParam = retryCount > 0 && gatheredResults.length > 0
+          ? `&results=${btoa(JSON.stringify(gatheredResults))}`
+          : '';
         const variationsParam = variations.length > 1 ? `&variations=${encodeURIComponent(variations.join(','))}` : '';
         const languageParam = `&language=${language}`;
-        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}${findingsParam}`);
+        eventSource = new EventSource(`/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${resumeParam}${findingsParam}${resultsParam}`);
 
         // Health check: detect stale connections before they die
         lastMessageTime = Date.now();
@@ -1208,6 +1213,11 @@
 
           if (data.type === 'gather_complete') {
             addLogEntry('result', `Gathered ${data.totalResults} URLs in ${(data.duration/1000).toFixed(1)}s`);
+            // Store gathered results for reconnection
+            if (data.results) {
+              gatheredResults = data.results;
+              console.log(`[SSE] Stored ${gatheredResults.length} results for potential reconnection`);
+            }
           }
 
           // Per-result logging for deep audit

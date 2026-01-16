@@ -171,11 +171,19 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 280px;
+      max-width: 490px;
     }
     .ticker {
       color: #4a9eff;
       font-weight: 600;
+    }
+    .ticker a {
+      color: #4a9eff;
+      text-decoration: none;
+    }
+    .ticker a:hover {
+      text-decoration: underline;
+      color: #6bb3ff;
     }
     .status-active {
       background: #1a3a1a;
@@ -364,7 +372,7 @@
           <thead>
             <tr>
               <th data-sort="ticker" style="width: 70px;">Ticker</th>
-              <th data-sort="company" style="width: 240px;">Company</th>
+              <th data-sort="company" style="width: 500px;">Company</th>
               <th data-sort="date" style="width: 80px;">Date</th>
               <th data-sort="sizeHKDm" style="width: 100px;">Size (HKDm)</th>
               <th>Sponsors</th>
@@ -550,8 +558,8 @@
 
       tbody.innerHTML = pageData.map(row => `
         <tr>
-          <td class="ticker">${row.ticker}</td>
-          <td class="company-name" title="${escapeHtml(row.company)}">${escapeHtml(row.company)}</td>
+          <td class="ticker"><a href="#" onclick="openProspectus('${row.ticker}'); return false;" title="Open prospectus PDF">${row.ticker}</a></td>
+          <td class="company-name" title="${escapeHtml(row.companyCn ? row.company + ' (' + row.companyCn + ')' : row.company)}">${escapeHtml(row.companyCn ? row.company + ' (' + row.companyCn + ')' : row.company)}</td>
           <td class="date-cell">${formatDate(row.date)}</td>
           <td class="size-cell">${formatSize(row.sizeHKDm)}</td>
           <td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join('') || '-'}</td>
@@ -602,6 +610,22 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Open prospectus PDF
+    async function openProspectus(ticker) {
+      try {
+        const res = await fetch(`/api/deal-pdf-url/${ticker}`);
+        const data = await res.json();
+        if (data.url) {
+          window.open(data.url, '_blank');
+        } else {
+          alert('No prospectus PDF available for this deal');
+        }
+      } catch (err) {
+        console.error('Failed to fetch PDF URL:', err);
+        alert('Failed to load prospectus');
+      }
     }
 
     // Sorting

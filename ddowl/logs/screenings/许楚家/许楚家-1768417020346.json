@@ -1,0 +1,1341 @@
+{
+  "runId": "许楚家-1768417020346",
+  "subject": "许楚家",
+  "savedAt": "2026-01-14T18:58:56.614Z",
+  "metrics": {
+    "runId": "许楚家-1768417020346",
+    "subject": "许楚家",
+    "startTime": "2026-01-14T18:57:00.346Z",
+    "queriesExecuted": 10,
+    "totalSearchResults": 57,
+    "uniqueUrlsProcessed": 0,
+    "duplicatesSkipped": 0,
+    "triageRed": 2,
+    "triageYellow": 6,
+    "triageGreen": 2,
+    "fetchAttempted": 7,
+    "fetchSucceeded": 6,
+    "fetchFailed": 1,
+    "analysisCompleted": 6,
+    "findingsRed": 0,
+    "findingsAmber": 4,
+    "totalCleared": 2,
+    "consolidationRatio": 1,
+    "costs": [],
+    "totalCostUSD": 0,
+    "endTime": "2026-01-14T18:58:56.613Z",
+    "durationMs": 116267
+  },
+  "findings": [
+    {
+      "headline": "Subject's wife engaged in potentially suspicious stock transactions ahead of a reverse takeover, raising concerns of possible insider dealing.",
+      "summary": "The article reports that the wife of Xu Chujia, Zhang Meijuan, accumulated 60.51 million shares of Shan Le International (later renamed Zhaobangji Real Estate) at an average price of approximately HKD 0.42 per share between November 2017 and before the company's March 2018 announcement of a reverse takeover by Shenzhen Zhaobangji Group, controlled by Xu Chujia. Following the takeover announcement, the stock price rose dramatically from under HKD 0.5 to over HKD 12.0, generating an unrealized profit of approximately HKD 690 million on Zhang Meijuan's holdings. The article explicitly questions whether these transactions constituted insider trading and notes abnormal trading volume from another entity, Tengshi Enterprise Co., Ltd., during the same period prior to the announcement.",
+      "severity": "AMBER",
+      "eventType": "other",
+      "dateRange": "2017-2018",
+      "sourceCount": 1,
+      "sources": [
+        {
+          "url": "https://www.gelonghui.com/p/209261",
+          "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？"
+        }
+      ]
+    },
+    {
+      "headline": "Content unavailable - manual review required",
+      "summary": "Categorized as AMBER: \"Snippet mentions the forced demolition of an illegal building by authorities in 2024, indicating legal/regulatory compliance issues.\". Could not fetch content.",
+      "severity": "AMBER",
+      "eventType": "other",
+      "dateRange": "2024",
+      "sourceCount": 1,
+      "sources": [
+        {
+          "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+          "title": "香港兆邦基董事长许楚家近况"
+        }
+      ]
+    },
+    {
+      "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in unverified illegal fundraising claims.",
+      "summary": "In September 2025, rumors circulated online regarding a potential 'capital chain rupture' at Lifestage Life Insurance, a Hong Kong insurer whose ultimate shareholder is financial magnate Xu Chujia. The article notes that these rumors were officially denied by the company. It further states that 'there were unverified小道消息 alleging that the Xu family's money exchange shops and real estate businesses were involved in illegal fundraising,' but clarifies this 'has not been confirmed.' The article attributes the sensitivity of the rumors to Lifestage's short operating history (licensed in 2019), its relatively aggressive product strategy, and the complexity of its parent group's cross-sector businesses in real estate, securities, and fund management.",
+      "severity": "AMBER",
+      "eventType": "traffic_violation",
+      "dateRange": "2019-2025",
+      "sourceCount": 1,
+      "sources": [
+        {
+          "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+          "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号"
+        }
+      ]
+    },
+    {
+      "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in illegal fundraising (unverified).",
+      "summary": "In September 2025, rumors circulated online regarding a potential 'capital chain rupture' at Lifestife Insurance Company Limited, a Hong Kong insurer whose ultimate shareholder is financial magnate Xu Chujia. The article notes that these rumors were officially refuted by the company. Separately, the article references unverified 'small news' alleging that the Xu family's money exchange shops and real estate businesses were involved in illegal fundraising. No specific dates, case numbers, amounts, or co-conspirators related to these allegations are provided in the content.",
+      "severity": "AMBER",
+      "eventType": "other",
+      "dateRange": "2025",
+      "sourceCount": 1,
+      "sources": [
+        {
+          "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+          "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿"
+        }
+      ]
+    },
+    {
+      "headline": "Allegedly involved in debt evasion scheme (2014-2016) and using political connections to interfere with judicial proceedings in a CNY 337 million civil dispute.",
+      "summary": "The article alleges that Xu Chujia, a businessman from the Chaoshan region, became the controller of the Shenzhen Anlian Xinnuo Investment Development Co., Ltd. (the project company for the Xinnuo Technology Park) in May 2014. It is alleged that he subsequently sought to evade repayment of a CNY 337 million (approx. USD 50.8 million) debt related to the project, which consisted of CNY 250 million owed to individual Gao Yingcan and CNY 87 million owed to Heilongjiang Construction Group. The article claims Xu Chujai utilized his political connections, including being identified as the nephew of former Guangdong Provincial High Court Enforcement Bureau Chief Yang Xiancai (who was later removed from his post), to interfere with the judicial process. It is alleged that this interference caused a related civil lawsuit, filed in 2013, to remain unresolved at the first-instance trial stage for approximately three years as of August 2016. The article further alleges Xu Chujai engaged in tactics such as orchestrating malicious complaints to prosecutors against the creditor and initiating frivolous lawsuits to apply pressure.",
+      "severity": "AMBER",
+      "eventType": "legal_proceedings",
+      "dateRange": "2013-2014-2016",
+      "sourceCount": 1,
+      "sources": [
+        {
+          "url": "http://sxxbcnns.com/news/?3512.html",
+          "title": "信诺科技园倒手，3.37亿债务欲逃废"
+        }
+      ]
+    }
+  ],
+  "urlTracker": {
+    "gathered": [
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+        "snippet": "检察官随即向许楚家播放了杨贤才在看守所要求许楚家向专案组退还投资款的录像和杨贤才写给许楚家的要求退款的信。 一看昔日里熟悉亲切可爱的舅舅身着囚服，面容憔悴 ...",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+        "title": "深圳兆邦基老板许楚家",
+        "snippet": "您在查找深圳兆邦基老板许楚家吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线 ...",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/37048801",
+        "title": "许楚家：金融科技风口之下金融机构应如何自处",
+        "snippet": "许楚家. 秦莞尔. 健康营养师. 关注. 当前，互金行业内有个趋势愈发明显：金融的归金融，科技的归科技。 许楚家认为，这并非一个新现象。2013年之前 ...",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://www.gelonghui.com/p/209261",
+        "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+        "snippet": "创始人为许楚家 ... 许楚家老板收购该公司所付的2.6亿港元，并且已账面暴赚逾4亿！ 张女士在收购公司之前提前大量吃进目标公司股份的这个操作，究竟算不算内幕交易，是否完全合规 ...",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://finance.sina.cn/stock/estate/2021-12-24/detail-ikyakumx6138858.d.html",
+        "title": "兆邦基地产拟300万收购深圳邦世纪互动网络",
+        "snippet": "由于许伟圳及陈嘉圳分别为许楚家（兆邦基地产执行董事及控股股东）的侄儿及外甥，根据上市规则第14A章，卖方被视为兆邦基地产的关连人士，而根据上市 ...",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E8%83%9C",
+        "title": "兆邦基董事长许楚胜",
+        "snippet": "... 兆邦基董事长兆邦基董事长许楚家. 最新作品发布时间：2025-11-03 13:55. 试试切换大屏预览，即搜即看. 有新的筛选项更新，快来试一试吧. 综合视频用户直播. 多列.",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+        "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+        "snippet": "作为1997年后香港极少获批的三家寿险公司之一，立桥人寿背后的股东是在澳门和香港从事地产、证券、资产管理以及保险业务的金融大亨许楚家。自成立以来 ...",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+        "snippet": "检察官随即向许楚家播放了杨贤才在看守所要求许楚家向专案组退还投资款的录像和杨贤才写给许楚家的要求退款的信。 一看昔日里熟悉亲切可爱的舅舅身着囚服，面容憔悴 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "https://www.welllinkgroup.com/cn/newsdynamic/82.jhtml",
+        "title": "最新动态_立桥动态",
+        "snippet": "许楚家先生在2005年开展金融板块，凭借诚信稳健及务实的经营理念，在过去15年间，成功获得当地金融监管机构批准经营银行、人寿保险、财险、证券和资产管理等。 返回上一页.",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "http://quote.eastmoney.com/unify/r/116.01271?jump_to_web=true",
+        "title": "佳明集团控股(01271)股票价格_行情_走势图",
+        "snippet": "许楚家, 增持, 1.06亿. Banco Well Link, S.A., 增持, 9.22亿. 许楚家, 增持, 9.22亿. Well ... 违法和不良信息举报:021-61278686 举报邮箱：jubao@eastmoney.com. 沪ICP证 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "http://basic.10jqka.com.cn/HK8350/manager.html",
+        "title": "立桥证券控股(HK8350) 高管介绍",
+        "snippet": "许文霞女士，具有企业管理经验。彼自二零二三年起获委任为立桥保险集团控股有限公司的人力常务副总裁。彼为公司的最终控股股东许楚家先生的女儿。",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "https://finance.sina.com.cn/roll/2025-10-14/doc-inftwnve4208171.shtml",
+        "title": "每日全球并购：康为世纪拟收购昊为泰49%股权",
+        "snippet": "... 许楚家，175万港元发行给张美娟。收购完成后，海山股份成为立桥证券控股的直接全资附属公司，其财务业绩将并入集团综合账目。（智通财经）. 6、多点数 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "https://baike.baidu.com/item/%E5%85%86%E9%82%A6%E5%9F%BA%E5%9C%B0%E4%BA%A7%E6%8E%A7%E8%82%A1%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/63291274",
+        "title": "兆邦基地产控股有限公司",
+        "snippet": "许楚家（董事会主席）. 员工人数. 706人. 曾用名. 善乐国际控股有限公司、兆 ... 重大股价波动2018年股价从年初不足0.5港元最高涨至10港元，市盈率达400倍，香港证监会 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "https://www.admin5.com/article/20180518/855531.shtml",
+        "title": "许楚家看好兆邦基科技梦工场发展前景",
+        "snippet": "深圳兆邦基集团是由许楚家先生创立的一个多元产业的集团,旗下有地产、金融、商业三大业务版块,而核客游戏则是兆邦基正在全力打造的第4个产业支柱,核客游戏 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+        "title": "香港兆邦基董事长许楚家近况",
+        "snippet": "... 许楚家近况”吗？抖音短视频， ... 违规建筑物，执法部门已于2024年4月10日起依法强制拆除。” #深圳 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "http://sxxbcnns.com/news/?3512.html",
+        "title": "信诺科技园倒手，3.37亿债务欲逃废",
+        "snippet": "几年间，许楚家奇谋百出，黑建集团和高英灿陷入了新的官司，陷入检察院调查，陷入各种非难和程序更改，步步维艰，高达3.37亿元的债权官司虽仍然处于一审阶段，但 ...",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+        "snippet": "检察官随即向许楚家播放了杨贤才在看守所要求许楚家向专案组退还投资款的录像和杨贤才写给许楚家的要求退款的信。 一看昔日里熟悉亲切可爱的舅舅身着囚服，面容憔悴 ...",
+        "query": "\"{NAME}\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入"
+      },
+      {
+        "url": "https://wap.faloo.com/1445549_38.html",
+        "title": "全职业满级，过火红生活_第三十六章_究竟是怎么一回事",
+        "snippet": "当下想都没想，一脚踹开许楚家的房门，提着板凳就准备找贼拼命！许楚担心傻柱会出事，紧跟其后冲进了房间。然而，当许楚和何雨柱看见屋内的景象时，立刻惊呆了。手中的 ...",
+        "query": "\"{NAME}\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入"
+      },
+      {
+        "url": "https://www.sotwe.com/hashtag/%E4%B8%81%E7%8E%89%E6%A2%85",
+        "title": "丁玉梅- Twitter Hashtag",
+        "snippet": "@db27129073 @HuarenNews #许振隆 #许广平 #许志安 #许家印 #许楚家 #许宁 #许文杰 #许世友 #许光 #许子诺。。。 它们之间全部都相互打通血缘，并且虔诚孝道于邪教家族 ...",
+        "query": "\"{NAME}\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入"
+      },
+      {
+        "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+        "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+        "snippet": "作为1997年后香港极少获批的三家寿险公司之一，立桥人寿背后的股东是在澳门和香港从事地产、证券、资产管理以及保险业务的金融大亨许楚家。 ... 非法集资，但 ...",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.gelonghui.com/p/209261",
+        "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+        "snippet": "... 许楚家老板收购该公司所付的2.6亿港元，并且已账面暴赚逾4亿！ 张女士在收购公司之前提前大量吃进目标公司股份的这个操作，究竟算不算内幕交易，是否完全合规？这是 ...",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%BA%8B%E4%BB%B6",
+        "title": "兆邦基董事长许楚家事件",
+        "snippet": "您在查找兆邦基董事长许楚家事件吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.163.com/dy/article/D7SMOCKT0519PGGF.html",
+        "title": "亿万富豪许楚家传奇发迹史惹人瞩目",
+        "snippet": "1916年7月16日，许楚家出生于广东一个殷实的农民家庭。许家祖辈以种田为生，有祖传的水田30亩，一头水牛和一些农具。父亲为人朴实敦厚，许楚家在父母 ...",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+        "title": "兆邦基许楚家",
+        "snippet": "您在查找兆邦基许楚家吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.163.com/dy/article/IJMVQ2MF0519QIKK.html",
+        "title": "骏溢环球金融(08350.HK)：林家泰获调任为非执行董事",
+        "snippet": "... 该公司为一家由许楚家先生控制的公司，许楚家先生实益拥有要约人97%权益及于完成后于5.",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%B8%AA%E4%BA%BA%E8%B5%84%E6%96%99",
+        "title": "兆邦基董事长许楚家个人资料",
+        "snippet": "您在查找兆邦基董事长许楚家个人资料吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户， ...",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6%E7%8E%B0%E7%8A%B6",
+        "title": "兆邦基许楚家现状",
+        "snippet": "您在查找兆邦基许楚家现状吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+        "title": "深圳兆邦基老板许楚家",
+        "snippet": "您在查找深圳兆邦基老板许楚家吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线 ...",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E5%A4%A7%E5%8E%A6%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E4%BD%B3",
+        "title": "兆邦基大厦老板许楚佳",
+        "snippet": "... 许楚家祖籍哪里兆邦基大厦兆邦基董事长许楚家发家史兆邦基集团董事长简历兆邦基董事长许楚家兆邦基许楚家. 最新作品发布时间：2025-12-08 15:56. 综合 ...",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+      },
+      {
+        "url": "https://www.gelonghui.com/p/209261",
+        "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+        "snippet": "... 许楚家老板收购该公司所付的2.6亿港元，并且已账面暴赚逾4亿！ 张女士在收购公司 ... 近2年来，这三种方式的操控股价行为在港股一度泛滥，成收购散户们的三大利器 ...",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%BA%8B%E4%BB%B6",
+        "title": "兆邦基董事长许楚家事件",
+        "snippet": "您在查找兆邦基董事长许楚家事件吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+        "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+        "snippet": "另外一重原因则是立桥人寿与整个立桥金融集团之间的关联，包括立桥银行、立桥证券及香港上市公司兆邦基地产以及背后的股东许楚家家族。 ... 集体跑路？",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+        "title": "兆邦基许楚家",
+        "snippet": "您在查找兆邦基许楚家吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6%E7%8E%B0%E7%8A%B6",
+        "title": "兆邦基许楚家现状",
+        "snippet": "您在查找兆邦基许楚家现状吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%B8%AA%E4%BA%BA%E8%B5%84%E6%96%99",
+        "title": "兆邦基董事长许楚家个人资料",
+        "snippet": "您在查找兆邦基董事长许楚家个人资料吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户， ...",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+        "title": "深圳兆邦基老板许楚家",
+        "snippet": "您在查找深圳兆邦基老板许楚家吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线 ...",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E5%A4%A7%E5%8E%A6%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E4%BD%B3",
+        "title": "兆邦基大厦老板许楚佳",
+        "snippet": "... 基董事长许楚家兆邦基许楚家. 最新作品发布时间：2025-12-08 15:56. 综合视频用户直播 ... 贵州黔艺艺术品. ·4月前. #兆邦爆雷事件#你怎么看. #兆邦爆雷事件#你怎么 ...",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://www.douyin.com/zhuanti/7211316027878131764",
+        "title": "楚卿妤姬北殇",
+        "snippet": "... 许楚家百世荣华！” 后来他们逃了出去，他得胜回宫，民心所向，也顺利从战神王爷继位皇统。 万万没想到，大婚之夜，他却对她羞辱至极，封后即废后。 他 ...",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+        "snippet": "这个电话号码本为日后查找重要涉案人员许楚家、黎智华、柳泉等提供了重要线索。 检察官对许俊宏办公室的搜查也取得了重大收获。广东百思威律师事务所位于广州市广州大道北 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "http://sxxbcnns.com/news/?3512.html",
+        "title": "信诺科技园倒手，3.37亿债务欲逃废",
+        "snippet": "以上过程全是许楚家借张厚双规之机对原告高英灿恶意举报而来的，其险恶目的是把原告高英灿抓进去，他官司不打便自赢。使他失望的是原告没有侵害和贪占 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "http://nb.ifeng.com/a/20180316/6439532_0.shtml",
+        "title": "立桥股东董事实力雄厚许楚家抢攻金融科技领域",
+        "snippet": "许楚家是立桥金融集团的董事长,亦是经营深圳房地产业务的深圳兆邦基集团董事长。许楚家一直以来秉承着务实求真、诚信稳健及勇于创新的经营信念,短短数 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%BA%8B%E4%BB%B6",
+        "title": "兆邦基董事长许楚家事件",
+        "snippet": "您在查找兆邦基董事长许楚家事件吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://finance.sina.com.cn/roll/2025-10-14/doc-inftwnve4208171.shtml",
+        "title": "每日全球并购：康为世纪拟收购昊为泰49%股权",
+        "snippet": "... 许楚家，175万港元发行给张美娟。收购完成后，海山股份成为立桥证券控股的直接全资附属公司，其财务业绩将并入集团综合账目。（智通财经）. 6、多点数 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://www.163.com/dy/article/DKO7U4TI0519PGGF.html",
+        "title": "许楚家解读新时代科技发展三个新趋势",
+        "snippet": "许楚家解读新时代科技发展三个新趋势. 慧点财经. 2018-06-20 11:24. 0. 与人类未来生存密切相关的议题正在成为各国新技术发展的重要方向，在这一轮竞争中，谁能 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6%E7%8E%B0%E7%8A%B6",
+        "title": "兆邦基许楚家现状",
+        "snippet": "您在查找兆邦基许楚家现状吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://www.163.com/dy/article/KBP3I0H505198UNI.html",
+        "title": "立桥证券控股(08350)完成收购海山股份的所有已发行股权",
+        "snippet": "本金为3500万港元的代价债券已发行给卖方，当中，本金为3325万港元的代价债券将会发行给许楚家及本金为175万港元的代价债券将会发行给张美娟。 于完成 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E9%9B%86%E5%9B%A2%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+        "title": "深圳兆邦基集团许楚家",
+        "snippet": "您在查找深圳兆邦基集团许楚家吗？抖音综合搜索帮你找到更多相关视频、图文、直播内容，支持在线观看。更有海量高清视频、相关直播、用户，满足您的在线观看需求。",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E8%83%9C",
+        "title": "兆邦基董事长许楚胜",
+        "snippet": "... 许楚家. 最新作品发布时间：2025-11-03 13:55. 试试切换大屏预览，即搜即看. 有新的 ... 声明中承认，该文章的标题及内容均未经调查核实，并武断地发表了关于薛方全 ...",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/37048963",
+        "title": "许楚家:让科技赋能金融业",
+        "snippet": "许楚家认为技术的迭代升级掀起了全球新一轮科技浪潮，科技与金融深度融合，金融业的创新也呈现出加速之势，金融科技企业在金融领域正强势崛起。 科技、创新、 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/33188250",
+        "title": "许楚家称软银将称霸全球",
+        "snippet": "许楚家之所以惊讶，在于一家企业支持的基金对技术如此具有先见之明，实属罕见。大多数企业风投机构的目标是通过开发式创新和收购战略，来协助母公司的发展。",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://www.zhihu.com/column/xuchujia",
+        "title": "许楚家",
+        "snippet": "许楚家认为技术的迭代升级掀起了全球新一轮科技浪潮，科技与金融深度融合，金融业的创新也呈现出加速之势，金融科技企业在金融领域正强势崛起。 科技、创新、金融是金融科技 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/37048801",
+        "title": "许楚家：金融科技风口之下金融机构应如何自处",
+        "snippet": "当前，互金行业内有个趋势愈发明显：金融的归金融，科技的归科技。 许楚家认为，这并非一个新现象。2013年之前，金融的是金融，科技的是科技，便属于常态， ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/33188541",
+        "title": "许楚家解惑美债正在被抛弃？",
+        "snippet": "北京时间1月18日，美国财政部在华盛顿发布的国际资本流动报告显示，去年11月，中国持有美国国债较前一个月减少126亿美元，降至1.177万亿美元，许楚家指出这 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+        "snippet": "在情和法的面前，许楚家作出了明智的选择：“请检察官相信，我一定积极配合，在规定时间内将舅舅的涉案赃款全部退清。”言罢，他又急忙补上一句，“虽然现在遇上了金融危机，商场经营 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/20057168787",
+        "title": "立桥「息享年年3」2025年开年逆势加息，2年回本！",
+        "snippet": "立桥人寿的母公司为立桥金融集团，立桥金融集团由许楚家家族创办，旗下业务还有银行、证券、地产（兆邦基地产）等。资本实力还是很充足的，值得信赖 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/1905925048579109105",
+        "title": "立桥智选储蓄保：2年保证回本",
+        "snippet": "2016年，立桥保险收购丰亚保险（香港），并于2017年改名为立桥保险；立桥人寿的母公司为立桥金融集团，立桥金融集团由许楚家家族创办，旗下业务还有 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      },
+      {
+        "url": "https://zhuanlan.zhihu.com/p/6834023071",
+        "title": "2年回本，5年总保证20.5%！香港短期储蓄[息享年年3]全面 ...",
+        "snippet": "立桥人寿的母公司为立桥金融集团，立桥金融集团由许楚家家族创办，旗下业务还有银行、证券、地产（兆邦基地产）等。资本实力还是很充足的，值得信赖 ...",
+        "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+      }
+    ],
+    "programmaticElimination": {
+      "passed": [
+        {
+          "url": "https://zhuanlan.zhihu.com/p/675328723",
+          "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+          "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+        },
+        {
+          "url": "https://www.gelonghui.com/p/209261",
+          "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+          "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+        },
+        {
+          "url": "http://quote.eastmoney.com/unify/r/116.01271?jump_to_web=true",
+          "title": "佳明集团控股(01271)股票价格_行情_走势图",
+          "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+        },
+        {
+          "url": "https://baike.baidu.com/item/%E5%85%86%E9%82%A6%E5%9F%BA%E5%9C%B0%E4%BA%A7%E6%8E%A7%E8%82%A1%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/63291274",
+          "title": "兆邦基地产控股有限公司",
+          "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+        },
+        {
+          "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+          "title": "香港兆邦基董事长许楚家近况",
+          "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+        },
+        {
+          "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+          "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+          "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+        },
+        {
+          "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+          "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+          "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+        },
+        {
+          "url": "https://zhuanlan.zhihu.com/p/675328723",
+          "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+          "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+        },
+        {
+          "url": "http://sxxbcnns.com/news/?3512.html",
+          "title": "信诺科技园倒手，3.37亿债务欲逃废",
+          "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+        },
+        {
+          "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E8%83%9C",
+          "title": "兆邦基董事长许楚胜",
+          "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+        }
+      ],
+      "bypassed": [],
+      "eliminated": {
+        "noise_domain": [],
+        "noise_title_pattern": [],
+        "name_char_separation": [],
+        "missing_dirty_word": [
+          {
+            "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+            "title": "深圳兆邦基老板许楚家",
+            "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/37048801",
+            "title": "许楚家：金融科技风口之下金融机构应如何自处",
+            "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+          },
+          {
+            "url": "https://finance.sina.cn/stock/estate/2021-12-24/detail-ikyakumx6138858.d.html",
+            "title": "兆邦基地产拟300万收购深圳邦世纪互动网络",
+            "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E8%83%9C",
+            "title": "兆邦基董事长许楚胜",
+            "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+          },
+          {
+            "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+            "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+            "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑"
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/675328723",
+            "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+            "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+          },
+          {
+            "url": "https://www.welllinkgroup.com/cn/newsdynamic/82.jhtml",
+            "title": "最新动态_立桥动态",
+            "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+          },
+          {
+            "url": "http://basic.10jqka.com.cn/HK8350/manager.html",
+            "title": "立桥证券控股(HK8350) 高管介绍",
+            "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+          },
+          {
+            "url": "https://finance.sina.com.cn/roll/2025-10-14/doc-inftwnve4208171.shtml",
+            "title": "每日全球并购：康为世纪拟收购昊为泰49%股权",
+            "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+          },
+          {
+            "url": "https://www.admin5.com/article/20180518/855531.shtml",
+            "title": "许楚家看好兆邦基科技梦工场发展前景",
+            "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+          },
+          {
+            "url": "http://sxxbcnns.com/news/?3512.html",
+            "title": "信诺科技园倒手，3.37亿债务欲逃废",
+            "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入"
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/675328723",
+            "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+            "query": "\"{NAME}\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入"
+          },
+          {
+            "url": "https://wap.faloo.com/1445549_38.html",
+            "title": "全职业满级，过火红生活_第三十六章_究竟是怎么一回事",
+            "query": "\"{NAME}\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入"
+          },
+          {
+            "url": "https://www.sotwe.com/hashtag/%E4%B8%81%E7%8E%89%E6%A2%85",
+            "title": "丁玉梅- Twitter Hashtag",
+            "query": "\"{NAME}\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入"
+          },
+          {
+            "url": "https://www.gelonghui.com/p/209261",
+            "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%BA%8B%E4%BB%B6",
+            "title": "兆邦基董事长许楚家事件",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.163.com/dy/article/D7SMOCKT0519PGGF.html",
+            "title": "亿万富豪许楚家传奇发迹史惹人瞩目",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+            "title": "兆邦基许楚家",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.163.com/dy/article/IJMVQ2MF0519QIKK.html",
+            "title": "骏溢环球金融(08350.HK)：林家泰获调任为非执行董事",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%B8%AA%E4%BA%BA%E8%B5%84%E6%96%99",
+            "title": "兆邦基董事长许楚家个人资料",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6%E7%8E%B0%E7%8A%B6",
+            "title": "兆邦基许楚家现状",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+            "title": "深圳兆邦基老板许楚家",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E5%A4%A7%E5%8E%A6%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E4%BD%B3",
+            "title": "兆邦基大厦老板许楚佳",
+            "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷"
+          },
+          {
+            "url": "https://www.gelonghui.com/p/209261",
+            "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%BA%8B%E4%BB%B6",
+            "title": "兆邦基董事长许楚家事件",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+            "title": "兆邦基许楚家",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6%E7%8E%B0%E7%8A%B6",
+            "title": "兆邦基许楚家现状",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%B8%AA%E4%BA%BA%E8%B5%84%E6%96%99",
+            "title": "兆邦基董事长许楚家个人资料",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+            "title": "深圳兆邦基老板许楚家",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E5%A4%A7%E5%8E%A6%E8%80%81%E6%9D%BF%E8%AE%B8%E6%A5%9A%E4%BD%B3",
+            "title": "兆邦基大厦老板许楚佳",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "https://www.douyin.com/zhuanti/7211316027878131764",
+            "title": "楚卿妤姬北殇",
+            "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷"
+          },
+          {
+            "url": "http://nb.ifeng.com/a/20180316/6439532_0.shtml",
+            "title": "立桥股东董事实力雄厚许楚家抢攻金融科技领域",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E5%AE%B6%E4%BA%8B%E4%BB%B6",
+            "title": "兆邦基董事长许楚家事件",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://finance.sina.com.cn/roll/2025-10-14/doc-inftwnve4208171.shtml",
+            "title": "每日全球并购：康为世纪拟收购昊为泰49%股权",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://www.163.com/dy/article/DKO7U4TI0519PGGF.html",
+            "title": "许楚家解读新时代科技发展三个新趋势",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%AE%B8%E6%A5%9A%E5%AE%B6%E7%8E%B0%E7%8A%B6",
+            "title": "兆邦基许楚家现状",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://www.163.com/dy/article/KBP3I0H505198UNI.html",
+            "title": "立桥证券控股(08350)完成收购海山股份的所有已发行股权",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://www.douyin.com/search/%E6%B7%B1%E5%9C%B3%E5%85%86%E9%82%A6%E5%9F%BA%E9%9B%86%E5%9B%A2%E8%AE%B8%E6%A5%9A%E5%AE%B6",
+            "title": "深圳兆邦基集团许楚家",
+            "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马"
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/37048963",
+            "title": "许楚家:让科技赋能金融业",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/33188250",
+            "title": "许楚家称软银将称霸全球",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://www.zhihu.com/column/xuchujia",
+            "title": "许楚家",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/37048801",
+            "title": "许楚家：金融科技风口之下金融机构应如何自处",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/33188541",
+            "title": "许楚家解惑美债正在被抛弃？",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/675328723",
+            "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/20057168787",
+            "title": "立桥「息享年年3」2025年开年逆势加息，2年回本！",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/1905925048579109105",
+            "title": "立桥智选储蓄保：2年保证回本",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          },
+          {
+            "url": "https://zhuanlan.zhihu.com/p/6834023071",
+            "title": "2年回本，5年总保证20.5%！香港短期储蓄[息享年年3]全面 ...",
+            "query": "site:caixin.com OR site:zhihu.com \"{NAME}\""
+          }
+        ]
+      }
+    },
+    "categorized": {
+      "red": [
+        {
+          "url": "https://zhuanlan.zhihu.com/p/675328723",
+          "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+          "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+          "reason": "Directly linked to a major corruption case (杨贤才案), mentions the subject being shown evidence of a relative in prison and being asked to return funds, indicating involvement in a criminal investigation."
+        },
+        {
+          "url": "https://zhuanlan.zhihu.com/p/675328723",
+          "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+          "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+          "reason": "Explicitly identifies the subject (许楚家) as an '重要涉案人员' (important person involved in the case) in a major judicial corruption case, indicating a direct link to crime/investigation."
+        }
+      ],
+      "amber": [
+        {
+          "url": "https://www.gelonghui.com/p/209261",
+          "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+          "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+          "reason": "Discusses potential market manipulation and raises questions about the legality of trades (内幕交易, 合规), implying allegations but not stating a formal investigation or conviction."
+        },
+        {
+          "url": "https://baike.baidu.com/item/%E5%85%86%E9%82%A6%E5%9F%BA%E5%9C%B0%E4%BA%A7%E6%8E%A7%E8%82%A1%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/63291274",
+          "title": "兆邦基地产控股有限公司",
+          "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+          "reason": "Mentons significant stock price volatility and high P/E ratio, with a reference to the Hong Kong Securities and Futures Commission, suggesting regulatory scrutiny or unusual market activity."
+        },
+        {
+          "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+          "title": "香港兆邦基董事长许楚家近况",
+          "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+          "reason": "Snippet mentions the forced demolition of an illegal building by authorities in 2024, indicating legal/regulatory compliance issues."
+        },
+        {
+          "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+          "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+          "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷",
+          "reason": "Links the subject's company to rumors of '资金链断裂' (capital chain rupture) and mentions '非法集资' (illegal fundraising), which are serious allegations but presented as rumors/investigation topics."
+        },
+        {
+          "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+          "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+          "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷",
+          "reason": "Similar to result 6, discusses rumors and questions about the group's stability ('集体跑路?'), falling under allegations."
+        },
+        {
+          "url": "http://sxxbcnns.com/news/?3512.html",
+          "title": "信诺科技园倒手，3.37亿债务欲逃废",
+          "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+          "reason": "Describes a lawsuit context where the subject is accused of malicious reporting to gain advantage in legal proceedings, constituting allegations within a lawsuit."
+        }
+      ],
+      "green": [
+        {
+          "url": "http://quote.eastmoney.com/unify/r/116.01271?jump_to_web=true",
+          "title": "佳明集团控股(01271)股票价格_行情_走势图",
+          "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+          "reason": "Neutral financial data showing shareholding changes and corporate actions. No adverse information."
+        },
+        {
+          "url": "https://www.douyin.com/search/%E5%85%86%E9%82%A6%E5%9F%BA%E8%91%A3%E4%BA%8B%E9%95%BF%E8%AE%B8%E6%A5%9A%E8%83%9C",
+          "title": "兆邦基董事长许楚胜",
+          "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+          "reason": "Appears to be a case of mistaken identity or irrelevant content (mentions 许楚胜 and a 2025 date for a video), likely referring to a different person or neutral content."
+        }
+      ]
+    },
+    "eliminated": [
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+        "reason": "duplicate"
+      }
+    ],
+    "processed": [
+      {
+        "url": "https://zhuanlan.zhihu.com/p/675328723",
+        "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+        "result": "CLEARED"
+      },
+      {
+        "url": "https://www.gelonghui.com/p/209261",
+        "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+        "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+        "result": "ADVERSE",
+        "severity": "AMBER",
+        "headline": "Subject's wife engaged in potentially suspicious stock transactions ahead of a reverse takeover, raising concerns of possible insider dealing."
+      },
+      {
+        "url": "https://baike.baidu.com/item/%E5%85%86%E9%82%A6%E5%9F%BA%E5%9C%B0%E4%BA%A7%E6%8E%A7%E8%82%A1%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/63291274",
+        "title": "兆邦基地产控股有限公司",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+        "result": "CLEARED"
+      },
+      {
+        "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+        "title": "香港兆邦基董事长许楚家近况",
+        "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+        "result": "FAILED",
+        "headline": "Content unavailable"
+      },
+      {
+        "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+        "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+        "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷",
+        "result": "ADVERSE",
+        "severity": "AMBER",
+        "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in unverified illegal fundraising claims."
+      },
+      {
+        "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+        "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+        "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷",
+        "result": "ADVERSE",
+        "severity": "AMBER",
+        "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in illegal fundraising (unverified)."
+      },
+      {
+        "url": "http://sxxbcnns.com/news/?3512.html",
+        "title": "信诺科技园倒手，3.37亿债务欲逃废",
+        "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+        "result": "ADVERSE",
+        "severity": "AMBER",
+        "headline": "Allegedly involved in debt evasion scheme (2014-2016) and using political connections to interfere with judicial proceedings in a CNY 337 million civil dispute."
+      }
+    ]
+  },
+  "eventLog": [
+    {
+      "timestamp": "2026-01-14T18:57:00.346Z",
+      "type": "phase",
+      "phase": 1,
+      "name": "GATHER",
+      "message": "Gathering all search results..."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:02.137Z",
+      "type": "search_progress",
+      "queryIndex": 1,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+      "resultsFound": 7,
+      "totalSoFar": 7
+    },
+    {
+      "timestamp": "2026-01-14T18:57:03.418Z",
+      "type": "search_progress",
+      "queryIndex": 2,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 詐騙 | 詐欺 | 貪污 | 賄賂 | 洗錢 | 內幕交易 | 被起訴 | 被拘 | 判刑",
+      "resultsFound": 0,
+      "totalSoFar": 7
+    },
+    {
+      "timestamp": "2026-01-14T18:57:05.574Z",
+      "type": "search_progress",
+      "queryIndex": 3,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+      "resultsFound": 9,
+      "totalSoFar": 16
+    },
+    {
+      "timestamp": "2026-01-14T18:57:07.330Z",
+      "type": "search_progress",
+      "queryIndex": 4,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 證監會 | 處罰 | 罰款 | 違規 | 違法 | 制裁 | 資產凍結 | 禁入",
+      "resultsFound": 3,
+      "totalSoFar": 19
+    },
+    {
+      "timestamp": "2026-01-14T18:57:10.021Z",
+      "type": "search_progress",
+      "queryIndex": 5,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷",
+      "resultsFound": 10,
+      "totalSoFar": 29
+    },
+    {
+      "timestamp": "2026-01-14T18:57:11.820Z",
+      "type": "search_progress",
+      "queryIndex": 6,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷",
+      "resultsFound": 9,
+      "totalSoFar": 38
+    },
+    {
+      "timestamp": "2026-01-14T18:57:13.441Z",
+      "type": "search_progress",
+      "queryIndex": 7,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+      "resultsFound": 10,
+      "totalSoFar": 48
+    },
+    {
+      "timestamp": "2026-01-14T18:57:14.701Z",
+      "type": "search_progress",
+      "queryIndex": 8,
+      "totalQueries": 10,
+      "query": "\"许楚家\" 腐敗 | 受賄 | 行賄 | 雙規 | 紀委 | 調查 | 落馬",
+      "resultsFound": 0,
+      "totalSoFar": 48
+    },
+    {
+      "timestamp": "2026-01-14T18:57:15.953Z",
+      "type": "search_progress",
+      "queryIndex": 9,
+      "totalQueries": 10,
+      "query": "site:hkexnews.hk OR site:sfc.hk \"许楚家\"",
+      "resultsFound": 0,
+      "totalSoFar": 48
+    },
+    {
+      "timestamp": "2026-01-14T18:57:17.822Z",
+      "type": "search_progress",
+      "queryIndex": 10,
+      "totalQueries": 10,
+      "query": "site:caixin.com OR site:zhihu.com \"许楚家\"",
+      "resultsFound": 9,
+      "totalSoFar": 57
+    },
+    {
+      "timestamp": "2026-01-14T18:57:18.323Z",
+      "type": "gather_complete",
+      "totalResults": 57,
+      "duration": 17977
+    },
+    {
+      "timestamp": "2026-01-14T18:57:18.323Z",
+      "type": "phase",
+      "phase": 2,
+      "name": "PROGRAMMATIC_ELIMINATION",
+      "message": "Running programmatic filters on 57 results..."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:18.331Z",
+      "type": "programmatic_elimination_complete",
+      "before": 57,
+      "after": 10,
+      "eliminated": 47,
+      "govBypassed": 0,
+      "breakdown": {
+        "gov_domain_bypass": 0,
+        "noise_domain": 0,
+        "noise_title_pattern": 0,
+        "name_char_separation": 0,
+        "missing_dirty_word": 47
+      },
+      "duration": 8
+    },
+    {
+      "timestamp": "2026-01-14T18:57:18.331Z",
+      "type": "phase",
+      "phase": 3,
+      "name": "CATEGORIZE",
+      "message": "Categorizing 10 results..."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorize_complete",
+      "red": 2,
+      "amber": 6,
+      "green": 2,
+      "duration": 19561
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "RED",
+      "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+      "snippet": "检察官随即向许楚家播放了杨贤才在看守所要求许楚家向专案组退还投资款的录像和杨贤才写给许楚家的要求退款的信。 一看昔日里熟悉亲切可爱的舅舅身着囚服，面容憔悴 ...",
+      "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+      "reason": "Directly linked to a major corruption case (杨贤才案), mentions the subject being shown evidence of a relative in prison and being asked to return funds, indicating involvement in a criminal investigation."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "RED",
+      "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+      "snippet": "这个电话号码本为日后查找重要涉案人员许楚家、黎智华、柳泉等提供了重要线索。 检察官对许俊宏办公室的搜查也取得了重大收获。广东百思威律师事务所位于广州市广州大道北 ...",
+      "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+      "reason": "Explicitly identifies the subject (许楚家) as an '重要涉案人员' (important person involved in the case) in a major judicial corruption case, indicating a direct link to crime/investigation."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "AMBER",
+      "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+      "snippet": "创始人为许楚家 ... 许楚家老板收购该公司所付的2.6亿港元，并且已账面暴赚逾4亿！ 张女士在收购公司之前提前大量吃进目标公司股份的这个操作，究竟算不算内幕交易，是否完全合规 ...",
+      "query": "\"{NAME}\" 诈骗 | 欺诈 | 贪污 | 贿赂 | 洗钱 | 内幕交易 | 被起诉 | 被拘 | 判刑",
+      "reason": "Discusses potential market manipulation and raises questions about the legality of trades (内幕交易, 合规), implying allegations but not stating a formal investigation or conviction."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "AMBER",
+      "title": "兆邦基地产控股有限公司",
+      "snippet": "许楚家（董事会主席）. 员工人数. 706人. 曾用名. 善乐国际控股有限公司、兆 ... 重大股价波动2018年股价从年初不足0.5港元最高涨至10港元，市盈率达400倍，香港证监会 ...",
+      "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+      "reason": "Mentons significant stock price volatility and high P/E ratio, with a reference to the Hong Kong Securities and Futures Commission, suggesting regulatory scrutiny or unusual market activity."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "AMBER",
+      "title": "香港兆邦基董事长许楚家近况",
+      "snippet": "... 许楚家近况”吗？抖音短视频， ... 违规建筑物，执法部门已于2024年4月10日起依法强制拆除。” #深圳 ...",
+      "query": "\"{NAME}\" 证监会 | 处罚 | 罚款 | 违规 | 违法 | 制裁 | 资产冻结 | 禁入",
+      "reason": "Snippet mentions the forced demolition of an illegal building by authorities in 2024, indicating legal/regulatory compliance issues."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "AMBER",
+      "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+      "snippet": "作为1997年后香港极少获批的三家寿险公司之一，立桥人寿背后的股东是在澳门和香港从事地产、证券、资产管理以及保险业务的金融大亨许楚家。 ... 非法集资，但 ...",
+      "query": "\"{NAME}\" 操纵股价 | 非法集资 | 挪用 | 侵占 | 跑路 | 崩盘 | 暴雷",
+      "reason": "Links the subject's company to rumors of '资金链断裂' (capital chain rupture) and mentions '非法集资' (illegal fundraising), which are serious allegations but presented as rumors/investigation topics."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "AMBER",
+      "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+      "snippet": "另外一重原因则是立桥人寿与整个立桥金融集团之间的关联，包括立桥银行、立桥证券及香港上市公司兆邦基地产以及背后的股东许楚家家族。 ... 集体跑路？",
+      "query": "\"{NAME}\" 操縱股價 | 非法集資 | 挪用 | 侵佔 | 跑路 | 崩盤 | 暴雷",
+      "reason": "Similar to result 6, discusses rumors and questions about the group's stability ('集体跑路?'), falling under allegations."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "categorized_item",
+      "category": "AMBER",
+      "title": "信诺科技园倒手，3.37亿债务欲逃废",
+      "snippet": "以上过程全是许楚家借张厚双规之机对原告高英灿恶意举报而来的，其险恶目的是把原告高英灿抓进去，他官司不打便自赢。使他失望的是原告没有侵害和贪占 ...",
+      "query": "\"{NAME}\" 腐败 | 受贿 | 行贿 | 双规 | 纪委 | 调查 | 落马",
+      "reason": "Describes a lawsuit context where the subject is accused of malicious reporting to gain advantage in legal proceedings, constituting allegations within a lawsuit."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "phase",
+      "phase": 4,
+      "name": "ANALYZE",
+      "message": "Analyzing 8 flagged results..."
+    },
+    {
+      "timestamp": "2026-01-14T18:57:37.892Z",
+      "type": "analyze_start",
+      "index": 1,
+      "total": 8,
+      "url": "https://zhuanlan.zhihu.com/p/675328723",
+      "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+      "category": "RED"
+    },
+    {
+      "timestamp": "2026-01-14T18:57:52.428Z",
+      "type": "analyze_result",
+      "url": "https://zhuanlan.zhihu.com/p/675328723",
+      "title": "揭开司法高官令人震惊的腐败窝案—杨贤才案",
+      "isAdverse": false,
+      "severity": "GREEN",
+      "headline": ""
+    },
+    {
+      "timestamp": "2026-01-14T18:57:52.428Z",
+      "type": "analyze_start",
+      "index": 3,
+      "total": 8,
+      "url": "https://www.gelonghui.com/p/209261",
+      "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+      "category": "AMBER"
+    },
+    {
+      "timestamp": "2026-01-14T18:58:03.715Z",
+      "type": "analyze_result",
+      "url": "https://www.gelonghui.com/p/209261",
+      "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？",
+      "isAdverse": true,
+      "severity": "AMBER",
+      "headline": "Subject's wife engaged in potentially suspicious stock transactions ahead of a reverse takeover, raising concerns of possible insider dealing."
+    },
+    {
+      "timestamp": "2026-01-14T18:58:03.715Z",
+      "type": "analyze_start",
+      "index": 4,
+      "total": 8,
+      "url": "https://baike.baidu.com/item/%E5%85%86%E9%82%A6%E5%9F%BA%E5%9C%B0%E4%BA%A7%E6%8E%A7%E8%82%A1%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/63291274",
+      "title": "兆邦基地产控股有限公司",
+      "category": "AMBER"
+    },
+    {
+      "timestamp": "2026-01-14T18:58:13.479Z",
+      "type": "analyze_result",
+      "url": "https://baike.baidu.com/item/%E5%85%86%E9%82%A6%E5%9F%BA%E5%9C%B0%E4%BA%A7%E6%8E%A7%E8%82%A1%E6%9C%89%E9%99%90%E5%85%AC%E5%8F%B8/63291274",
+      "title": "兆邦基地产控股有限公司",
+      "isAdverse": false,
+      "severity": "GREEN",
+      "headline": "No adverse information found; subject is listed as the Board Chairman of a Hong Kong-listed company."
+    },
+    {
+      "timestamp": "2026-01-14T18:58:13.479Z",
+      "type": "analyze_start",
+      "index": 5,
+      "total": 8,
+      "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+      "title": "香港兆邦基董事长许楚家近况",
+      "category": "AMBER"
+    },
+    {
+      "timestamp": "2026-01-14T18:58:21.808Z",
+      "type": "analyze_start",
+      "index": 6,
+      "total": 8,
+      "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+      "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+      "category": "AMBER"
+    },
+    {
+      "timestamp": "2026-01-14T18:58:33.138Z",
+      "type": "analyze_result",
+      "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+      "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号",
+      "isAdverse": true,
+      "severity": "AMBER",
+      "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in unverified illegal fundraising claims."
+    },
+    {
+      "timestamp": "2026-01-14T18:58:33.138Z",
+      "type": "analyze_start",
+      "index": 7,
+      "total": 8,
+      "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+      "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+      "category": "AMBER"
+    },
+    {
+      "timestamp": "2026-01-14T18:58:43.630Z",
+      "type": "analyze_result",
+      "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+      "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿",
+      "isAdverse": true,
+      "severity": "AMBER",
+      "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in illegal fundraising (unverified)."
+    },
+    {
+      "timestamp": "2026-01-14T18:58:43.631Z",
+      "type": "analyze_start",
+      "index": 8,
+      "total": 8,
+      "url": "http://sxxbcnns.com/news/?3512.html",
+      "title": "信诺科技园倒手，3.37亿债务欲逃废",
+      "category": "AMBER"
+    },
+    {
+      "timestamp": "2026-01-14T18:58:56.609Z",
+      "type": "analyze_result",
+      "url": "http://sxxbcnns.com/news/?3512.html",
+      "title": "信诺科技园倒手，3.37亿债务欲逃废",
+      "isAdverse": true,
+      "severity": "AMBER",
+      "headline": "Allegedly involved in debt evasion scheme (2014-2016) and using political connections to interfere with judicial proceedings in a CNY 337 million civil dispute."
+    },
+    {
+      "timestamp": "2026-01-14T18:58:56.609Z",
+      "type": "phase",
+      "phase": 5,
+      "name": "CONSOLIDATE",
+      "message": "Consolidating 5 findings..."
+    },
+    {
+      "timestamp": "2026-01-14T18:58:56.613Z",
+      "type": "eliminate_complete",
+      "before": 5,
+      "after": 5
+    },
+    {
+      "timestamp": "2026-01-14T18:58:56.613Z",
+      "type": "complete",
+      "stats": {
+        "gathered": 57,
+        "programmaticElimination": {
+          "before": 57,
+          "after": 10,
+          "eliminated": 47,
+          "govBypassed": 0,
+          "breakdown": {
+            "gov_domain_bypass": 0,
+            "noise_domain": 0,
+            "noise_title_pattern": 0,
+            "name_char_separation": 0,
+            "missing_dirty_word": 47
+          }
+        },
+        "categorized": {
+          "red": 2,
+          "amber": 6,
+          "green": 2
+        },
+        "eliminated": {
+          "total": 1,
+          "duplicate": 1,
+          "invalid": 0
+        },
+        "processed": {
+          "total": 7,
+          "adverse": 4,
+          "cleared": 2,
+          "failed": 1
+        },
+        "consolidated": {
+          "before": 5,
+          "after": 5
+        },
+        "findings": 5,
+        "red": 0,
+        "amber": 5,
+        "durationMs": 116267,
+        "durationMin": "1.9"
+      },
+      "findings": [
+        {
+          "headline": "Subject's wife engaged in potentially suspicious stock transactions ahead of a reverse takeover, raising concerns of possible insider dealing.",
+          "summary": "The article reports that the wife of Xu Chujia, Zhang Meijuan, accumulated 60.51 million shares of Shan Le International (later renamed Zhaobangji Real Estate) at an average price of approximately HKD 0.42 per share between November 2017 and before the company's March 2018 announcement of a reverse takeover by Shenzhen Zhaobangji Group, controlled by Xu Chujia. Following the takeover announcement, the stock price rose dramatically from under HKD 0.5 to over HKD 12.0, generating an unrealized profit of approximately HKD 690 million on Zhang Meijuan's holdings. The article explicitly questions whether these transactions constituted insider trading and notes abnormal trading volume from another entity, Tengshi Enterprise Co., Ltd., during the same period prior to the announcement.",
+          "severity": "AMBER",
+          "eventType": "other",
+          "dateRange": "2017-2018",
+          "sourceCount": 1,
+          "sources": [
+            {
+              "url": "https://www.gelonghui.com/p/209261",
+              "title": "港股炒壳再造神话，股价1年飙涨45倍的背后有何玄机？"
+            }
+          ]
+        },
+        {
+          "headline": "Content unavailable - manual review required",
+          "summary": "Categorized as AMBER: \"Snippet mentions the forced demolition of an illegal building by authorities in 2024, indicating legal/regulatory compliance issues.\". Could not fetch content.",
+          "severity": "AMBER",
+          "eventType": "other",
+          "dateRange": "2024",
+          "sourceCount": 1,
+          "sources": [
+            {
+              "url": "https://www.douyin.com/zhuanti/7248744080564504608",
+              "title": "香港兆邦基董事长许楚家近况"
+            }
+          ]
+        },
+        {
+          "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in unverified illegal fundraising claims.",
+          "summary": "In September 2025, rumors circulated online regarding a potential 'capital chain rupture' at Lifestage Life Insurance, a Hong Kong insurer whose ultimate shareholder is financial magnate Xu Chujia. The article notes that these rumors were officially denied by the company. It further states that 'there were unverified小道消息 alleging that the Xu family's money exchange shops and real estate businesses were involved in illegal fundraising,' but clarifies this 'has not been confirmed.' The article attributes the sensitivity of the rumors to Lifestage's short operating history (licensed in 2019), its relatively aggressive product strategy, and the complexity of its parent group's cross-sector businesses in real estate, securities, and fund management.",
+          "severity": "AMBER",
+          "eventType": "traffic_violation",
+          "dateRange": "2019-2025",
+          "sourceCount": 1,
+          "sources": [
+            {
+              "url": "https://caifuhao.eastmoney.com/news/20250915200321218432600",
+              "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻 - 财富号"
+            }
+          ]
+        },
+        {
+          "headline": "Subject's associated insurance company faced 'capital chain rupture' rumors (Sep 2025); subject's family businesses allegedly involved in illegal fundraising (unverified).",
+          "summary": "In September 2025, rumors circulated online regarding a potential 'capital chain rupture' at Lifestife Insurance Company Limited, a Hong Kong insurer whose ultimate shareholder is financial magnate Xu Chujia. The article notes that these rumors were officially refuted by the company. Separately, the article references unverified 'small news' alleging that the Xu family's money exchange shops and real estate businesses were involved in illegal fundraising. No specific dates, case numbers, amounts, or co-conspirators related to these allegations are provided in the content.",
+          "severity": "AMBER",
+          "eventType": "other",
+          "dateRange": "2025",
+          "sourceCount": 1,
+          "sources": [
+            {
+              "url": "https://www.163.com/dy/article/K9HAEUTF0539U8OD.html",
+              "title": "增长太快惹的祸？港险“后起之秀”卷入“资金链断裂”传闻|人寿"
+            }
+          ]
+        },
+        {
+          "headline": "Allegedly involved in debt evasion scheme (2014-2016) and using political connections to interfere with judicial proceedings in a CNY 337 million civil dispute.",
+          "summary": "The article alleges that Xu Chujia, a businessman from the Chaoshan region, became the controller of the Shenzhen Anlian Xinnuo Investment Development Co., Ltd. (the project company for the Xinnuo Technology Park) in May 2014. It is alleged that he subsequently sought to evade repayment of a CNY 337 million (approx. USD 50.8 million) debt related to the project, which consisted of CNY 250 million owed to individual Gao Yingcan and CNY 87 million owed to Heilongjiang Construction Group. The article claims Xu Chujai utilized his political connections, including being identified as the nephew of former Guangdong Provincial High Court Enforcement Bureau Chief Yang Xiancai (who was later removed from his post), to interfere with the judicial process. It is alleged that this interference caused a related civil lawsuit, filed in 2013, to remain unresolved at the first-instance trial stage for approximately three years as of August 2016. The article further alleges Xu Chujai engaged in tactics such as orchestrating malicious complaints to prosecutors against the creditor and initiating frivolous lawsuits to apply pressure.",
+          "severity": "AMBER",
+          "eventType": "legal_proceedings",
+          "dateRange": "2013-2014-2016",
+          "sourceCount": 1,
+          "sources": [
+            {
+              "url": "http://sxxbcnns.com/news/?3512.html",
+              "title": "信诺科技园倒手，3.37亿债务欲逃废"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

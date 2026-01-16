@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pal": {
+      "type": "stdio",
+      "command": "/Users/home/Desktop/DD Owl/pal-mcp-server/.pal_venv/bin/python",
+      "args": [
+        "/Users/home/Desktop/DD Owl/pal-mcp-server/server.py"
+      ],
+      "env": {}
+    }
+  }
+}

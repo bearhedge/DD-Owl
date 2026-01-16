@@ -812,6 +812,19 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
   }
 
+  // Parse restored search results from reconnection (for mid-categorize reconnects)
+  let restoredResults: BatchSearchResult[] = [];
+  const resultsParam = req.query.results as string;
+  if (resultsParam) {
+    try {
+      const decoded = Buffer.from(resultsParam, 'base64').toString('utf-8');
+      restoredResults = JSON.parse(decoded);
+      console.log(`[V4] Restored ${restoredResults.length} search results from previous connection`);
+    } catch (e) {
+      console.error('[V4] Failed to parse restored results:', e);
+    }
+  }
+
   // Cancel any existing screening for this subject
   const screeningKey = subjectName.toLowerCase();
   if (activeScreenings.has(screeningKey)) {
@@ -1013,6 +1026,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       await new Promise(r => setTimeout(r, 500));
     }
 
+    // If all queries were skipped (reconnection) and we have restored results, use them
+    if (allResults.length === 0 && restoredResults.length > 0) {
+      console.log(`[V4] Using ${restoredResults.length} restored results from reconnection`);
+      allResults.push(...restoredResults);
+    }
+
     // Track all gathered URLs with full details AND send per-result events for auditing
     for (let i = 0; i < allResults.length; i++) {
       const r = allResults[i];
@@ -1038,6 +1057,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       type: 'gather_complete',
       totalResults: allResults.length,
       duration: Date.now() - startTime,
+      results: allResults, // Include results for reconnection persistence
     });
 
     if (allResults.length === 0) {
