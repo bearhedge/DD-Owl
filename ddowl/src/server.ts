@@ -432,7 +432,7 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   // Heartbeat (1s for robust connection stability)
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
-    res.write(': keepalive\n\n');
+    res.write(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
     // Force flush to bypass proxy buffering
     if (typeof (res as any).flush === 'function') {
       (res as any).flush();
@@ -895,7 +895,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   // Heartbeat (1s for robust connection stability)
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
-    res.write(': keepalive\n\n');
+    res.write(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
     // Force flush to bypass proxy buffering
     if (typeof (res as any).flush === 'function') {
       (res as any).flush();
@@ -1639,7 +1639,7 @@ app.post('/api/report/generate', async (req: Request, res: Response) => {
   // Heartbeat (1s for robust connection stability)
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
-    res.write(': keepalive\n\n');
+    res.write(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
     // Force flush to bypass proxy buffering
     if (typeof (res as any).flush === 'function') {
       (res as any).flush();
