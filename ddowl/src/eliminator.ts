@@ -41,9 +41,6 @@ export interface EliminationBreakdown {
 // CONSTANTS
 // ============================================================
 
-// Government domains that bypass all elimination rules
-const GOV_DOMAINS = ['.gov.cn', '.court.gov'];
-
 // Noise domains - job sites and corporate aggregators
 const NOISE_DOMAINS = [
   // Job sites
@@ -63,14 +60,6 @@ const NOISE_TITLE_PATTERNS = [
 // ============================================================
 // ELIMINATION FUNCTIONS
 // ============================================================
-
-/**
- * Check if URL is a government domain (protected from elimination)
- */
-function isGovDomain(url: string): boolean {
-  if (!url) return false;
-  return GOV_DOMAINS.some(d => url.includes(d));
-}
 
 /**
  * Rule 1: Check if URL is a noise domain
@@ -157,13 +146,6 @@ export function eliminateObviousNoise(
   const bypassed: EliminatedResult[] = [];
 
   for (const result of results) {
-    // BYPASS: Government domains skip all rules
-    if (isGovDomain(result.url)) {
-      bypassed.push({ ...result, reason: 'gov_domain_bypass' });
-      passed.push(result); // Gov domains pass through
-      continue;
-    }
-
     // Rule 1: Noise domains
     if (isNoiseDomain(result.url)) {
       eliminated.push({ ...result, reason: 'noise_domain' });

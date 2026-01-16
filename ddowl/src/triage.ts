@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // LLM Configuration for Triage with Fallback Chain
-// Priority: Kimi K2 → DeepSeek → Gemini
+// Priority: Gemini 2.5 Pro (best for triage) → DeepSeek → Kimi
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -20,7 +20,19 @@ interface LLMProvider {
 function getProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
 
-  // 1. DeepSeek (primary - cheaper)
+  // 1. Gemini 2.5 Pro (PRIMARY for triage - 1M context, best accuracy)
+  if (GEMINI_API_KEY) {
+    providers.push({
+      name: 'Gemini',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent',
+      model: 'gemini-2.5-pro-preview-06-05',
+      apiKey: GEMINI_API_KEY,
+      timeout: 180000,
+      isGemini: true,
+    });
+  }
+
+  // 2. DeepSeek (fallback)
   if (DEEPSEEK_API_KEY) {
     providers.push({
       name: 'DeepSeek',
@@ -31,7 +43,7 @@ function getProviders(): LLMProvider[] {
     });
   }
 
-  // 2. Kimi (fallback for content moderation issues)
+  // 3. Kimi (last resort fallback)
   if (KIMI_API_KEY) {
     providers.push({
       name: 'Kimi',
@@ -39,18 +51,6 @@ function getProviders(): LLMProvider[] {
       model: 'moonshot-v1-8k',
       apiKey: KIMI_API_KEY,
       timeout: 120000,
-    });
-  }
-
-  // 3. Gemini (last resort fallback)
-  if (GEMINI_API_KEY) {
-    providers.push({
-      name: 'Gemini',
-      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      model: 'gemini-2.0-flash',
-      apiKey: GEMINI_API_KEY,
-      timeout: 120000,
-      isGemini: true,
     });
   }
 
@@ -338,8 +338,125 @@ export interface CategorizedOutput {
 }
 
 /**
- * Categorize ALL search results in a single LLM call.
- * This replaces the per-query triage with one batch call.
+ * Categorize a batch of search results (max 50 at a time to stay under token limits)
+ */
+async function categorizeBatch(
+  results: BatchSearchResult[],
+  subjectName: string,
+  batchOffset: number = 0
+): Promise<CategorizedOutput> {
+  const providers = getProviders();
+  if (providers.length === 0) {
+    return {
+      red: [],
+      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'no api keys configured' })),
+      green: []
+    };
+  }
+
+  // Format results as numbered list
+  const resultsText = results.map((r, i) =>
+    `${i + 1}. Title: ${r.title.slice(0, 80)}\n   Snippet: ${(r.snippet || '').slice(0, 150)}`
+  ).join('\n\n');
+
+  const prompt = `Categorize ${results.length} search results about "${subjectName}" as RED/AMBER/GREEN.
+
+CHINESE ADVERSE KEYWORDS - FLAG THESE:
+RED (severe):
+- 腐败/贪污/贿赂/受贿/行贿 = corruption/bribery
+- 诈骗/欺诈/骗取 = fraud
+- 洗钱 = money laundering
+- 非法集资/非法吸收 = illegal fundraising
+- 判刑/入狱/拘留/逮捕 = sentenced/imprisoned/detained/arrested
+- 制裁/黑名单 = sanctions/blacklist
+
+AMBER (investigate):
+- 证监会/SFC/监管 = regulatory body mention
+- 股权集中/异常交易 = concentration warning/unusual trading
+- 调查/涉嫌/被查 = investigation/suspected/under inquiry
+- 诉讼/起诉/纠纷 = lawsuit/prosecution/dispute
+- 债务/欠款/违约 = debt/default
+- 内幕交易 = insider trading
+
+GREEN: No adverse keywords, different person, neutral business news
+
+IMPORTANT: If title/snippet contains ANY of the above keywords about "${subjectName}", mark RED or AMBER accordingly. Do NOT mark GREEN if adverse keywords are present.
+
+RESULTS:
+${resultsText}
+
+Return JSON only:
+{"classifications":[{"index":1,"category":"GREEN","reason":"neutral"},{"index":2,"category":"RED","reason":"corruption mentioned"}]}`;
+
+  let rawText = '';
+  for (const provider of providers) {
+    console.log(`[CATEGORIZE] Batch at offset ${batchOffset}: trying ${provider.name}...`);
+    try {
+      rawText = provider.isGemini
+        ? await callGeminiAPI(provider, prompt)
+        : await callOpenAICompatibleAPI(provider, prompt);
+      console.log(`[CATEGORIZE] ✓ ${provider.name} succeeded`);
+      break;
+    } catch (error: any) {
+      console.error(`[CATEGORIZE] ✗ ${provider.name} failed: ${error.message}`);
+      continue;
+    }
+  }
+
+  if (!rawText) {
+    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'api failed' })), green: [] };
+  }
+
+  // Parse response
+  const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: [] };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch {
+    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: [] };
+  }
+
+  if (!parsed.classifications || !Array.isArray(parsed.classifications)) {
+    console.error(`[CATEGORIZE] No classifications array in response`);
+    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: [] };
+  }
+
+  console.log(`[CATEGORIZE] Got ${parsed.classifications.length} classifications for ${results.length} items`);
+
+  // Track which items got classified
+  const classifiedIndices = new Set<number>();
+  const output: CategorizedOutput = { red: [], amber: [], green: [] };
+
+  for (const c of parsed.classifications) {
+    const result = results[c.index - 1];
+    if (!result) continue;
+    classifiedIndices.add(c.index - 1);
+    const cat = (typeof c.category === 'string' ? c.category.toUpperCase() : 'AMBER') as 'RED' | 'AMBER' | 'GREEN';
+    const validCat = ['RED', 'AMBER', 'GREEN'].includes(cat) ? cat : 'AMBER';
+    const categorized = { ...result, category: validCat, reason: c.reason || 'no reason' };
+    if (validCat === 'RED') output.red.push(categorized);
+    else if (validCat === 'AMBER') output.amber.push(categorized);
+    else output.green.push(categorized);
+  }
+
+  // Any items not classified default to AMBER (investigate)
+  for (let i = 0; i < results.length; i++) {
+    if (!classifiedIndices.has(i)) {
+      console.warn(`[CATEGORIZE] Item ${i + 1} not classified, defaulting to AMBER: ${results[i].title?.slice(0, 50)}`);
+      output.amber.push({ ...results[i], category: 'AMBER', reason: 'not classified by model' });
+    }
+  }
+
+  return output;
+}
+
+/**
+ * Categorize ALL search results in batches to avoid token limits.
  */
 export async function categorizeAll(
   results: BatchSearchResult[],
@@ -349,157 +466,18 @@ export async function categorizeAll(
     return { red: [], amber: [], green: [] };
   }
 
-  const providers = getProviders();
-  if (providers.length === 0) {
-    return {
-      red: [],
-      amber: results.map(r => ({
-        ...r,
-        category: 'AMBER' as const,
-        reason: 'no api keys configured'
-      })),
-      green: []
-    };
-  }
-
-  // Format all results as numbered list with query context
-  const resultsText = results.map((r, i) =>
-    `${i + 1}. [Query: ${r.query}]\n   Title: ${r.title}\n   Snippet: ${r.snippet}`
-  ).join('\n\n');
-
-  const prompt = `You are a senior due diligence analyst. You have ${results.length} search results about "${subjectName}".
-
-TASK: Categorize each result as RED, AMBER, or GREEN based on title and snippet.
-
-CATEGORIES:
-- RED: Clear adverse info - crime, fraud, sanctions, conviction, arrest, prosecution
-- AMBER: Possible adverse info - lawsuit, investigation, allegations, regulatory inquiry
-- GREEN: No adverse info, neutral mention, or subject not mentioned
-
-RULES:
-1. The subject name "${subjectName}" should appear in title or snippet for RED/AMBER
-2. If article is about a different person with similar name → GREEN
-3. Corporate directory listings, job sites, aggregators → GREEN
-4. News about crime/fraud that doesn't name the subject → GREEN
-
-SEARCH RESULTS:
-${resultsText}
-
-Return JSON with classification for each result (use 1-indexed):
-{
-  "classifications": [
-    {"index": 1, "category": "GREEN", "reason": "corporate directory"},
-    {"index": 2, "category": "RED", "reason": "criminal conviction mentioned"},
-    {"index": 3, "category": "AMBER", "reason": "investigation mentioned"}
-  ]
-}`;
-
-  // Try each provider in order
-  let rawText = '';
-  let lastError = '';
-
-  for (const provider of providers) {
-    console.log(`[CATEGORIZE] Trying ${provider.name} for ${results.length} results...`);
-
-    try {
-      if (provider.isGemini) {
-        rawText = await callGeminiAPI(provider, prompt);
-      } else {
-        rawText = await callOpenAICompatibleAPI(provider, prompt);
-      }
-
-      console.log(`[CATEGORIZE] ✓ ${provider.name} succeeded`);
-      break;
-
-    } catch (error: any) {
-      const errorMessage = error?.response?.data?.error?.message
-        || error?.response?.status
-        || error?.message
-        || 'unknown error';
-
-      console.error(`[CATEGORIZE] ✗ ${provider.name} failed: ${errorMessage}`);
-      lastError = `${provider.name}: ${errorMessage}`;
-
-      if (isContentModerationError(error)) {
-        console.log(`[CATEGORIZE] Content moderation error, trying next provider...`);
-        continue;
-      }
-      continue;
-    }
-  }
-
-  if (!rawText) {
-    console.error(`[CATEGORIZE] All providers failed. Last error: ${lastError}`);
-    return {
-      red: [],
-      amber: results.map(r => ({
-        ...r,
-        category: 'AMBER' as const,
-        reason: `all apis failed: ${lastError}`
-      })),
-      green: []
-    };
-  }
-
-  console.log('[CATEGORIZE] LLM response (first 500 chars):', rawText.slice(0, 500));
-
-  // Parse response
-  const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-
-  if (!jsonMatch) {
-    console.error('[CATEGORIZE] No JSON found in response');
-    return {
-      red: [],
-      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })),
-      green: []
-    };
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch {
-    return {
-      red: [],
-      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })),
-      green: []
-    };
-  }
-
-  if (!parsed.classifications || !Array.isArray(parsed.classifications)) {
-    return {
-      red: [],
-      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })),
-      green: []
-    };
-  }
-
+  const BATCH_SIZE = 50;
   const output: CategorizedOutput = { red: [], amber: [], green: [] };
 
-  for (const c of parsed.classifications) {
-    const result = results[c.index - 1];
-    if (!result) continue;
+  // Process in batches
+  for (let i = 0; i < results.length; i += BATCH_SIZE) {
+    const batch = results.slice(i, i + BATCH_SIZE);
+    console.log(`[CATEGORIZE] Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(results.length/BATCH_SIZE)} (${batch.length} items)`);
 
-    const normalizedCategory = typeof c.category === 'string'
-      ? c.category.toUpperCase()
-      : 'AMBER';
-    const validCategory = ['RED', 'AMBER', 'GREEN'].includes(normalizedCategory)
-      ? normalizedCategory as 'RED' | 'AMBER' | 'GREEN'
-      : 'AMBER';
-
-    const categorized: CategorizedResult = {
-      url: result.url,
-      title: result.title,
-      snippet: result.snippet,
-      query: result.query,
-      category: validCategory,
-      reason: c.reason || 'no reason given'
-    };
-
-    if (validCategory === 'RED') output.red.push(categorized);
-    else if (validCategory === 'AMBER') output.amber.push(categorized);
-    else output.green.push(categorized);
+    const batchResult = await categorizeBatch(batch, subjectName, i);
+    output.red.push(...batchResult.red);
+    output.amber.push(...batchResult.amber);
+    output.green.push(...batchResult.green);
   }
 
   console.log(`[CATEGORIZE] Done: ${output.red.length} RED, ${output.amber.length} AMBER, ${output.green.length} GREEN`);
