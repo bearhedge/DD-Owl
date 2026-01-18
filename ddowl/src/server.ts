@@ -1025,6 +1025,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     let sessionId: string;
     let skipGather = false;
     let skipElimination = false;
+    let skipCluster = false;
     let skipCategorize = false;
     let skipConsolidate = false;
     let analyzeStartIndex = 0;
@@ -1046,8 +1047,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       if (phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
         skipElimination = true;
+        skipCluster = true;
         restoredPassed = existingSession.passedElimination;
         sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
+        sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
       }
 
       if (phase === 'analyze' || phase === 'consolidate') {
@@ -1363,40 +1366,48 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 2.5: INCIDENT CLUSTERING (LLM batch)
     // ========================================
-    sendEvent({
-      type: 'phase',
-      phase: '2.5',
-      name: 'INCIDENT_CLUSTERING',
-      message: `Clustering ${passed.length} articles by incident...`
-    });
-
-    const clusterStart = Date.now();
-    const clusterResult = await clusterByIncidentLLM(passed, subjectName, 3);
-
-    // Send cluster summary
-    sendEvent({
-      type: 'incident_clusters',
-      totalArticles: clusterResult.stats.totalArticles,
-      totalClusters: clusterResult.stats.totalClusters,
-      articlesToAnalyze: clusterResult.stats.articlesToAnalyze,
-      articlesParked: clusterResult.stats.articlesParked,
-      clusters: clusterResult.clusters.map(c => ({ label: c.label, count: c.articles.length })),
-      duration: Date.now() - clusterStart,
-    });
-
-    // Park redundant articles (visible in UI as "further links")
-    for (const item of clusterResult.parked) {
+    if (skipCluster && restoredPassed) {
+      // Skip clustering - already done in previous session
+      sendEvent({ type: 'phase_skipped', phase: '2.5', reason: 'Restored from session' });
+      passed = restoredPassed;
+      console.log(`[V4] Skipped clustering phase, using restored passed results (${passed.length} articles)`);
+    } else {
       sendEvent({
-        type: 'further_link',
-        url: item.url,
-        title: item.title,
-        reason: 'Duplicate incident - covered by higher-tier source',
+        type: 'phase',
+        phase: '2.5',
+        name: 'INCIDENT_CLUSTERING',
+        message: `Clustering ${passed.length} articles by incident...`
       });
-    }
 
-    // Continue with deduplicated results
-    passed = clusterResult.toAnalyze;
-    await updateSession(sessionId, { passedElimination: passed, currentPhase: 'categorize' });
+      const clusterStart = Date.now();
+      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 3);
+
+      // Send cluster summary
+      sendEvent({
+        type: 'incident_clusters',
+        totalArticles: clusterResult.stats.totalArticles,
+        totalClusters: clusterResult.stats.totalClusters,
+        articlesToAnalyze: clusterResult.stats.articlesToAnalyze,
+        articlesParked: clusterResult.stats.articlesParked,
+        clusters: clusterResult.clusters.map(c => ({ label: c.label, count: c.articles.length })),
+        duration: Date.now() - clusterStart,
+      });
+
+      // Park redundant articles (visible in UI as "further links")
+      for (const item of clusterResult.parked) {
+        sendEvent({
+          type: 'further_link',
+          url: item.url,
+          title: item.title,
+          reason: 'Duplicate incident - covered by higher-tier source',
+          isParked: true,  // Don't show as AMBER - just informational
+        });
+      }
+
+      // Continue with deduplicated results
+      passed = clusterResult.toAnalyze;
+      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'categorize' });
+    }
 
     if (passed.length === 0) {
       clearInterval(heartbeat);
@@ -1494,6 +1505,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             reason: 'Similar story covered',
             originalCategory: 'RED',
             triageReason: item.reason,
+            isParked: true,  // Don't show as AMBER
           });
         }
         for (const item of amberGrouped.parked) {
@@ -1504,6 +1516,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             reason: 'Similar story covered',
             originalCategory: 'AMBER',
             triageReason: item.reason,
+            isParked: true,  // Don't show as AMBER
           });
         }
       }

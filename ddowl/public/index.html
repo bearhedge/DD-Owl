@@ -950,6 +950,83 @@
       background: #1a1a1a;
       border-radius: 4px;
     }
+
+    /* Finding checkboxes */
+    .finding-checkbox {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: #4a9eff;
+      flex-shrink: 0;
+    }
+
+    .flag-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .flag-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .flag-item.selected {
+      background: #1a1a2a;
+      border-color: #4a9eff;
+    }
+
+    /* Detail Report Modal */
+    .detail-report-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .detail-report-modal.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .detail-finding {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .detail-finding-header {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #333;
+    }
+
+    .detail-finding-section {
+      margin-bottom: 16px;
+    }
+
+    .detail-finding-section h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .detail-finding-section p {
+      color: #ccc;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -1037,11 +1114,11 @@
         </div>
 
         <div style="display: flex; gap: 12px; margin-top: 20px;">
-          <button class="btn-primary download-btn" onclick="downloadReport()" style="margin-top: 0; flex: 1;">
-            Export JSON
+          <button class="btn-generate" id="generateReportBtn" onclick="generateDetailedReport()" disabled style="flex: 1;">
+            Generate Report (<span id="selectedCount">0</span>)
           </button>
-          <button class="btn-generate" id="generateReportBtn" onclick="openReportModal()" disabled style="flex: 1;">
-            Generate Report
+          <button class="btn-secondary" id="furtherSearchBtn" onclick="furtherSearchSelected()" disabled style="flex: 1;">
+            Further Searches
           </button>
         </div>
         <button class="btn-further-links" id="furtherLinksBtn" onclick="openFurtherLinksModal()" style="display: none; margin-top: 12px; width: 100%;">
@@ -1059,6 +1136,26 @@
         <button onclick="closeFurtherLinksModal()" style="background: none; border: none; color: #888; font-size: 20px; cursor: pointer;">&times;</button>
       </div>
       <div class="further-links-list" id="furtherLinksList"></div>
+    </div>
+  </div>
+
+  <!-- Detailed Report Modal -->
+  <div class="detail-report-modal" id="detailReportModal">
+    <div class="report-modal-header">
+      <span class="report-modal-title">Detailed Report</span>
+      <div class="report-modal-status" id="detailReportStatus">
+        <div class="status-dot"></div>
+        <span>Generating...</span>
+      </div>
+      <button class="report-modal-close" onclick="closeDetailReportModal()">Close</button>
+    </div>
+    <div class="report-modal-body">
+      <div id="detailReportContent" style="max-width: 800px; margin: 0 auto;"></div>
+    </div>
+    <div class="report-modal-footer">
+      <button class="btn-secondary" id="copyDetailReportBtn" onclick="copyDetailReport()" disabled>
+        Copy to Clipboard
+      </button>
     </div>
   </div>
 
@@ -1363,6 +1460,15 @@
             console.log(`[SSE] Received session ID: ${sessionId}`);
           }
 
+          // Handle reconnection status - show clear context about where we are
+          if (data.type === 'reconnect_status') {
+            addLogEntry('result', `\u2713 Reconnected. ${data.message}`);
+            updateActivityStats(`Reconnected: ${data.phaseName} phase${data.progress ? ` (${data.progress})` : ''}`);
+            if (data.findingsCount > 0) {
+              addLogEntry('result', `  ${data.findingsCount} findings restored from previous session`);
+            }
+          }
+
           // Handle phase skipped (reconnection)
           if (data.type === 'phase_skipped') {
             addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
@@ -1434,6 +1540,14 @@
           if (data.type === 'dedupe') {
             const totalRemoved = data.redRemoved + data.amberRemoved;
             addLogEntry('result', `Deduped: removed ${totalRemoved} duplicates (${data.redRemoved} red, ${data.amberRemoved} amber). Analyzing ${data.redCount} red + ${data.amberCount} amber unique.`);
+          }
+
+          // Title similarity grouping - same story on multiple sites
+          if (data.type === 'title_grouped') {
+            const totalParked = data.redParked + data.amberParked;
+            if (totalParked > 0) {
+              addLogEntry('result', `Title grouping: parked ${totalParked} similar stories (${data.redParked} red, ${data.amberParked} amber). Analyzing ${data.redAnalyze} red + ${data.amberAnalyze} amber.`);
+            }
           }
 
           // Categorized item - colored severity, title, URL, snippet
@@ -1541,6 +1655,8 @@
           }
 
           // Further links - RED/AMBER articles that LLM couldn't verify (403, paywall, etc.)
+          // Also includes parked duplicates from clustering (isParked=true)
+          // Collect silently during analyze, show summary at end
           if (data.type === 'further_link') {
             furtherLinks.push({
               url: data.url,
@@ -1548,11 +1664,12 @@
               reason: data.reason || 'Content mismatch',
               originalCategory: data.originalCategory,
               triageReason: data.triageReason,
+              isParked: data.isParked || false,  // Parked duplicates vs verification failures
             });
-            document.getElementById('furtherLinksCount').textContent = furtherLinks.length;
-            // Show in log so user knows it's captured
-            const categoryTag = data.originalCategory ? `[was ${data.originalCategory}]` : '';
-            addLogEntry('warn', `FURTHER ${categoryTag}: ${data.reason || 'Needs review'}`, data.url, data.title);
+            // Only count non-parked items (verification failures need manual review)
+            const reviewCount = furtherLinks.filter(l => !l.isParked).length;
+            document.getElementById('furtherLinksCount').textContent = reviewCount;
+            // Don't log each one - we'll show a summary at the end
           }
 
           // === CONSOLIDATION ===
@@ -1594,10 +1711,13 @@
               document.getElementById('redCount').textContent = '0';
               document.getElementById('amberCount').textContent = '0';
 
-              // Add consolidated findings to UI
-              for (const finding of data.findings) {
-                addConsolidatedResultToUI(finding);
+              // Add consolidated findings to UI with index for selection
+              for (let i = 0; i < data.findings.length; i++) {
+                addConsolidatedResultToUI(data.findings[i], i);
               }
+              // Reset selections
+              selectedFindings.clear();
+              updateSelectedCount();
 
               // Enable Generate Report button
               document.getElementById('generateReportBtn').disabled = false;
@@ -1618,10 +1738,27 @@
             document.getElementById('searchBtn').disabled = false;
             updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
 
-            // Show Further Links button if there are any
+            // Show Further Links summary if there are any
+            const reviewNeeded = furtherLinks.filter(l => !l.isParked);
+            const parkedCount = furtherLinks.filter(l => l.isParked).length;
+
             if (furtherLinks.length > 0) {
               document.getElementById('furtherLinksBtn').style.display = 'block';
-              document.getElementById('furtherLinksCount').textContent = furtherLinks.length;
+              document.getElementById('furtherLinksCount').textContent = reviewNeeded.length;
+
+              // Only log verification failures as AMBER (not parked duplicates)
+              if (reviewNeeded.length > 0) {
+                addLogEntry('result', `━━━ MANUAL REVIEW NEEDED (${reviewNeeded.length}) ━━━`);
+                for (const link of reviewNeeded) {
+                  const categoryTag = link.originalCategory ? `[${link.originalCategory}]` : '';
+                  addLogEntry('amber', `${categoryTag} ${link.reason}`, link.url, link.title);
+                }
+              }
+
+              // Parked duplicates logged as info (not amber)
+              if (parkedCount > 0) {
+                addLogEntry('info', `${parkedCount} duplicate articles parked (covered by higher-tier sources)`);
+              }
             }
 
             // Clear session from localStorage on successful completion
@@ -1686,8 +1823,30 @@
       document.getElementById('resultsSection').classList.add('active');
     }
 
-    // Add consolidated finding to UI (with source count badge)
-    function addConsolidatedResultToUI(finding) {
+    // Track selected findings for detailed report
+    let selectedFindings = new Set();
+
+    function updateSelectedCount() {
+      const count = selectedFindings.size;
+      document.getElementById('selectedCount').textContent = count;
+      document.getElementById('generateReportBtn').disabled = count === 0;
+      document.getElementById('furtherSearchBtn').disabled = count === 0;
+    }
+
+    function toggleFindingSelection(checkbox, findingIndex) {
+      const item = checkbox.closest('.flag-item');
+      if (checkbox.checked) {
+        selectedFindings.add(findingIndex);
+        item.classList.add('selected');
+      } else {
+        selectedFindings.delete(findingIndex);
+        item.classList.remove('selected');
+      }
+      updateSelectedCount();
+    }
+
+    // Add consolidated finding to UI (with source count badge and checkbox)
+    function addConsolidatedResultToUI(finding, index) {
       const listId = finding.severity === 'RED' ? 'redFlagsList' : 'amberFlagsList';
       const list = document.getElementById(listId);
 
@@ -1718,13 +1877,17 @@
 
       const item = document.createElement('div');
       item.className = `flag-item ${finding.severity.toLowerCase()}`;
+      item.dataset.findingIndex = index;
       item.innerHTML = `
-        <div class="flag-header">
-          <div class="flag-title">${escapeHtml(finding.headline)}</div>
-          ${dateRangeHtml}
+        <input type="checkbox" class="finding-checkbox" onchange="toggleFindingSelection(this, ${index})">
+        <div class="flag-content">
+          <div class="flag-header">
+            <div class="flag-title">${escapeHtml(finding.headline)}</div>
+            ${dateRangeHtml}
+          </div>
+          <div class="flag-summary">${escapeHtml(finding.summary)}</div>
+          ${sourcesHtml}
         </div>
-        <div class="flag-summary">${escapeHtml(finding.summary)}</div>
-        ${sourcesHtml}
       `;
       list.appendChild(item);
 
@@ -1976,6 +2139,189 @@
         btn.textContent = 'Copied!';
         setTimeout(() => btn.textContent = originalText, 2000);
       });
+    }
+
+    // ============================================================
+    // DETAILED REPORT GENERATION
+    // ============================================================
+
+    let detailReportContent = '';
+
+    function closeDetailReportModal() {
+      document.getElementById('detailReportModal').classList.remove('active');
+    }
+
+    function copyDetailReport() {
+      navigator.clipboard.writeText(detailReportContent).then(() => {
+        const btn = document.getElementById('copyDetailReportBtn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = originalText, 2000);
+      });
+    }
+
+    async function generateDetailedReport() {
+      if (selectedFindings.size === 0) {
+        alert('Please select at least one finding');
+        return;
+      }
+
+      // Get selected findings
+      const selected = Array.from(selectedFindings).map(i => currentFindings[i]).filter(Boolean);
+      if (selected.length === 0) return;
+
+      // Open modal
+      const modal = document.getElementById('detailReportModal');
+      const content = document.getElementById('detailReportContent');
+      const status = document.getElementById('detailReportStatus');
+
+      content.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Generating detailed report...</div>';
+      detailReportContent = '';
+      status.classList.remove('complete');
+      status.querySelector('span').textContent = `Generating 0/${selected.length}...`;
+      document.getElementById('copyDetailReportBtn').disabled = true;
+
+      modal.classList.add('active');
+
+      // Generate detailed report for each selected finding
+      let reportHtml = '';
+      let reportText = '';
+
+      for (let i = 0; i < selected.length; i++) {
+        const finding = selected[i];
+        status.querySelector('span').textContent = `Generating ${i + 1}/${selected.length}...`;
+
+        try {
+          const response = await fetch('/api/findings/detail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              finding,
+              subjectName: currentSubjectName,
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            reportHtml += `
+              <div class="detail-finding">
+                <div class="detail-finding-header">${escapeHtml(finding.headline)}</div>
+                <div class="detail-finding-section">
+                  <h4>Summary</h4>
+                  <p>${escapeHtml(data.summary)}</p>
+                </div>
+                <div class="detail-finding-section">
+                  <h4>Key Facts</h4>
+                  <p>${escapeHtml(data.keyFacts)}</p>
+                </div>
+                <div class="detail-finding-section">
+                  <h4>Sources</h4>
+                  <p style="font-size: 12px; color: #888;">${finding.sources?.map(s => s.url).join('<br>') || 'N/A'}</p>
+                </div>
+              </div>
+            `;
+            reportText += `## ${finding.headline}\n\n**Summary:** ${data.summary}\n\n**Key Facts:** ${data.keyFacts}\n\n**Sources:**\n${finding.sources?.map(s => '- ' + s.url).join('\n') || 'N/A'}\n\n---\n\n`;
+          } else {
+            reportHtml += `
+              <div class="detail-finding">
+                <div class="detail-finding-header">${escapeHtml(finding.headline)}</div>
+                <div class="detail-finding-section">
+                  <p style="color: #ff4757;">Failed to generate: ${escapeHtml(data.error || 'Unknown error')}</p>
+                </div>
+              </div>
+            `;
+          }
+        } catch (err) {
+          reportHtml += `
+            <div class="detail-finding">
+              <div class="detail-finding-header">${escapeHtml(finding.headline)}</div>
+              <div class="detail-finding-section">
+                <p style="color: #ff4757;">Error: ${escapeHtml(err.message)}</p>
+              </div>
+            </div>
+          `;
+        }
+
+        content.innerHTML = reportHtml;
+      }
+
+      detailReportContent = reportText;
+      status.classList.add('complete');
+      status.querySelector('span').textContent = 'Complete';
+      document.getElementById('copyDetailReportBtn').disabled = false;
+    }
+
+    async function furtherSearchSelected() {
+      if (selectedFindings.size === 0) {
+        alert('Please select at least one finding');
+        return;
+      }
+
+      // Get selected findings
+      const selected = Array.from(selectedFindings).map(i => currentFindings[i]).filter(Boolean);
+      if (selected.length === 0) return;
+
+      // Build search queries from findings
+      const queries = selected.map(f => {
+        // Extract key terms from headline for targeted search
+        return `"${currentSubjectName}" ${f.headline.replace(/Name match:?\s*/i, '').slice(0, 50)}`;
+      });
+
+      // Open modal to show progress
+      const modal = document.getElementById('detailReportModal');
+      const content = document.getElementById('detailReportContent');
+      const status = document.getElementById('detailReportStatus');
+
+      content.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Searching for more information...</div>';
+      status.classList.remove('complete');
+      status.querySelector('span').textContent = `Searching...`;
+      document.getElementById('copyDetailReportBtn').disabled = true;
+
+      modal.classList.add('active');
+
+      try {
+        const response = await fetch('/api/findings/expand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            findings: selected,
+            subjectName: currentSubjectName,
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          let html = '<h2 style="color: #fff; margin-bottom: 20px;">Additional Search Results</h2>';
+
+          for (const result of data.results) {
+            html += `
+              <div class="detail-finding">
+                <div class="detail-finding-header">${escapeHtml(result.query)}</div>
+                <div class="detail-finding-section">
+                  ${result.items.map(item => `
+                    <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #222;">
+                      <a href="${escapeHtml(item.url)}" target="_blank" style="color: #4a9eff; font-weight: 600;">${escapeHtml(item.title)}</a>
+                      <p style="color: #888; font-size: 12px; margin-top: 4px;">${escapeHtml(item.snippet || '')}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          content.innerHTML = html;
+          status.classList.add('complete');
+          status.querySelector('span').textContent = `Found ${data.results.reduce((sum, r) => sum + r.items.length, 0)} results`;
+        } else {
+          content.innerHTML = `<div style="color: #ff4757; text-align: center; padding: 40px;">Search failed: ${escapeHtml(data.error)}</div>`;
+          status.querySelector('span').textContent = 'Failed';
+        }
+      } catch (err) {
+        content.innerHTML = `<div style="color: #ff4757; text-align: center; padding: 40px;">Error: ${escapeHtml(err.message)}</div>`;
+        status.querySelector('span').textContent = 'Error';
+      }
     }
 
     async function downloadWord() {
