@@ -289,36 +289,64 @@ export async function analyzeWithLLM(
     return { isAdverse: false, severity: 'REVIEW', headline: 'LLM not configured', summary: 'LLM API key not configured - requires manual review' };
   }
 
-  const prompt = `You are a senior due diligence analyst writing a professional report for investment banks. Analyze this content about "${subjectName}".
+  const prompt = `You are a senior due diligence analyst. Analyze this content for mentions of the name "${subjectName}".
 
 Content:
 ${content.slice(0, 6000)}
 
 INSTRUCTIONS:
-1. Does this content specifically mention "${subjectName}" (the exact person, not someone with a similar name)?
+1. Does this content mention the name "${subjectName}"?
 2. If yes, extract ALL factual details about any adverse information.
-3. Write a professional narrative summary in English, like you would see in a due diligence report for Morgan Stanley or Goldman Sachs.
+3. Write a professional narrative summary in English.
+
+CRITICAL - NAME MATCH LANGUAGE:
+- This is a NAME MATCH search. We found an article containing the name "${subjectName}".
+- We CANNOT confirm this is the same person as our subject without additional context.
+- Use language like "An individual named ${subjectName}..." or "A person named ${subjectName}..."
+- Include ANY identifying details from the article: company, job title, location, age, gender
+- These details help distinguish different people with the same name
 
 IMPORTANT RULES:
-- Only include facts that are ACTUALLY in the article. Do not invent or assume details.
-- Include specific details when available: dates, amounts (CNY and USD equivalent), case numbers, co-conspirators' names (Chinese with pinyin), sentences, fines
-- Use professional language: "convicted of", "sentenced to", "allegedly involved in", "charged with"
-- If the article mentions other people involved, include their names and roles
-- Do NOT include information from the search query - only what's in the article content
+- Only include facts EXPLICITLY stated in the article. Do not invent or infer details.
+- If specific amounts, case numbers, dates, or names are NOT in the article, do NOT include them.
+- Include identifying context when stated: company name, job title, location
+- Do NOT include information from the search query - only what's in the article
+- When information is unclear or not stated, write "not specified" or "unclear"
 
 Respond in JSON format ONLY:
 {
   "mentions_subject": true/false,
   "is_adverse": true/false,
   "severity": "RED" | "AMBER" | "GREEN",
-  "headline": "One-line finding, e.g.: Convicted of insider trading (2008), sentenced to 2.5 years imprisonment",
-  "summary": "Professional 2-4 sentence narrative with specific facts from the article. Include dates, amounts, case numbers, co-conspirators if mentioned."
+  "headline": "[Name (中文名)] [action/event] (year or year-year)",
+  "summary": "Professional due diligence narrative - see examples below"
 }
 
 Severity guide:
 - RED: Criminal conviction, sanctions, serious fraud, money laundering
-- AMBER: Regulatory investigation, civil litigation, allegations without conviction, historical issues
-- GREEN: No adverse information, or subject not actually mentioned`;
+- AMBER: Regulatory investigation, civil litigation, allegations, historical issues
+- GREEN: No adverse information, or name not actually mentioned
+
+SUMMARY FORMAT:
+"According to an article published by [Media Outlet] (中文名 if applicable) on [date/month year], [topic sentence about subject]. [3-5 sentences of factual detail from the article]."
+
+EXAMPLES OF GOOD SUMMARIES (follow this style exactly):
+
+Example 1 (RED - conviction):
+headline: "Chen Yuxing (陈玉兴) sentenced to 2.5 years for insider trading (2007-2008)"
+summary: "According to an article published by Shanghai Securities News (上海证券报) in December 2007, Chen Yuxing was charged with insider trading alongside two co-conspirators. Chen Yuxing (陈玉兴) worked at Hangxiao Steel Structure Co. Ltd. (杭萧钢构股份有限公司, 600477.SS) from 2004 to December 2006. He was detained in May 2007 and arrested in June 2007 for insider trading resulting in illegal profits of CNY 40.37 million (USD 5.68 million). Chen Yuxing was convicted in February 2008 (case no.: （2007）丽中刑初字第44号) and sentenced to 2.5 years. He appealed to the Zhejiang Higher People's Court but in March 2008, the court upheld the original ruling."
+
+Example 2 (AMBER - allegations dismissed):
+headline: "Cao Guoqing (曹国庆) sued for stealing Eli Lilly trade secrets (2013-2014)"
+summary: "According to an article published by Indiana Business Journal on 5 December 2014, Cao Guoqing faced trade secret theft allegations that were ultimately dismissed. Cao (曹国庆) is the founder, chairman and CEO of Minghui Pharmaceutical who worked at Eli Lilly & Company (USA) from 1999 to around 2012. In October 2013, Cao and Li Shuyu (李树玉) were accused of stealing trade secrets valued at USD 55 million. Cao and Li were detained at the Marion County Jail in Indiana. The case collapsed in December 2014 when prosecutors filed a motion to dismiss all charges."
+
+Example 3 (AMBER - named in lawsuit, no wrongdoing alleged):
+headline: "Wang included in Sinovac proxy fight lawsuit (2025)"
+summary: "According to court filings in the New York County Supreme Court on 22 April 2025, Wang was named as a defendant in a proxy fight lawsuit. Three funds affiliated with Vivo Capital LLC sued OrbiMed, Wang, and several others for allegations of breach of fiduciary duties surrounding Sinovac Biotech Ltd. Vivo Capital did not make any specific allegations against Wang; he appears to have been included solely due to his role as a director. Both sides agreed to dismiss the case without prejudice on 26 August 2025."
+
+Example 4 (GREEN - mentioned but no adverse info):
+headline: "Referenced as non-executive director in Ascentage Pharma critique (2019)"
+summary: "According to an article published by Tolfin (tolfin.com) in December 2019, the subject was mentioned in connection with Ascentage Pharma Group. The company was characterized as a 'flop' following reports it had never turned a profit over its 10-year operating history. The subject was listed as a non-executive director but was not accused of any wrongdoing. No allegations of misconduct were made against the subject personally."`;
 
   try {
     const response = await axios.post(
