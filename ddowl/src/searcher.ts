@@ -200,6 +200,8 @@ export interface BatchSearchResult {
   title: string;
   snippet: string;
   query: string;  // the dirty word template that found this
+  clusterId?: string;     // Incident cluster ID (assigned in Phase 2.5)
+  clusterLabel?: string;  // Incident description (e.g., "AC Milan破产案")
 }
 
 export type BatchSearchProgressCallback = (event: {

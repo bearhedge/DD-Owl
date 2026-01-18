@@ -75,6 +75,8 @@ export interface RawFinding {
   triageClassification: string;
   fingerprint?: FindingFingerprint;
   fetchFailed?: boolean;  // True if content couldn't be fetched - needs manual review
+  clusterId?: string;     // From Phase 2.5 incident clustering
+  clusterLabel?: string;  // Incident description from clustering
 }
 
 // Consolidated finding after deduplication
@@ -86,6 +88,8 @@ export interface ConsolidatedFinding {
   dateRange: string;
   sourceCount: number;
   sources: { url: string; title: string }[];
+  clusterId?: string;     // From Phase 2.5 incident clustering
+  clusterLabel?: string;  // Incident description from clustering
 }
 
 // ============================================================

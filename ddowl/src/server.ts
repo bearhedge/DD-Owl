@@ -16,6 +16,7 @@ process.on('uncaughtException', (error) => {
 });
 
 import express, { Request, Response } from 'express';
+import axios from 'axios';
 import cors from 'cors';
 import path from 'path';
 import http from 'http';
@@ -46,6 +47,7 @@ import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
 import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown, EliminatedResult } from './eliminator.js';
 import { getChineseVariantsLLM } from './utils/chinese.js';
 import { createSession, getSession, updateSession, deleteSession, ScreeningSession } from './session-store.js';
+import { clusterByIncidentLLM, ClusteringResult } from './deduplicator.js';
 
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -95,6 +97,54 @@ function deduplicateResults<T extends { url: string }>(results: T[]): { unique: 
   }
 
   return { unique, duplicateCount };
+}
+
+/**
+ * Group results by similar titles to avoid analyzing the same story 20 times
+ * Keeps max N per group, parks rest for manual review
+ */
+function groupByTitleSimilarity<T extends { title: string; url: string }>(
+  results: T[],
+  maxPerGroup: number = 5
+): { toAnalyze: T[]; parked: T[] } {
+  const groups = new Map<string, T[]>();
+
+  for (const result of results) {
+    // Normalize: remove site suffix (after - | _), keep first 15 Chinese chars
+    const normalized = result.title
+      .replace(/[-_|].*$/, '')           // Remove site suffix
+      .replace(/[^\u4e00-\u9fff]/g, '')  // Keep only Chinese chars
+      .slice(0, 15);                      // First 15 chars
+
+    // Skip if no Chinese chars (likely English or garbage)
+    if (normalized.length < 3) {
+      // Use URL domain as fallback key for non-Chinese titles
+      try {
+        const domain = new URL(result.url).hostname;
+        const fallbackKey = `_domain_${domain}_${result.title.slice(0, 20)}`;
+        if (!groups.has(fallbackKey)) groups.set(fallbackKey, []);
+        groups.get(fallbackKey)!.push(result);
+      } catch {
+        // Invalid URL, put in misc bucket
+        if (!groups.has('_misc')) groups.set('_misc', []);
+        groups.get('_misc')!.push(result);
+      }
+      continue;
+    }
+
+    if (!groups.has(normalized)) groups.set(normalized, []);
+    groups.get(normalized)!.push(result);
+  }
+
+  const toAnalyze: T[] = [];
+  const parked: T[] = [];
+
+  for (const [, items] of groups) {
+    toAnalyze.push(...items.slice(0, maxPerGroup));
+    parked.push(...items.slice(maxPerGroup));
+  }
+
+  return { toAnalyze, parked };
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -976,9 +1026,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     let skipGather = false;
     let skipElimination = false;
     let skipCategorize = false;
+    let skipConsolidate = false;
     let analyzeStartIndex = 0;
     let restoredCategorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] } | null = null;
     let restoredPassed: BatchSearchResult[] | null = null;
+    let restoredConsolidated: ConsolidatedFinding[] | null = null;
 
     if (existingSession && incomingSessionId) {
       // Reconnection: reuse existing session
@@ -1006,6 +1058,16 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         sendEvent({ type: 'phase_skipped', phase: 'categorize', reason: 'Restored from session' });
         sendEvent({ type: 'analyze_resume', fromIndex: analyzeStartIndex, totalFindings: restoredFindings.length });
       }
+
+      // If we're in consolidate phase and already have results, skip consolidation
+      if (phase === 'consolidate' && existingSession.consolidatedFindings) {
+        skipConsolidate = true;
+        restoredConsolidated = existingSession.consolidatedFindings;
+        analyzeStartIndex = restoredCategorized ? (restoredCategorized.red.length + restoredCategorized.amber.length) : 0;
+        sendEvent({ type: 'phase_skipped', phase: 'analyze', reason: 'Restored from session' });
+        sendEvent({ type: 'phase_skipped', phase: 'consolidate', reason: 'Restored from session' });
+        console.log(`[V4] Restoring ${restoredConsolidated.length} consolidated findings from session`);
+      }
     } else {
       // New screening: create fresh session
       sessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -1024,6 +1086,21 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     // Send session ID to client (for reconnection tracking)
     sendEvent({ type: 'session', sessionId });
+
+    // If reconnecting, send status so user knows where we are
+    if (existingSession && incomingSessionId) {
+      const phase = existingSession.currentPhase;
+      const phaseName = phase === 'gather' ? 'gathering' : phase === 'eliminate' ? 'filtering' : phase === 'categorize' ? 'categorizing' : phase === 'analyze' ? 'analyzing' : 'consolidating';
+      const progress = phase === 'analyze' ? `${existingSession.currentIndex}/${existingSession.categorized.red.length + existingSession.categorized.amber.length}` : '';
+      sendEvent({
+        type: 'reconnect_status',
+        phase,
+        phaseName,
+        progress,
+        message: `Connection restored. Resuming ${phaseName} phase${progress ? ` at ${progress}` : ''}...`,
+        findingsCount: existingSession.findings.length,
+      });
+    }
 
     // URL tracking for analysis - includes search query for each URL
     const urlTracker = {
@@ -1193,7 +1270,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     if (skipElimination && restoredPassed) {
       // Skip elimination phase - use restored results from session
       passed = restoredPassed;
-      breakdown = { gov_domain_bypass: 0, noise_domain: 0, noise_title_pattern: 0, name_char_separation: 0, missing_dirty_word: 0 };
+      breakdown = { gov_domain_bypass: 0, noise_domain: 0, noise_title_pattern: 0, name_char_separation: 0, missing_dirty_word: 0, part_of_longer_name: 0 };
       console.log(`[V4] Skipped elimination phase, using ${passed.length} restored passed results`);
     } else {
       sendEvent({ type: 'phase', phase: 2, name: 'PROGRAMMATIC_ELIMINATION', message: `Running programmatic filters on ${allResults.length} results...` });
@@ -1211,6 +1288,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       'noise_title_pattern': 'Rule 2: Job posting keyword in title',
       'name_char_separation': 'Rule 3: Name characters separated',
       'missing_dirty_word': 'Rule 4: Missing dirty word',
+      'part_of_longer_name': 'Rule 5: Part of longer name (different person)',
       'gov_domain_bypass': 'Bypass: Government domain (.gov.cn)',
     };
 
@@ -1271,8 +1349,54 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       // Update session with elimination results (Redis)
-      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'categorize' });
+      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'cluster' });
     } // End of elimination phase else block
+
+    if (passed.length === 0) {
+      clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
+      sendEvent({ type: 'complete', stats: { totalResults: allResults.length, programmaticEliminated: progEliminated.length, findings: 0 }, findings: [] });
+      res.end();
+      return;
+    }
+
+    // ========================================
+    // PHASE 2.5: INCIDENT CLUSTERING (LLM batch)
+    // ========================================
+    sendEvent({
+      type: 'phase',
+      phase: '2.5',
+      name: 'INCIDENT_CLUSTERING',
+      message: `Clustering ${passed.length} articles by incident...`
+    });
+
+    const clusterStart = Date.now();
+    const clusterResult = await clusterByIncidentLLM(passed, subjectName, 3);
+
+    // Send cluster summary
+    sendEvent({
+      type: 'incident_clusters',
+      totalArticles: clusterResult.stats.totalArticles,
+      totalClusters: clusterResult.stats.totalClusters,
+      articlesToAnalyze: clusterResult.stats.articlesToAnalyze,
+      articlesParked: clusterResult.stats.articlesParked,
+      clusters: clusterResult.clusters.map(c => ({ label: c.label, count: c.articles.length })),
+      duration: Date.now() - clusterStart,
+    });
+
+    // Park redundant articles (visible in UI as "further links")
+    for (const item of clusterResult.parked) {
+      sendEvent({
+        type: 'further_link',
+        url: item.url,
+        title: item.title,
+        reason: 'Duplicate incident - covered by higher-tier source',
+      });
+    }
+
+    // Continue with deduplicated results
+    passed = clusterResult.toAnalyze;
+    await updateSession(sessionId, { passedElimination: passed, currentPhase: 'categorize' });
 
     if (passed.length === 0) {
       clearInterval(heartbeat);
@@ -1344,6 +1468,49 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           amberCount: categorized.amber.length,
         });
       }
+
+      // === TITLE SIMILARITY GROUPING ===
+      // Group similar titles, keep max 5 per story, park rest for manual review
+      const redGrouped = groupByTitleSimilarity(categorized.red, 5);
+      const amberGrouped = groupByTitleSimilarity(categorized.amber, 5);
+
+      const titleParkedCount = redGrouped.parked.length + amberGrouped.parked.length;
+      if (titleParkedCount > 0) {
+        console.log(`[V4] Title grouping: parked ${redGrouped.parked.length} red, ${amberGrouped.parked.length} amber similar stories`);
+        sendEvent({
+          type: 'title_grouped',
+          redParked: redGrouped.parked.length,
+          amberParked: amberGrouped.parked.length,
+          redAnalyze: redGrouped.toAnalyze.length,
+          amberAnalyze: amberGrouped.toAnalyze.length,
+        });
+
+        // Send parked items as further_link events
+        for (const item of redGrouped.parked) {
+          sendEvent({
+            type: 'further_link',
+            url: item.url,
+            title: item.title,
+            reason: 'Similar story covered',
+            originalCategory: 'RED',
+            triageReason: item.reason,
+          });
+        }
+        for (const item of amberGrouped.parked) {
+          sendEvent({
+            type: 'further_link',
+            url: item.url,
+            title: item.title,
+            reason: 'Similar story covered',
+            originalCategory: 'AMBER',
+            triageReason: item.reason,
+          });
+        }
+      }
+
+      // Update categorized with grouped results
+      categorized.red = redGrouped.toAnalyze;
+      categorized.amber = amberGrouped.toAnalyze;
 
       // Update session with deduplicated categorized results
       await updateSession(sessionId, { categorized, currentPhase: 'analyze' });
@@ -1435,6 +1602,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             summary: `Categorized as ${item.category}: "${item.reason}". Could not fetch content.`,
             triageClassification: item.category,
             fetchFailed: true,
+            clusterId: item.clusterId,
+            clusterLabel: item.clusterLabel,
           });
           continue;
         }
@@ -1462,6 +1631,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             headline: analysis.headline,
             summary: analysis.summary,
             triageClassification: item.category,
+            clusterId: item.clusterId,
+            clusterLabel: item.clusterLabel,
           });
         } else {
           // LLM said "Clear" - but if triage flagged RED/AMBER, we should preserve for manual review
@@ -1478,16 +1649,17 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             const subjectInContent = nameVariations.some((v: string) => content.includes(v)) ||
               contentLower.includes(subjectName.toLowerCase());
 
-            // Determine reason for further review
-            let furtherReason = 'LLM cleared';
-            if (isShortContent) furtherReason = 'Content too short';
-            else if (isErrorPage) furtherReason = 'Possible error page';
-            else if (!subjectInContent) furtherReason = 'Subject not found in content';
+            // Determine reason for further review - use clearer wording
+            let furtherReason = 'Unverified - needs manual review';
+            if (isShortContent) furtherReason = 'Content too short to verify';
+            else if (isErrorPage) furtherReason = 'Error page - needs manual check';
+            else if (!subjectInContent) furtherReason = 'Subject not in content - verify manually';
 
             // Log explicitly so it's visible
-            console.log(`[V4] FURTHER: ${item.category} article cleared by LLM (${furtherReason}): ${item.title}`);
+            console.log(`[V4] FURTHER: ${item.category} article (${furtherReason}): ${item.title}`);
 
             urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FURTHER', headline: furtherReason });
+            // Only send further_link event (not analyze_result to avoid duplicate logs)
             sendEvent({
               type: 'further_link',
               url: item.url,
@@ -1495,14 +1667,6 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
               reason: furtherReason,
               originalCategory: item.category,
               triageReason: item.reason,
-            });
-            sendEvent({
-              type: 'analyze_result',
-              url: item.url,
-              title: item.title,
-              isAdverse: false,
-              severity: 'FURTHER',
-              headline: `${furtherReason} (was ${item.category})`,
             });
           } else {
             urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'CLEARED' });
@@ -1517,21 +1681,35 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
 
     // ========================================
-    // PHASE 4: CONSOLIDATE (elimination)
+    // PHASE 5: CONSOLIDATE
     // ========================================
-    clearInterval(heartbeat);
-
     let consolidatedFindings: ConsolidatedFinding[] = [];
-    if (allFindings.length > 0) {
+
+    if (skipConsolidate && restoredConsolidated) {
+      // Restored from session - use existing consolidated findings
+      consolidatedFindings = restoredConsolidated;
+      console.log(`[V4] Skipped consolidate phase, using ${consolidatedFindings.length} restored findings`);
+    } else if (allFindings.length > 0) {
       sendEvent({ type: 'phase', phase: 5, name: 'CONSOLIDATE', message: `Consolidating ${allFindings.length} findings...` });
+
+      // Update session to consolidate phase BEFORE starting (for reconnection tracking)
+      await updateSession(sessionId, { currentPhase: 'consolidate' });
+
       consolidatedFindings = await consolidateFindings(allFindings, subjectName);
       tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
+
+      // Store consolidated results in session (for reconnection)
+      await updateSession(sessionId, { consolidatedFindings });
+
       sendEvent({
         type: 'eliminate_complete',
         before: allFindings.length,
         after: consolidatedFindings.length,
       });
     }
+
+    // NOW stop heartbeat (after consolidation is done)
+    clearInterval(heartbeat);
 
     // Final stats (REVIEW items count as AMBER - they need manual review)
     const redFindings = consolidatedFindings.filter(f => f.severity === 'RED');
@@ -1867,6 +2045,176 @@ app.get('/api/report/company', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Report generation error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// FINDINGS DETAIL & EXPAND API ENDPOINTS
+// ============================================================
+
+// Generate detailed report for a single finding
+app.post('/api/findings/detail', async (req: Request, res: Response) => {
+  const { finding, subjectName } = req.body;
+
+  if (!finding || !subjectName) {
+    res.status(400).json({ error: 'finding and subjectName required' });
+    return;
+  }
+
+  try {
+    // Get the first source URL to fetch content
+    const sourceUrl = finding.sources?.[0]?.url;
+    if (!sourceUrl) {
+      res.json({
+        success: true,
+        summary: finding.summary || 'No summary available',
+        keyFacts: 'Source URL not available for detailed analysis.',
+      });
+      return;
+    }
+
+    // Fetch the page content
+    let content = '';
+    try {
+      content = await fetchPageContent(sourceUrl);
+    } catch (fetchErr) {
+      res.json({
+        success: true,
+        summary: finding.summary || 'No summary available',
+        keyFacts: 'Could not fetch source page for detailed analysis.',
+      });
+      return;
+    }
+
+    if (content.length < 100) {
+      res.json({
+        success: true,
+        summary: finding.summary || 'No summary available',
+        keyFacts: 'Source page content too short for detailed analysis.',
+      });
+      return;
+    }
+
+    // Use LLM to generate detailed report
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+    if (!DEEPSEEK_API_KEY) {
+      res.json({
+        success: true,
+        summary: finding.summary || 'No summary available',
+        keyFacts: 'LLM API not configured for detailed analysis.',
+      });
+      return;
+    }
+
+    const prompt = `You are writing a detailed due diligence finding for a professional report about "${subjectName}".
+
+Based on this article content, write a comprehensive analysis:
+
+ARTICLE:
+${content.slice(0, 8000)}
+
+EXISTING SUMMARY:
+${finding.headline}
+${finding.summary}
+
+Write two sections:
+
+1. SUMMARY: A detailed 3-5 sentence professional narrative summary of the adverse finding. Include all specific facts: dates, amounts (CNY and USD), case numbers, names of co-conspirators, court decisions, sentences.
+
+2. KEY FACTS: A bulleted list of the most important facts extracted from the article:
+- Date(s) of incident
+- Nature of offense
+- Amount involved (if any)
+- Court/regulatory body involved
+- Outcome (sentence, fine, etc.)
+- Co-conspirators (if any)
+
+Respond in JSON:
+{
+  "summary": "Detailed narrative summary...",
+  "keyFacts": "• Fact 1\\n• Fact 2\\n• Fact 3..."
+}`;
+
+    const response = await axios.post(
+      'https://api.deepseek.com/v1/chat/completions',
+      {
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        timeout: 60000,
+      }
+    );
+
+    const rawText = response.data.choices?.[0]?.message?.content || '';
+    const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      res.json({
+        success: true,
+        summary: parsed.summary || finding.summary,
+        keyFacts: parsed.keyFacts || 'No key facts extracted',
+      });
+    } else {
+      res.json({
+        success: true,
+        summary: finding.summary || 'No summary available',
+        keyFacts: 'Could not parse LLM response',
+      });
+    }
+  } catch (error: any) {
+    console.error('[DETAIL] Error:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// Expand search - do further web searches for selected findings
+app.post('/api/findings/expand', async (req: Request, res: Response) => {
+  const { findings, subjectName } = req.body;
+
+  if (!findings || !Array.isArray(findings) || !subjectName) {
+    res.status(400).json({ error: 'findings array and subjectName required' });
+    return;
+  }
+
+  try {
+    const results: { query: string; items: { title: string; url: string; snippet: string }[] }[] = [];
+
+    for (const finding of findings.slice(0, 5)) { // Limit to 5 findings
+      // Extract key terms from headline for targeted search
+      const headline = (finding.headline || '').replace(/Name match:?\s*/i, '');
+      const keyTerms = headline.slice(0, 50);
+      const query = `"${subjectName}" ${keyTerms}`;
+
+      console.log(`[EXPAND] Searching: ${query}`);
+
+      // Search Google (1 page)
+      const searchResults = await searchGoogle(query, 1, 10);
+
+      results.push({
+        query,
+        items: searchResults.map(r => ({
+          title: r.title,
+          url: r.link,
+          snippet: r.snippet,
+        })),
+      });
+
+      // Small delay between searches
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    res.json({ success: true, results });
+  } catch (error: any) {
+    console.error('[EXPAND] Error:', error);
+    res.json({ success: false, error: error.message });
   }
 });
 

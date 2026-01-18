@@ -322,6 +322,52 @@ Return JSON only:
 
 import { BatchSearchResult } from './searcher.js';
 
+// ============================================================================
+// FICTION/ENTERTAINMENT DETECTION
+// Detect fiction content (novels, TV dramas, movies) to mark as GREEN
+// ============================================================================
+
+/**
+ * Detect if content is fiction/entertainment (novels, TV dramas, movies)
+ * These should be marked GREEN as they're not real adverse media
+ */
+function isFiction(item: { title: string; snippet: string; url: string }): boolean {
+  const text = `${item.title} ${item.snippet || ''}`;
+  const url = item.url.toLowerCase();
+
+  // URL signals - entertainment/novel sites
+  if (url.includes('linovel') || url.includes('lightnovel') || url.includes('novel') ||
+      url.includes('/entertainment/') || url.includes('/tvshow/') || url.includes('/drama/') ||
+      url.includes('douyin.com/video') || url.includes('youtube.com/watch') ||
+      url.includes('bilibili.com')) return true;
+
+  // Chinese content signals for fiction/entertainment
+  const fictionKeywords = [
+    // TV/Film
+    '电视剧', '連續劇', '剧集', '综艺', '綜藝',
+    // Novels
+    '小说', '小說', '轻小说', '輕小說', '网络小说', '網絡小說',
+    // Acting/Performance
+    '饰演', '飾演', '主演', '出演', '演员', '演員', '导演', '導演',
+    // Plot/Character
+    '剧情', '劇情', '角色', '虚构', '虛構', '剧透', '劇透',
+    // Episode indicators
+    '大结局', '大結局',
+  ];
+
+  for (const kw of fictionKeywords) {
+    if (text.includes(kw)) return true;
+  }
+
+  // Episode pattern: 第X集
+  if (/第\d+集/.test(text)) return true;
+
+  // Book/show title format: starts with 《 and contains 》
+  if (text.startsWith('《') && text.includes('》')) return true;
+
+  return false;
+}
+
 export interface CategorizedResult {
   url: string;
   title: string;
@@ -329,6 +375,8 @@ export interface CategorizedResult {
   query: string;
   category: 'RED' | 'AMBER' | 'GREEN';
   reason: string;
+  clusterId?: string;     // From Phase 2.5 incident clustering
+  clusterLabel?: string;  // Incident description from clustering
 }
 
 export interface CategorizedOutput {
@@ -345,17 +393,34 @@ async function categorizeBatch(
   subjectName: string,
   batchOffset: number = 0
 ): Promise<CategorizedOutput> {
+  const output: CategorizedOutput = { red: [], amber: [], green: [] };
+
+  // Pre-filter: Mark fiction/entertainment as GREEN before LLM call
+  const nonFiction: BatchSearchResult[] = [];
+  for (const r of results) {
+    if (isFiction({ title: r.title, snippet: r.snippet || '', url: r.url })) {
+      output.green.push({ ...r, category: 'GREEN' as const, reason: 'Fiction/Entertainment content' });
+    } else {
+      nonFiction.push(r);
+    }
+  }
+
+  // If all items were fiction, return early
+  if (nonFiction.length === 0) {
+    return output;
+  }
+
   const providers = getProviders();
   if (providers.length === 0) {
     return {
       red: [],
-      amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'no api keys configured' })),
-      green: []
+      amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'no api keys configured' })),
+      green: output.green
     };
   }
 
-  // Format results as numbered list
-  const resultsText = results.map((r, i) =>
+  // Format non-fiction results as numbered list
+  const resultsText = nonFiction.map((r, i) =>
     `${i + 1}. Title: ${r.title.slice(0, 80)}\n   Snippet: ${(r.snippet || '').slice(0, 150)}`
   ).join('\n\n');
 
@@ -404,36 +469,35 @@ Return JSON only:
   }
 
   if (!rawText) {
-    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'api failed' })), green: [] };
+    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'api failed' })), green: output.green };
   }
 
   // Parse response
   const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: [] };
+    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
   }
 
   let parsed;
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch {
-    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: [] };
+    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
   }
 
   if (!parsed.classifications || !Array.isArray(parsed.classifications)) {
     console.error(`[CATEGORIZE] No classifications array in response`);
-    return { red: [], amber: results.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: [] };
+    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
   }
 
-  console.log(`[CATEGORIZE] Got ${parsed.classifications.length} classifications for ${results.length} items`);
+  console.log(`[CATEGORIZE] Got ${parsed.classifications.length} classifications for ${nonFiction.length} items (${results.length - nonFiction.length} fiction filtered)`);
 
   // Track which items got classified
   const classifiedIndices = new Set<number>();
-  const output: CategorizedOutput = { red: [], amber: [], green: [] };
 
   for (const c of parsed.classifications) {
-    const result = results[c.index - 1];
+    const result = nonFiction[c.index - 1];
     if (!result) continue;
     classifiedIndices.add(c.index - 1);
     const cat = (typeof c.category === 'string' ? c.category.toUpperCase() : 'AMBER') as 'RED' | 'AMBER' | 'GREEN';
@@ -445,10 +509,10 @@ Return JSON only:
   }
 
   // Any items not classified default to AMBER (investigate)
-  for (let i = 0; i < results.length; i++) {
+  for (let i = 0; i < nonFiction.length; i++) {
     if (!classifiedIndices.has(i)) {
-      console.warn(`[CATEGORIZE] Item ${i + 1} not classified, defaulting to AMBER: ${results[i].title?.slice(0, 50)}`);
-      output.amber.push({ ...results[i], category: 'AMBER', reason: 'not classified by model' });
+      console.warn(`[CATEGORIZE] Item ${i + 1} not classified, defaulting to AMBER: ${nonFiction[i].title?.slice(0, 50)}`);
+      output.amber.push({ ...nonFiction[i], category: 'AMBER', reason: 'not classified by model' });
     }
   }
 

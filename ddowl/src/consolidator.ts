@@ -54,6 +54,69 @@ const ENTITY_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * Extract identity signals from text to distinguish different people with same name
+ */
+function extractIdentitySignals(text: string): {
+  companies: string[];
+  titles: string[];
+  locations: string[];
+  gender: 'male' | 'female' | 'unknown';
+  isVictim: boolean;
+} {
+  const textLower = text.toLowerCase();
+
+  // Extract company names (look for patterns like "of XXX Company", "XXX Limited", etc.)
+  const companyPatterns = [
+    /(?:of|at|from)\s+([A-Z][A-Za-z\s]+(?:Limited|Ltd|Inc|Corp|Group|Holdings|Energy|Bank|Securities))/gi,
+    /([A-Z][A-Za-z\s]+(?:Limited|Ltd|Inc|Corp|Group|Holdings|Energy|Bank|Securities))/gi,
+    /([\u4e00-\u9fff]+(?:公司|集团|银行|证券|能源|有限))/g,
+  ];
+  const companies: string[] = [];
+  for (const pattern of companyPatterns) {
+    const matches = text.match(pattern);
+    if (matches) companies.push(...matches.map(m => m.trim().toLowerCase()));
+  }
+
+  // Extract job titles
+  const titlePatterns = [
+    /(?:Chairman|CEO|Director|Executive|Manager|President|Vice President|CFO|COO)/gi,
+    /(?:董事长|总裁|总经理|执行董事|董事|经理|主任|主席)/g,
+  ];
+  const titles: string[] = [];
+  for (const pattern of titlePatterns) {
+    const matches = text.match(pattern);
+    if (matches) titles.push(...matches.map(m => m.toLowerCase()));
+  }
+
+  // Extract locations
+  const locationPatterns = [
+    /(?:Hong Kong|Beijing|Shanghai|Shenzhen|Guangzhou|Hunan|Zhejiang|Sichuan)/gi,
+    /(?:香港|北京|上海|深圳|广州|湖南|浙江|四川|醴陵|株洲)/g,
+  ];
+  const locations: string[] = [];
+  for (const pattern of locationPatterns) {
+    const matches = text.match(pattern);
+    if (matches) locations.push(...matches.map(m => m.toLowerCase()));
+  }
+
+  // Detect gender
+  let gender: 'male' | 'female' | 'unknown' = 'unknown';
+  if (/\b(her|she|女|girlfriend|wife|母亲|女士)\b/i.test(text)) gender = 'female';
+  else if (/\b(his|he|男|boyfriend|husband|父亲|先生)\b/i.test(text)) gender = 'male';
+
+  // Detect if person is victim (not perpetrator)
+  const isVictim = /victim|killed by|murdered by|被杀|遇害|受害者|former boyfriend|前男友/.test(textLower);
+
+  return {
+    companies: [...new Set(companies)],
+    titles: [...new Set(titles)],
+    locations: [...new Set(locations)],
+    gender,
+    isVictim,
+  };
+}
+
+/**
  * Extract a fingerprint from a finding for similarity matching
  */
 export function extractFingerprint(headline: string, summary: string): FindingFingerprint {
@@ -85,11 +148,16 @@ export function extractFingerprint(headline: string, summary: string): FindingFi
   // Extract key terms (nouns and important words)
   const keywords = extractKeywords(text);
 
+  // Extract identity signals
+  const identity = extractIdentitySignals(text);
+
   return {
     eventType,
     entities: uniqueEntities,
     years,
-    keywords
+    keywords,
+    // Add identity fields (extend the interface)
+    ...identity,
   };
 }
 
@@ -112,8 +180,55 @@ function extractKeywords(text: string): string[] {
 
 /**
  * Calculate similarity score between two fingerprints (0-1)
+ * Returns 0 if identity signals conflict (different people)
  */
 export function calculateSimilarity(fp1: FindingFingerprint, fp2: FindingFingerprint): number {
+  // CRITICAL: Check identity conflicts FIRST - if these conflict, NEVER merge
+  const fp1Identity = fp1 as any; // Extended with identity fields
+  const fp2Identity = fp2 as any;
+
+  // Conflict: One is victim, other is perpetrator
+  if (fp1Identity.isVictim !== fp2Identity.isVictim &&
+      (fp1Identity.isVictim === true || fp2Identity.isVictim === true)) {
+    console.log('[CONSOLIDATE] Identity conflict: victim vs perpetrator - not merging');
+    return 0;
+  }
+
+  // Conflict: Different genders (if both known)
+  if (fp1Identity.gender !== 'unknown' && fp2Identity.gender !== 'unknown' &&
+      fp1Identity.gender !== fp2Identity.gender) {
+    console.log('[CONSOLIDATE] Identity conflict: different genders - not merging');
+    return 0;
+  }
+
+  // Conflict: Different companies (if both have companies and NO overlap)
+  const companies1 = fp1Identity.companies || [];
+  const companies2 = fp2Identity.companies || [];
+  if (companies1.length > 0 && companies2.length > 0) {
+    const companyOverlap = companies1.some((c1: string) =>
+      companies2.some((c2: string) => c1.includes(c2) || c2.includes(c1))
+    );
+    if (!companyOverlap) {
+      console.log(`[CONSOLIDATE] Identity conflict: different companies (${companies1[0]} vs ${companies2[0]}) - not merging`);
+      return 0;
+    }
+  }
+
+  // Conflict: Different job titles at different organizations
+  const titles1 = fp1Identity.titles || [];
+  const titles2 = fp2Identity.titles || [];
+  if (titles1.length > 0 && titles2.length > 0 && companies1.length > 0 && companies2.length > 0) {
+    const titleOverlap = titles1.some((t1: string) => titles2.includes(t1));
+    const companyOverlap = companies1.some((c1: string) =>
+      companies2.some((c2: string) => c1.includes(c2) || c2.includes(c1))
+    );
+    if (!titleOverlap && !companyOverlap) {
+      console.log('[CONSOLIDATE] Identity conflict: different titles at different orgs - not merging');
+      return 0;
+    }
+  }
+
+  // No identity conflicts - proceed with similarity calculation
   let score = 0;
 
   // Event type match: +0.4
@@ -144,6 +259,14 @@ export function calculateSimilarity(fp1: FindingFingerprint, fp2: FindingFingerp
   const keywordOverlap = fp1.keywords.filter(k => fp2.keywords.includes(k)).length;
   if (keywordOverlap >= 2) {
     score += 0.1;
+  }
+
+  // Company/title match bonus: +0.2 (strong identity signal)
+  if (companies1.length > 0 && companies2.length > 0) {
+    const companyMatch = companies1.some((c1: string) =>
+      companies2.some((c2: string) => c1.includes(c2) || c2.includes(c1))
+    );
+    if (companyMatch) score += 0.2;
   }
 
   return Math.min(score, 1);
@@ -296,6 +419,7 @@ Return JSON only:
 
 /**
  * Main consolidation function
+ * Uses clusterId from Phase 2.5 for grouping when available, falls back to fingerprint matching
  */
 export async function consolidateFindings(
   findings: RawFinding[],
@@ -305,22 +429,51 @@ export async function consolidateFindings(
 
   console.log(`[CONSOLIDATE] Processing ${findings.length} findings...`);
 
-  // Add fingerprints to findings
-  const findingsWithFp = findings.map(f => ({
-    ...f,
-    fingerprint: extractFingerprint(f.headline, f.summary)
-  }));
+  // Check how many have cluster info from Phase 2.5
+  const withCluster = findings.filter(f => f.clusterId);
+  const withoutCluster = findings.filter(f => !f.clusterId);
+  console.log(`[CONSOLIDATE] ${withCluster.length} with cluster info, ${withoutCluster.length} without`);
 
-  // Group by similarity
-  const groups = groupFindingsBySimilarity(findingsWithFp, 0.5);
-  console.log(`[CONSOLIDATE] Grouped into ${groups.length} unique incidents`);
+  // Group by clusterId first (from Phase 2.5 incident clustering)
+  const clusterGroups = new Map<string, RawFinding[]>();
+  for (const f of withCluster) {
+    const key = f.clusterId!;
+    if (!clusterGroups.has(key)) {
+      clusterGroups.set(key, []);
+    }
+    clusterGroups.get(key)!.push(f);
+  }
+
+  // For findings without clusterId, fall back to fingerprint-based grouping
+  let fallbackGroups: RawFinding[][] = [];
+  if (withoutCluster.length > 0) {
+    const findingsWithFp = withoutCluster.map(f => ({
+      ...f,
+      fingerprint: extractFingerprint(f.headline, f.summary)
+    }));
+    fallbackGroups = groupFindingsBySimilarity(findingsWithFp, 0.5);
+    console.log(`[CONSOLIDATE] Fallback: grouped ${withoutCluster.length} findings into ${fallbackGroups.length} groups`);
+  }
+
+  // Combine all groups
+  const allGroups: RawFinding[][] = [
+    ...Array.from(clusterGroups.values()),
+    ...fallbackGroups
+  ];
+  console.log(`[CONSOLIDATE] Total ${allGroups.length} groups (${clusterGroups.size} from clustering, ${fallbackGroups.length} from fallback)`);
 
   const consolidated: ConsolidatedFinding[] = [];
 
-  for (const group of groups) {
-    if (group.length === 1) {
+  for (const group of allGroups) {
+    // Add fingerprints if not already present
+    const groupWithFp = group.map(f => ({
+      ...f,
+      fingerprint: f.fingerprint || extractFingerprint(f.headline, f.summary)
+    }));
+
+    if (groupWithFp.length === 1) {
       // Single finding - no consolidation needed
-      const f = group[0];
+      const f = groupWithFp[0];
       consolidated.push({
         headline: f.headline,
         summary: f.summary,
@@ -328,12 +481,18 @@ export async function consolidateFindings(
         eventType: f.fingerprint?.eventType || 'other',
         dateRange: f.fingerprint?.years.join('-') || '',
         sourceCount: 1,
-        sources: [{ url: f.url, title: f.title }]
+        sources: [{ url: f.url, title: f.title }],
+        clusterId: f.clusterId,
+        clusterLabel: f.clusterLabel,
       });
     } else {
       // Multiple findings - consolidate with LLM
-      console.log(`[CONSOLIDATE] Merging ${group.length} findings about same incident`);
-      const merged = await consolidateGroupWithLLM(group, subjectName);
+      const label = groupWithFp[0].clusterLabel || 'same incident';
+      console.log(`[CONSOLIDATE] Merging ${groupWithFp.length} findings about "${label}"`);
+      const merged = await consolidateGroupWithLLM(groupWithFp, subjectName);
+      // Preserve cluster info in consolidated result
+      merged.clusterId = groupWithFp[0].clusterId;
+      merged.clusterLabel = groupWithFp[0].clusterLabel;
       consolidated.push(merged);
     }
   }
