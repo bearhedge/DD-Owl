@@ -2,12 +2,18 @@ import { Redis } from '@upstash/redis';
 import { BatchSearchResult } from './searcher.js';
 import { CategorizedResult } from './triage.js';
 import { RawFinding, ConsolidatedFinding } from './types.js';
-import { ClusteringResult } from './deduplicator.js';
+import { ClusteringResult, IncidentCluster } from './deduplicator.js';
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
+
+export interface DetectedCompany {
+  english: string;
+  chinese: string;
+  source: string;  // URL where we found this company (required for consistency with server.ts)
+}
 
 export interface ScreeningSession {
   name: string;
@@ -16,11 +22,32 @@ export interface ScreeningSession {
   gatheredResults: BatchSearchResult[];
   categorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] };
   passedElimination: BatchSearchResult[];
+  detectedCompanies?: DetectedCompany[];  // Associated companies from SFC/registry pages
   currentPhase: 'gather' | 'eliminate' | 'cluster' | 'categorize' | 'analyze' | 'consolidate' | 'complete';
   currentIndex: number;
   findings: RawFinding[];
   consolidatedFindings?: ConsolidatedFinding[];  // Stored after consolidation phase
   clusterResult?: ClusteringResult;  // Stored after clustering phase
+
+  // === Granular progress tracking for mid-phase resume ===
+
+  // Phase 1: Gather progress
+  gatherIndex?: number;           // Which query template completed (1-indexed: 1 to N)
+
+  // Phase 1.5: Company Expansion progress
+  companyExpansionIndex?: number; // Which company we've searched (1-indexed)
+
+  // Phase 2.5: Clustering progress
+  clusterBatchIndex?: number;     // Which batch we've clustered (1-indexed)
+  clusterBatchResults?: IncidentCluster[]; // Clusters found so far (before merge)
+
+  // Phase 3: Categorize progress
+  categorizeBatchIndex?: number;  // Which batch we've categorized (1-indexed)
+  categorizePartialResults?: {    // Partial categorization results
+    red: CategorizedResult[];
+    amber: CategorizedResult[];
+    green: CategorizedResult[];
+  };
 }
 
 const SESSION_TTL = 14400; // 4 hours in seconds

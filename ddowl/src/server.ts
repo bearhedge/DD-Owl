@@ -46,8 +46,8 @@ import { MetricsTracker } from './metrics/tracker.js';
 import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
 import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown, EliminatedResult } from './eliminator.js';
 import { getChineseVariantsLLM } from './utils/chinese.js';
-import { createSession, getSession, updateSession, deleteSession, ScreeningSession } from './session-store.js';
-import { clusterByIncidentLLM, ClusteringResult } from './deduplicator.js';
+import { createSession, getSession, updateSession, deleteSession, ScreeningSession, DetectedCompany } from './session-store.js';
+import { clusterByIncidentLLM, ClusteringResult, ClusterProgressCallback, IncidentCluster } from './deduplicator.js';
 
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -145,6 +145,115 @@ function groupByTitleSimilarity<T extends { title: string; url: string }>(
   }
 
   return { toAnalyze, parked };
+}
+
+// ============================================================
+// PHASE 1.5: COMPANY EXPANSION HELPERS
+// Extract associated companies from SFC/registry pages and search for adverse media
+// ============================================================
+
+/**
+ * Extract company names from SFC/registry pages in search results
+ */
+function extractCompaniesFromResults(results: BatchSearchResult[]): DetectedCompany[] {
+  const companies: DetectedCompany[] = [];
+
+  // Patterns for SFC/registry URLs
+  const registryPatterns = [
+    /sfc\.hk/i,
+    /employproof\.org\/eplicensed/i,
+    /hksecwiki\.com/i,
+    /hkma\.gov\.hk/i,
+    /apps\.sfc\.hk/i,
+  ];
+
+  for (const result of results) {
+    const isRegistry = registryPatterns.some(p => p.test(result.url));
+    if (!isRegistry) continue;
+
+    // Extract company from title - Pattern: "COMPANY_EN COMPANY_CN" or just Chinese
+    // Example: "TransAsia Private Capital 寰亞資本管理- 開戶優惠"
+    const titleMatch = result.title.match(/^([A-Za-z\s]+(?:Limited|Ltd|Capital|Private|Securities|Asset|Management)?)\s*([\u4e00-\u9fff]+)/i);
+    if (titleMatch) {
+      const english = titleMatch[1].trim();
+      const chinese = titleMatch[2].trim();
+      // Only add if we have a meaningful company name (not just single chars)
+      if ((english.length > 3 || chinese.length >= 2) && !companies.find(c => c.chinese === chinese)) {
+        companies.push({
+          english: english,
+          chinese: chinese,
+          source: result.url
+        });
+      }
+    }
+
+    // Also check snippet for company patterns
+    // Look for patterns like "寰亞資本管理有限公司" or "TransAsia Private Capital Limited"
+    const snippet = result.snippet || '';
+    const snippetMatch = snippet.match(/([\u4e00-\u9fff]{2,}(?:資本|资本|證券|证券|投資|投资|管理|基金|控股)(?:有限公司|管理)?)/);
+    if (snippetMatch && !companies.find(c => c.chinese === snippetMatch[1])) {
+      // Try to find English name nearby in snippet
+      const engMatch = snippet.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4})\s*(?:Limited|Ltd|Capital|Private|Securities)?/);
+      companies.push({
+        english: engMatch?.[1] || '',
+        chinese: snippetMatch[1],
+        source: result.url
+      });
+    }
+  }
+
+  // Dedupe by Chinese name
+  const seen = new Set<string>();
+  return companies.filter(c => {
+    if (seen.has(c.chinese)) return false;
+    seen.add(c.chinese);
+    return true;
+  });
+}
+
+/**
+ * Search for adverse media about a company
+ */
+async function searchCompanyAdverseMedia(
+  company: DetectedCompany,
+  signal?: AbortSignal
+): Promise<BatchSearchResult[]> {
+  const results: BatchSearchResult[] = [];
+
+  // Build queries with adverse keywords
+  const queries: string[] = [];
+
+  if (company.english && company.english.length > 3) {
+    queries.push(`"${company.english}" lawsuit OR sued OR debt OR scandal OR fraud`);
+  }
+  if (company.chinese && company.chinese.length >= 2) {
+    queries.push(`"${company.chinese}" 訴訟 OR 醜聞 OR 債務 OR 欺詐 OR 調查 OR 違規`);
+  }
+
+  for (const query of queries) {
+    if (signal?.aborted) break;
+    try {
+      const searchResults = await searchGoogle(query, 1, 10, signal);
+      for (const r of searchResults) {
+        results.push({
+          url: r.link,  // SearchResult uses 'link' not 'url'
+          title: r.title,
+          snippet: r.snippet || '',
+          query: query,
+        });
+      }
+    } catch (e) {
+      console.error(`[COMPANY_EXPANSION] Search failed for ${company.chinese}:`, e);
+    }
+  }
+
+  // Dedupe by URL
+  const seen = new Set<string>();
+  return results.filter(r => {
+    if (seen.has(r.url)) return false;
+    seen.add(r.url);
+    return true;
+  });
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1029,6 +1138,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     let skipCategorize = false;
     let skipConsolidate = false;
     let analyzeStartIndex = 0;
+    let gatherStartIndex = 0;  // For mid-gather resume
+    let companyExpansionStartIndex = 0;  // For mid-company-expansion resume
+    let restoredDetectedCompanies: DetectedCompany[] | null = null;  // For mid-company-expansion resume
+    let clusterStartBatchIndex = 0;  // For mid-clustering resume
+    let restoredClusterBatchResults: IncidentCluster[] | null = null;  // For mid-clustering resume
+    let categorizeBatchStartIndex = 0;  // For mid-categorize resume
+    let restoredCategorizePartialResults: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] } | null = null;  // For mid-categorize resume
     let restoredCategorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] } | null = null;
     let restoredPassed: BatchSearchResult[] | null = null;
     let restoredConsolidated: ConsolidatedFinding[] | null = null;
@@ -1039,18 +1155,94 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       const phase = existingSession.currentPhase;
       console.log(`[V4] Restoring from phase: ${phase}`);
 
+      // Mid-gather resume: if we have partial gather progress, resume from there
+      if (phase === 'gather' && existingSession.gatherIndex && existingSession.gatherIndex > 0) {
+        gatherStartIndex = existingSession.gatherIndex;
+        restoredResults = existingSession.gatheredResults || [];
+        console.log(`[V4] Resuming gather from query ${gatherStartIndex + 1}, restored ${restoredResults.length} results`);
+        sendEvent({
+          type: 'phase_resumed',
+          phase: 'gather',
+          message: `Resuming gather from query ${gatherStartIndex + 1}`,
+          resultsRestored: restoredResults.length
+        });
+      }
+
+      // Mid-company-expansion resume: if we have partial company expansion progress
+      if (phase === 'gather' && existingSession.companyExpansionIndex && existingSession.companyExpansionIndex > 0) {
+        companyExpansionStartIndex = existingSession.companyExpansionIndex;
+        restoredResults = existingSession.gatheredResults || [];
+        restoredDetectedCompanies = existingSession.detectedCompanies || null;
+        // Skip the gather phase since company expansion means gather is done
+        skipGather = true;
+        console.log(`[V4] Resuming company expansion from company ${companyExpansionStartIndex + 1}, restored ${restoredResults.length} results`);
+        sendEvent({
+          type: 'phase_resumed',
+          phase: 'company_expansion',
+          message: `Resuming company expansion from company ${companyExpansionStartIndex + 1}`,
+          resultsRestored: restoredResults.length
+        });
+      }
+
+      // Mid-clustering resume: if we have partial clustering progress
+      if (phase === 'cluster' && existingSession.clusterBatchIndex && existingSession.clusterBatchIndex > 0) {
+        clusterStartBatchIndex = existingSession.clusterBatchIndex;
+        restoredClusterBatchResults = existingSession.clusterBatchResults || null;
+        skipGather = true;
+        skipElimination = true;
+        restoredResults = existingSession.gatheredResults;
+        restoredPassed = existingSession.passedElimination;
+        console.log(`[V4] Resuming clustering from batch ${clusterStartBatchIndex + 1}, ${restoredClusterBatchResults?.length || 0} clusters so far`);
+        sendEvent({
+          type: 'phase_resumed',
+          phase: 'cluster',
+          message: `Resuming clustering from batch ${clusterStartBatchIndex + 1}`,
+          clustersRestored: restoredClusterBatchResults?.length || 0
+        });
+        sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
+        sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
+      }
+
+      // Mid-categorize resume: if we have partial categorization progress
+      if (phase === 'categorize' && existingSession.categorizeBatchIndex && existingSession.categorizeBatchIndex > 0) {
+        categorizeBatchStartIndex = existingSession.categorizeBatchIndex;
+        restoredCategorizePartialResults = existingSession.categorizePartialResults || null;
+        skipGather = true;
+        skipElimination = true;
+        skipCluster = true;
+        restoredResults = existingSession.gatheredResults;
+        restoredPassed = existingSession.passedElimination;
+        console.log(`[V4] Resuming categorize from batch ${categorizeBatchStartIndex + 1}, ${restoredCategorizePartialResults?.red.length || 0} red, ${restoredCategorizePartialResults?.amber.length || 0} amber, ${restoredCategorizePartialResults?.green.length || 0} green so far`);
+        sendEvent({
+          type: 'phase_resumed',
+          phase: 'categorize',
+          message: `Resuming categorize from batch ${categorizeBatchStartIndex + 1}`,
+          partialResults: {
+            red: restoredCategorizePartialResults?.red.length || 0,
+            amber: restoredCategorizePartialResults?.amber.length || 0,
+            green: restoredCategorizePartialResults?.green.length || 0
+          }
+        });
+        sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
+        sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
+        sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
+      }
+
       if (phase === 'eliminate' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
         skipGather = true;
         restoredResults = existingSession.gatheredResults;
         sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
       }
 
-      if (phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
+      if (phase === 'cluster' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
         skipElimination = true;
-        skipCluster = true;
+        // Only skip cluster if we're past it (categorize or later), not if we're mid-cluster
+        if (phase !== 'cluster') {
+          skipCluster = true;
+          sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
+        }
         restoredPassed = existingSession.passedElimination;
         sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
-        sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
       }
 
       if (phase === 'analyze' || phase === 'consolidate') {
@@ -1130,28 +1322,31 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 1: GATHER ALL URLs
     // ========================================
-    let allResults: BatchSearchResult[] = [];
+    // Initialize with restored results if mid-gather resume, otherwise empty
+    let allResults: BatchSearchResult[] = gatherStartIndex > 0 ? [...restoredResults] : [];
 
     if (skipGather && restoredResults.length > 0) {
       // Skip gather phase - use restored results from session
       allResults = restoredResults;
       console.log(`[V4] Skipped gather phase, using ${allResults.length} restored results`);
     } else {
-      const totalSearches = selectedTemplates.length;
+      const totalSearches = selectedTemplates.length - gatherStartIndex;
       const nameVariantsDisplay = nameVariations.length > 1
         ? `${nameVariations.length} name variants using OR (${nameVariations.join(', ')})`
         : nameVariations[0];
+      const resumeInfo = gatherStartIndex > 0 ? ` (resuming from query ${gatherStartIndex + 1})` : '';
       sendEvent({
         type: 'phase',
         phase: 1,
         name: 'GATHER',
-        message: `Gathering results for ${nameVariantsDisplay}, ${selectedTemplates.length} templates (${totalSearches} searches)...`
+        message: `Gathering results for ${nameVariantsDisplay}, ${selectedTemplates.length} templates${resumeInfo}...`
       });
 
       // Search with all name variants combined using OR in each query
-      let searchesDone = 0;
+      let searchesDone = gatherStartIndex;
 
-      for (let i = 0; i < selectedTemplates.length; i++) {
+      // Start from gatherStartIndex to skip already-completed queries on mid-gather resume
+      for (let i = gatherStartIndex; i < selectedTemplates.length; i++) {
 
       const template = selectedTemplates[i];
 
@@ -1213,6 +1408,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
       tracker.recordQuery(googleResults.length);
 
+      // Save progress after EACH query completes (for mid-gather resume)
+      await updateSession(sessionId, {
+        gatheredResults: allResults,
+        gatherIndex: i + 1,  // 1-indexed: completed queries
+        currentPhase: 'gather'
+      });
+
       await new Promise(r => setTimeout(r, 500));
     }
 
@@ -1250,9 +1452,87 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         results: allResults, // Include results for reconnection persistence
       });
 
-      // Update session with gathered results (Redis)
-      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate' });
+      // Update session with gathered results (Redis) - clear gatherIndex to indicate gather is fully complete
+      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate', gatherIndex: undefined });
     } // End of gather phase else block
+
+    // ========================================
+    // PHASE 1.5: COMPANY EXPANSION
+    // Detect associated companies from SFC/registry pages and search for their adverse media
+    // ========================================
+    // Run company expansion if: (1) fresh gather completed, OR (2) resuming mid-company-expansion
+    const shouldRunCompanyExpansion = (!skipGather && allResults.length > 0) || companyExpansionStartIndex > 0;
+
+    if (shouldRunCompanyExpansion) {
+      // Use restored companies if resuming mid-company-expansion, otherwise extract from results
+      const detectedCompanies = restoredDetectedCompanies || extractCompaniesFromResults(allResults);
+
+      if (detectedCompanies.length > 0) {
+        const resumeInfo = companyExpansionStartIndex > 0 ? ` (resuming from company ${companyExpansionStartIndex + 1})` : '';
+        sendEvent({
+          type: 'phase',
+          phase: '1.5',
+          name: 'COMPANY_EXPANSION',
+          message: `Detected ${detectedCompanies.length} associated companies from registry pages${resumeInfo}`
+        });
+
+        console.log(`[V4] [COMPANY_EXPANSION] Detected companies:`, detectedCompanies.map(c => c.chinese || c.english));
+
+        // Start from companyExpansionStartIndex to skip already-completed companies on resume
+        for (let compIdx = companyExpansionStartIndex; compIdx < detectedCompanies.length; compIdx++) {
+          const company = detectedCompanies[compIdx];
+          if (signal.aborted) break;
+
+          const companyName = company.chinese || company.english;
+          sendEvent({
+            type: 'progress',
+            message: `Searching adverse media for ${companyName} (${compIdx + 1}/${detectedCompanies.length})...`
+          });
+
+          const companyResults = await searchCompanyAdverseMedia(company, signal);
+
+          if (companyResults.length > 0) {
+            sendEvent({
+              type: 'progress',
+              message: `Found ${companyResults.length} results for ${companyName}`
+            });
+
+            // Tag results as company-sourced and add to allResults
+            for (const r of companyResults) {
+              (r as any).sourceCompany = companyName;
+              // Only add if URL not already in results
+              if (!allResults.find(existing => existing.url === r.url)) {
+                allResults.push(r);
+              }
+            }
+          } else {
+            sendEvent({
+              type: 'progress',
+              message: `No adverse media found for ${companyName}`
+            });
+          }
+
+          // Save progress after EACH company (for mid-company-expansion resume)
+          await updateSession(sessionId, {
+            gatheredResults: allResults,
+            detectedCompanies,
+            companyExpansionIndex: compIdx + 1,  // 1-indexed: completed companies
+            currentPhase: 'gather'  // Still in gather phase during company expansion
+          });
+        }
+
+        sendEvent({
+          type: 'phase_complete',
+          phase: '1.5',
+          count: allResults.length,
+          companies: detectedCompanies.map(c => ({ english: c.english, chinese: c.chinese })),
+          message: `Company expansion complete. Total results: ${allResults.length}`
+        });
+
+        // Update session with expanded results - clear companyExpansionIndex to indicate expansion is complete
+        await updateSession(sessionId, { gatheredResults: allResults, detectedCompanies, companyExpansionIndex: undefined });
+      }
+    }
 
     if (allResults.length === 0) {
       clearInterval(heartbeat);
@@ -1380,7 +1660,46 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       const clusterStart = Date.now();
-      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 3);
+
+      // Progress callback for clustering - sends SSE events AND saves to session for resume
+      const clusterProgress: ClusterProgressCallback = async (progress) => {
+        if (progress.type === 'batch_start') {
+          sendEvent({
+            type: 'cluster_batch_start',
+            batch: progress.batch,
+            totalBatches: progress.totalBatches,
+            articlesInBatch: progress.articlesInBatch,
+            message: progress.message,
+          });
+        } else if (progress.type === 'batch_complete') {
+          sendEvent({
+            type: 'cluster_batch_complete',
+            batch: progress.batch,
+            totalBatches: progress.totalBatches,
+            clustersFound: progress.clustersFound,
+            clusterLabels: progress.clusterLabels,
+            message: progress.message,
+          });
+
+          // Save cluster progress for mid-clustering resume
+          if (progress.clustersSoFar) {
+            await updateSession(sessionId, {
+              clusterBatchIndex: progress.batch,
+              clusterBatchResults: progress.clustersSoFar,
+              currentPhase: 'cluster'
+            });
+          }
+        } else if (progress.type === 'merge_complete') {
+          sendEvent({
+            type: 'cluster_merge_complete',
+            totalClusters: progress.totalClusters,
+            clusterLabels: progress.clusterLabels,
+            message: progress.message,
+          });
+        }
+      };
+
+      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 3, clusterProgress);
 
       // Send cluster summary
       sendEvent({
@@ -1404,9 +1723,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         });
       }
 
-      // Continue with deduplicated results
+      // Continue with deduplicated results - clear cluster progress fields
       passed = clusterResult.toAnalyze;
-      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'categorize' });
+      await updateSession(sessionId, {
+        passedElimination: passed,
+        currentPhase: 'categorize',
+        clusterBatchIndex: undefined,
+        clusterBatchResults: undefined
+      });
     }
 
     if (passed.length === 0) {
@@ -1427,10 +1751,39 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       categorized = restoredCategorized;
       console.log(`[V4] Skipped categorize phase, using restored categorization (${categorized.red.length} RED, ${categorized.amber.length} AMBER)`);
     } else {
-      sendEvent({ type: 'phase', phase: 3, name: 'CATEGORIZE', message: `Categorizing ${passed.length} results...` });
-
       const categorizeStart = Date.now();
-      categorized = await categorizeAll(passed, subjectName, (progress) => {
+
+      // Calculate items to skip for mid-categorize resume
+      const CATEGORIZE_BATCH_SIZE = 50;
+      const itemsToSkip = categorizeBatchStartIndex * CATEGORIZE_BATCH_SIZE;
+      const remainingItems = passed.slice(itemsToSkip);
+
+      // Track partial results for mid-categorize resume
+      // Start with restored partial results if resuming
+      const partialCategorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] } =
+        restoredCategorizePartialResults || { red: [], amber: [], green: [] };
+
+      if (categorizeBatchStartIndex > 0) {
+        console.log(`[V4] Resuming categorize from batch ${categorizeBatchStartIndex + 1}, skipping ${itemsToSkip} items, ${remainingItems.length} remaining`);
+        sendEvent({
+          type: 'phase',
+          phase: 3,
+          name: 'CATEGORIZE',
+          message: `Resuming categorize from batch ${categorizeBatchStartIndex + 1}: ${remainingItems.length} items remaining...`
+        });
+      } else {
+        sendEvent({ type: 'phase', phase: 3, name: 'CATEGORIZE', message: `Categorizing ${passed.length} results...` });
+      }
+
+      // Categorize remaining items
+      const newCategorized = await categorizeAll(remainingItems, subjectName, async (progress) => {
+        // Adjust batch number to account for skipped batches
+        const adjustedBatchNumber = progress.batchNumber + categorizeBatchStartIndex;
+      // Accumulate results for session persistence
+      partialCategorized.red.push(...progress.batchResult.red);
+      partialCategorized.amber.push(...progress.batchResult.amber);
+      partialCategorized.green.push(...progress.batchResult.green);
+
       // Send individual categorized_item events AS THEY HAPPEN (not after all batches)
       for (const item of progress.batchResult.red) {
         sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
@@ -1440,18 +1793,31 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       }
       // Don't log GREEN items to reduce noise - there are many
 
-      // Send batch progress summary
+      // Send batch progress summary (use adjusted batch number for consistency)
+      const adjustedTotalBatches = progress.totalBatches + categorizeBatchStartIndex;
+      const adjustedProcessedSoFar = progress.processedSoFar + itemsToSkip;
       sendEvent({
         type: 'categorize_batch_complete',
-        batch: progress.batchNumber,
-        totalBatches: progress.totalBatches,
-        processedSoFar: progress.processedSoFar,
-        totalItems: progress.totalItems,
+        batch: adjustedBatchNumber,
+        totalBatches: adjustedTotalBatches,
+        processedSoFar: adjustedProcessedSoFar,
+        totalItems: passed.length,  // Use total items, not just remaining
         batchRed: progress.batchResult.red.length,
         batchAmber: progress.batchResult.amber.length,
         batchGreen: progress.batchResult.green.length,
       });
+
+      // Save categorize progress for mid-categorize resume (use adjusted batch number)
+      await updateSession(sessionId, {
+        categorizePartialResults: { ...partialCategorized },
+        categorizeBatchIndex: adjustedBatchNumber,
+        currentPhase: 'categorize'
+      });
     });
+
+      // Merge new results with any restored partial results
+      // partialCategorized already contains both restored + newly categorized items
+      categorized = partialCategorized;
 
       sendEvent({
         type: 'categorize_complete',
@@ -1525,8 +1891,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       categorized.red = redGrouped.toAnalyze;
       categorized.amber = amberGrouped.toAnalyze;
 
-      // Update session with deduplicated categorized results
-      await updateSession(sessionId, { categorized, currentPhase: 'analyze' });
+      // Update session with deduplicated categorized results - clear categorize progress fields
+      await updateSession(sessionId, {
+        categorized,
+        currentPhase: 'analyze',
+        categorizeBatchIndex: undefined,
+        categorizePartialResults: undefined
+      });
     } // End of categorize phase else block
 
     tracker.recordTriage(categorized.red.length, categorized.amber.length, categorized.green.length);
@@ -1569,9 +1940,6 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     for (let i = analyzeStartIndex; i < toProcess.length; i++) {
       const item = toProcess[i];
-
-      // Update session progress for reconnection (Redis)
-      await updateSession(sessionId, { currentIndex: i, findings: allFindings });
 
       // Skip duplicates
       if (processedUrls.has(item.url)) {
@@ -1691,6 +2059,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         console.error(`[V4] Analysis ${isTimeout ? 'timed out' : 'failed'} for ${item.url}:`, err);
         sendEvent({ type: 'analyze_error', url: item.url, error: isTimeout ? 'Timeout (2min) - skipped' : 'Failed to fetch/analyze' });
       }
+
+      // Save progress AFTER this article is fully processed (for mid-analyze resume)
+      // Use i + 1 so on resume we start with the NEXT article, not re-analyze this one
+      await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
     }
 
     // ========================================
@@ -1842,6 +2214,54 @@ app.get('/screening', (req: Request, res: Response) => {
 
 app.get('/verify-import', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/verify-import.html'));
+});
+
+// ============================================================
+// SESSION STATUS API - Check if a screening session exists
+// Used for resume functionality when user reopens page
+// ============================================================
+app.get('/api/session/:sessionId/status', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+
+  try {
+    const session = await getSession(sessionId);
+
+    if (!session) {
+      res.json({ exists: false });
+      return;
+    }
+
+    // Calculate progress info
+    let progress = '';
+    if (session.currentPhase === 'gather') {
+      progress = `${session.gatheredResults?.length || 0} URLs gathered`;
+    } else if (session.currentPhase === 'eliminate' || session.currentPhase === 'cluster') {
+      progress = `${session.passedElimination?.length || session.gatheredResults?.length || 0} articles`;
+    } else if (session.currentPhase === 'categorize') {
+      const red = session.categorized?.red?.length || 0;
+      const amber = session.categorized?.amber?.length || 0;
+      progress = `${red} RED, ${amber} AMBER flagged`;
+    } else if (session.currentPhase === 'analyze') {
+      const total = (session.categorized?.red?.length || 0) + (session.categorized?.amber?.length || 0);
+      progress = `${session.currentIndex || 0}/${total} articles analyzed`;
+    } else if (session.currentPhase === 'consolidate') {
+      progress = `${session.findings?.length || 0} findings to consolidate`;
+    } else if (session.currentPhase === 'complete') {
+      progress = `${session.consolidatedFindings?.length || session.findings?.length || 0} findings`;
+    }
+
+    res.json({
+      exists: true,
+      name: session.name,
+      phase: session.currentPhase,
+      progress,
+      findingsCount: session.findings?.length || 0,
+      gatheredCount: session.gatheredResults?.length || 0,
+    });
+  } catch (e) {
+    console.error(`[SESSION] Error getting status for ${sessionId}:`, e);
+    res.json({ exists: false });
+  }
 });
 
 // Historical import verification API

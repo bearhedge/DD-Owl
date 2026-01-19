@@ -315,11 +315,25 @@ function selectBestArticles(
   return { toAnalyze, parked };
 }
 
+// Progress callback type for clustering
+export type ClusterProgressCallback = (progress: {
+  type: 'batch_start' | 'batch_complete' | 'merge_complete';
+  batch?: number;
+  totalBatches?: number;
+  articlesInBatch?: number;
+  clustersFound?: number;
+  clusterLabels?: string[];
+  totalClusters?: number;
+  message?: string;
+  clustersSoFar?: IncidentCluster[];  // Accumulated clusters for session persistence
+}) => void | Promise<void>;  // Allow async callbacks for session saves
+
 // Main entry point: cluster articles by incident using LLM
 export async function clusterByIncidentLLM(
   articles: BatchSearchResult[],
   subjectName: string,
-  maxPerCluster: number = 3
+  maxPerCluster: number = 3,
+  onProgress?: ClusterProgressCallback
 ): Promise<ClusteringResult> {
   console.log(`[CLUSTER] Starting clustering for ${articles.length} articles about "${subjectName}"`);
 
@@ -335,6 +349,14 @@ export async function clusterByIncidentLLM(
   // If few articles, don't bother clustering
   if (articles.length <= maxPerCluster) {
     console.log(`[CLUSTER] Only ${articles.length} articles, skipping clustering`);
+    onProgress?.({
+      type: 'batch_complete',
+      batch: 1,
+      totalBatches: 1,
+      clustersFound: 1,
+      clusterLabels: ['All articles'],
+      message: `Only ${articles.length} articles, no clustering needed`
+    });
     return {
       clusters: [{
         id: 'single-cluster',
@@ -361,10 +383,45 @@ export async function clusterByIncidentLLM(
   }
   console.log(`[CLUSTER] Split into ${batches.length} batches`);
 
-  // Process batches in parallel
-  const batchResults = await Promise.all(
-    batches.map((batch, i) => clusterBatch(batch, subjectName, i))
-  );
+  // Process batches SEQUENTIALLY to avoid rate limits
+  // (Parallel processing causes failures with 700+ articles)
+  const batchResults: { clusters: IncidentCluster[]; articleIndexOffset: number }[] = [];
+  for (let i = 0; i < batches.length; i++) {
+    // Notify batch start
+    await onProgress?.({
+      type: 'batch_start',
+      batch: i + 1,
+      totalBatches: batches.length,
+      articlesInBatch: batches[i].length,
+      message: `Processing batch ${i + 1}/${batches.length} (${batches[i].length} articles)...`
+    });
+
+    console.log(`[CLUSTER] Processing batch ${i + 1}/${batches.length} (${batches[i].length} articles)...`);
+    const result = await clusterBatch(batches[i], subjectName, i);
+    batchResults.push(result);
+
+    // Collect all clusters so far for session persistence
+    const clustersSoFar: IncidentCluster[] = [];
+    for (const r of batchResults) {
+      clustersSoFar.push(...r.clusters);
+    }
+
+    // Notify batch complete with accumulated clusters
+    await onProgress?.({
+      type: 'batch_complete',
+      batch: i + 1,
+      totalBatches: batches.length,
+      clustersFound: result.clusters.length,
+      clusterLabels: result.clusters.map(c => c.label),
+      message: `Batch ${i + 1} complete: found ${result.clusters.length} incidents`,
+      clustersSoFar,  // Include accumulated clusters for session persistence
+    });
+
+    // Small delay between batches to avoid rate limits
+    if (i < batches.length - 1) {
+      await new Promise(r => setTimeout(r, 500));
+    }
+  }
 
   // Collect all clusters
   let allClusters: IncidentCluster[] = [];
@@ -376,6 +433,14 @@ export async function clusterByIncidentLLM(
   // Merge similar clusters across batches
   const mergedClusters = mergeSimilarClusters(allClusters);
   console.log(`[CLUSTER] ${mergedClusters.length} clusters after merging`);
+
+  // Notify merge complete
+  await onProgress?.({
+    type: 'merge_complete',
+    totalClusters: mergedClusters.length,
+    clusterLabels: mergedClusters.map(c => c.label),
+    message: `Merged ${allClusters.length} batch clusters → ${mergedClusters.length} unique incidents`
+  });
 
   // Log cluster summary
   console.log(`[CLUSTER] Identified ${mergedClusters.length} incidents:`);

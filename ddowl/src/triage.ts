@@ -534,7 +534,7 @@ export interface BatchProgress {
 export async function categorizeAll(
   results: BatchSearchResult[],
   subjectName: string,
-  onBatchComplete?: (progress: BatchProgress) => void
+  onBatchComplete?: (progress: BatchProgress) => void | Promise<void>  // Allow async callbacks
 ): Promise<CategorizedOutput> {
   if (results.length === 0) {
     return { red: [], amber: [], green: [] };
@@ -555,9 +555,9 @@ export async function categorizeAll(
     output.amber.push(...batchResult.amber);
     output.green.push(...batchResult.green);
 
-    // Fire callback after each batch to allow progress reporting
+    // Fire callback after each batch to allow progress reporting (await for async callbacks)
     if (onBatchComplete) {
-      onBatchComplete({
+      await onBatchComplete({
         batchNumber,
         totalBatches,
         batchSize: batch.length,
