@@ -1087,34 +1087,74 @@
       line-height: 1.6;
     }
 
-    /* Paused Session Card */
-    .paused-session-card {
-      background: #1a1a1a;
-      border: 2px solid #f5a623;
-      border-radius: 12px;
+    /* Progress Card - handles running, paused, complete states */
+    .progress-card {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
       padding: 20px;
       margin-bottom: 24px;
-      max-width: 500px;
+      max-width: 600px;
       margin-left: auto;
       margin-right: auto;
     }
-    .paused-header {
-      font-size: 18px;
+    .progress-card.running { border-color: #4a9eff; }
+    .progress-card.paused { border-color: #f5a623; }
+    .progress-card.complete { border-color: #2ed573; }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 8px;
-      color: #f5a623;
     }
-    .paused-indicator {
-      margin-right: 8px;
+    .progress-title {
+      font-size: 16px;
+      color: #e0e0e0;
     }
-    .paused-status {
+    .progress-title .status-icon { margin-right: 8px; }
+    .progress-percentage {
+      font-size: 24px;
+      font-weight: bold;
+      color: #4a9eff;
+    }
+    .progress-card.paused .progress-percentage { color: #f5a623; }
+    .progress-card.complete .progress-percentage { color: #2ed573; }
+    .progress-bar-container {
+      background: #222;
+      border-radius: 4px;
+      height: 8px;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      background: linear-gradient(90deg, #4a9eff, #2ed573);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .progress-card.paused .progress-bar-fill { background: #f5a623; }
+    .progress-card.complete .progress-bar-fill { background: #2ed573; }
+    .progress-stats {
       color: #888;
       font-size: 14px;
       margin-bottom: 16px;
     }
-    .paused-actions {
+    .progress-actions {
       display: flex;
       gap: 12px;
     }
+    .btn-pause {
+      background: #333;
+      color: #e0e0e0;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    .btn-pause:hover { background: #444; }
     .btn-resume {
       background: #f5a623;
       color: black;
@@ -1126,10 +1166,8 @@
       font-weight: 600;
       font-family: inherit;
     }
-    .btn-resume:hover {
-      background: #ffc04d;
-    }
-    .btn-discard {
+    .btn-resume:hover { background: #ffc04d; }
+    .btn-cancel, .btn-discard {
       background: transparent;
       color: #888;
       padding: 10px 24px;
@@ -1139,10 +1177,35 @@
       font-size: 14px;
       font-family: inherit;
     }
-    .btn-discard:hover {
+    .btn-cancel:hover, .btn-discard:hover {
       color: #ff4757;
       border-color: #ff4757;
     }
+    .btn-report {
+      background: #2ed573;
+      color: black;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    .btn-report:hover { background: #7bed9f; }
+    .btn-new-search {
+      background: transparent;
+      color: #888;
+      padding: 10px 24px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .btn-new-search:hover { color: #fff; border-color: #666; }
+    /* Keep old paused card classes for compatibility */
+    .paused-session-card { display: none !important; }
 
     /* Recent Sessions Panel */
     .recent-sessions-panel {
@@ -1232,18 +1295,29 @@
         <p class="subtitle">Red Flag Detector</p>
       </header>
 
-      <!-- Paused Session Card - shown when there's a paused session -->
-      <div id="pausedSessionCard" class="paused-session-card" style="display: none;">
-        <div class="paused-header">
-          <span class="paused-indicator"></span>
-          <span>Paused: <strong id="pausedName"></strong></span>
+      <!-- Progress Card - shows running/paused/complete states -->
+      <div id="progressCard" class="progress-card" style="display: none;">
+        <div class="progress-header">
+          <div class="progress-title">
+            <span class="status-icon" id="progressIcon"></span>
+            <span id="progressLabel">Screening:</span>
+            <strong id="progressName"></strong>
+          </div>
+          <div class="progress-percentage" id="progressPercentage">0%</div>
         </div>
-        <div class="paused-status" id="pausedStatus"></div>
-        <div class="paused-actions">
-          <button onclick="resumePausedSession()" class="btn-resume">Resume</button>
-          <button onclick="discardPausedSession()" class="btn-discard">Discard</button>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <div class="progress-stats" id="progressStats">0 RED, 0 AMBER found</div>
+        <div class="progress-actions" id="progressActions">
+          <!-- Actions dynamically updated based on state -->
+          <button onclick="pauseSearch()" class="btn-pause" id="pauseBtn">Pause</button>
+          <button onclick="cancelSearch()" class="btn-cancel" id="cancelBtn">Cancel</button>
         </div>
       </div>
+
+      <!-- Legacy paused session card - hidden -->
+      <div id="pausedSessionCard" class="paused-session-card" style="display: none;"></div>
 
       <div class="search-box">
         <!-- Main row: Name + Language + Screen -->
@@ -1781,13 +1855,109 @@
       await checkForPausedSession();
     });
 
+    // ===== PROGRESS BAR SYSTEM =====
+    // Phase weights for overall progress calculation
+    const PHASE_WEIGHTS = {
+      gather: { start: 0, weight: 15 },      // 0-15%
+      eliminate: { start: 15, weight: 5 },   // 15-20%
+      cluster: { start: 20, weight: 15 },    // 20-35%
+      categorize: { start: 35, weight: 25 }, // 35-60%
+      analyze: { start: 60, weight: 30 },    // 60-90%
+      consolidate: { start: 90, weight: 10 } // 90-100%
+    };
+
+    // Current progress state
+    let progressState = {
+      percentage: 0,
+      redCount: 0,
+      amberCount: 0,
+      subjectName: '',
+      state: 'idle' // 'running', 'paused', 'complete'
+    };
+
+    // Calculate overall progress from phase and batch info
+    function calculateOverallProgress(phase, batchCurrent, batchTotal) {
+      const phaseInfo = PHASE_WEIGHTS[phase];
+      if (!phaseInfo) return progressState.percentage; // Keep current if unknown phase
+
+      const phaseProgress = batchTotal > 0 ? (batchCurrent / batchTotal) * 100 : 0;
+      return Math.round(phaseInfo.start + (phaseProgress / 100) * phaseInfo.weight);
+    }
+
+    // Update the progress card UI
+    function updateProgressCard(state, percentage, redCount, amberCount, subjectName) {
+      const card = document.getElementById('progressCard');
+      const fill = document.getElementById('progressBarFill');
+      const pct = document.getElementById('progressPercentage');
+      const stats = document.getElementById('progressStats');
+      const nameEl = document.getElementById('progressName');
+      const labelEl = document.getElementById('progressLabel');
+      const iconEl = document.getElementById('progressIcon');
+      const actionsEl = document.getElementById('progressActions');
+
+      // Update state
+      progressState = { percentage, redCount, amberCount, subjectName, state };
+
+      // Show card
+      card.style.display = 'block';
+      card.className = 'progress-card ' + state;
+
+      // Update content
+      fill.style.width = percentage + '%';
+      pct.textContent = percentage + '%';
+      stats.textContent = `${redCount} RED, ${amberCount} AMBER found`;
+      nameEl.textContent = subjectName;
+
+      // Update based on state
+      if (state === 'running') {
+        iconEl.textContent = '';
+        labelEl.textContent = 'Screening:';
+        actionsEl.innerHTML = `
+          <button onclick="pauseSearch()" class="btn-pause">Pause</button>
+          <button onclick="cancelSearch()" class="btn-cancel">Cancel</button>
+        `;
+      } else if (state === 'paused') {
+        iconEl.textContent = '🟡';
+        labelEl.textContent = 'Paused:';
+        actionsEl.innerHTML = `
+          <button onclick="resumePausedSession()" class="btn-resume">Resume</button>
+          <button onclick="discardPausedSession()" class="btn-discard">Discard</button>
+        `;
+      } else if (state === 'complete') {
+        iconEl.textContent = '✓';
+        labelEl.textContent = 'Complete:';
+        actionsEl.innerHTML = `
+          <button onclick="showReportModal()" class="btn-report">Generate Report</button>
+          <button onclick="startNewSearch()" class="btn-new-search">New Search</button>
+        `;
+      }
+    }
+
+    // Hide the progress card
+    function hideProgressCard() {
+      document.getElementById('progressCard').style.display = 'none';
+      progressState.state = 'idle';
+    }
+
+    // Start a new search (clears everything)
+    function startNewSearch() {
+      hideProgressCard();
+      document.getElementById('nameInput').value = '';
+      document.getElementById('resultsSection').classList.remove('active');
+      sessionId = null;
+      localStorage.removeItem('ddowl_sessionId');
+      localStorage.removeItem('ddowl_sessionName');
+    }
+
+    // ===== END PROGRESS BAR SYSTEM =====
+
     // Check localStorage for a paused session on page load
     async function checkForPausedSession() {
       const savedSessionId = localStorage.getItem('ddowl_sessionId');
       const savedName = localStorage.getItem('ddowl_sessionName');
 
       if (!savedSessionId || !savedName) {
-        document.getElementById('pausedSessionCard').style.display = 'none';
+        hideProgressCard();
         return;
       }
 
@@ -1796,19 +1966,20 @@
         const status = await response.json();
 
         if (status.exists && status.phase !== 'complete') {
-          // Show paused session card
-          document.getElementById('pausedName').textContent = savedName;
-          document.getElementById('pausedStatus').textContent = `${status.phase} - ${status.progress}`;
-          document.getElementById('pausedSessionCard').style.display = 'block';
+          // Show paused progress card with estimated percentage
+          const percentage = PHASE_WEIGHTS[status.phase]?.start || 0;
+          const red = status.stats?.red || 0;
+          const amber = status.stats?.amber || 0;
+          updateProgressCard('paused', percentage, red, amber, savedName);
         } else {
           // Session expired or completed, clear localStorage
           localStorage.removeItem('ddowl_sessionId');
           localStorage.removeItem('ddowl_sessionName');
-          document.getElementById('pausedSessionCard').style.display = 'none';
+          hideProgressCard();
         }
       } catch (e) {
         console.error('Failed to check session status:', e);
-        document.getElementById('pausedSessionCard').style.display = 'none';
+        hideProgressCard();
       }
     }
 
@@ -1821,8 +1992,8 @@
       localStorage.removeItem('ddowl_sessionName');
       sessionId = null;
 
-      // Hide card
-      document.getElementById('pausedSessionCard').style.display = 'none';
+      // Hide progress card
+      hideProgressCard();
 
       // Delete from server too
       if (savedSessionId) {
@@ -1832,6 +2003,73 @@
           console.error('Failed to delete session from server:', e);
         }
       }
+    }
+
+    // Pause active search
+    async function pauseSearch() {
+      if (!sessionId) return;
+
+      // Tell server to pause
+      try {
+        await fetch(`/api/session/${sessionId}/pause`, { method: 'POST' });
+      } catch (e) {
+        console.error('Failed to pause:', e);
+      }
+
+      // Close SSE connection
+      if (currentEventSource) {
+        currentEventSource.close();
+        currentEventSource = null;
+      }
+      if (currentHealthCheckInterval) {
+        clearInterval(currentHealthCheckInterval);
+        currentHealthCheckInterval = null;
+      }
+
+      // Update progress card to paused state
+      updateProgressCard(
+        'paused',
+        progressState.percentage,
+        progressState.redCount,
+        progressState.amberCount,
+        progressState.subjectName
+      );
+
+      addLogEntry('warn', 'Paused. Click Resume to continue.');
+    }
+
+    // Cancel active search entirely
+    async function cancelSearch() {
+      const sid = sessionId;
+
+      // Clear state
+      sessionId = null;
+      localStorage.removeItem('ddowl_sessionId');
+      localStorage.removeItem('ddowl_sessionName');
+
+      // Close SSE connection
+      if (currentEventSource) {
+        currentEventSource.close();
+        currentEventSource = null;
+      }
+      if (currentHealthCheckInterval) {
+        clearInterval(currentHealthCheckInterval);
+        currentHealthCheckInterval = null;
+      }
+
+      // Hide progress card
+      hideProgressCard();
+
+      // Delete session from server
+      if (sid) {
+        try {
+          await fetch(`/api/session/${sid}`, { method: 'DELETE' });
+        } catch (e) {
+          console.error('Failed to delete session:', e);
+        }
+      }
+
+      addLogEntry('warn', 'Search cancelled.');
     }
 
     // Resume paused session
@@ -1975,6 +2213,17 @@
             addLogEntry('search', `━━━ PHASE ${data.phase}: ${data.name} ━━━`);
             addLogEntry('search', data.message);
             updateActivityStats(`Phase ${data.phase}: ${data.name}`);
+            // Update progress bar to phase start percentage
+            const phaseName = data.name?.toLowerCase() || '';
+            const phaseKey = phaseName.includes('gather') ? 'gather' :
+                            phaseName.includes('eliminat') ? 'eliminate' :
+                            phaseName.includes('cluster') ? 'cluster' :
+                            phaseName.includes('categor') ? 'categorize' :
+                            phaseName.includes('analyz') ? 'analyze' :
+                            phaseName.includes('consolid') ? 'consolidate' : null;
+            if (phaseKey && PHASE_WEIGHTS[phaseKey]) {
+              updateProgressCard('running', PHASE_WEIGHTS[phaseKey].start, progressState.redCount, progressState.amberCount, savedName);
+            }
           }
 
           if (data.type === 'phase_skipped') {
@@ -2001,17 +2250,28 @@
           if (data.type === 'cluster_batch_complete') {
             const labels = data.clusterLabels?.slice(0, 5).join(', ') || '';
             addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Found ${data.clustersFound} incidents: ${labels}`);
+            // Update progress bar for clustering
+            const pct = calculateOverallProgress('cluster', data.batch, data.totalBatches);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, savedName);
           }
 
           // Handle categorization
           if (data.type === 'categorize_batch_complete') {
             addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
             updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
+            // Update progress bar for categorization with cumulative counts
+            const pct = calculateOverallProgress('categorize', data.batch, data.totalBatches);
+            const totalRed = (progressState.redCount || 0) + (data.batchRed || 0);
+            const totalAmber = (progressState.amberCount || 0) + (data.batchAmber || 0);
+            updateProgressCard('running', pct, totalRed, totalAmber, savedName);
           }
 
           // Handle analyze
           if (data.type === 'analyze_start') {
             addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
+            // Update progress bar for analyze phase
+            const pct = calculateOverallProgress('analyze', data.index, data.total);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, savedName);
           }
 
           if (data.type === 'analyze_result') {
@@ -2024,6 +2284,10 @@
                 severity: data.severity,
                 summary: data.headline + ' - ' + data.summary
               });
+              // Update progress bar with new finding counts
+              const newRed = progressState.redCount + (data.severity === 'RED' ? 1 : 0);
+              const newAmber = progressState.amberCount + (data.severity === 'AMBER' ? 1 : 0);
+              updateProgressCard('running', progressState.percentage, newRed, newAmber, savedName);
             } else {
               addLogEntry('green', `Clear`, data.url);
             }
@@ -2070,6 +2334,9 @@
             document.getElementById('resumeBtn').style.display = 'none';
             currentEventSource = null;
             updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
+
+            // Update progress bar to complete state
+            updateProgressCard('complete', 100, stats.red || 0, stats.amber || 0, savedName);
 
             // Clear session on complete
             localStorage.removeItem('ddowl_sessionId');
@@ -2239,9 +2506,11 @@
       document.getElementById('activityLog').innerHTML = '';
       document.getElementById('generateReportBtn').disabled = true;
 
-      // Hide paused card, show pause button
-      document.getElementById('pausedSessionCard').style.display = 'none';
-      document.getElementById('disconnectBtn').style.display = 'inline-block';
+      // Show progress card in running state
+      updateProgressCard('running', 0, 0, 0, name);
+
+      // Hide legacy UI elements
+      document.getElementById('disconnectBtn').style.display = 'none';
       document.getElementById('resumeBtn').style.display = 'none';
 
       // Show activity panel
