@@ -962,15 +962,13 @@ export async function extractBanksFromProspectus(pdfBuffer: Buffer): Promise<{
     // Parse banks from the section
     let banks = parseBanksFromSection(sectionText);
 
-    // Always run fallback to catch additional banks (e.g., international offering PLC banks)
-    const fallbackBanks = fallbackBankExtraction(allText);
-
-    // Merge fallback banks that aren't already captured (by raw name)
-    const existingRawNames = new Set(banks.map(b => b.bank.toLowerCase()));
-    for (const fb of fallbackBanks) {
-      if (!existingRawNames.has(fb.bank.toLowerCase())) {
-        banks.push(fb);
-      }
+    // CONDITIONAL FALLBACK: Only run fallback when main extraction finds nothing.
+    // If main extraction found banks, skip fallback (it adds garbage from unrelated mentions).
+    // If main extraction found NOTHING, use fallback as our only source.
+    // See: https://github.com/bearhedge/DD-Owl investigation Jan 2026
+    if (banks.length === 0) {
+      const fallbackBanks = fallbackBankExtraction(allText);
+      banks = fallbackBanks;
     }
 
     // Filter out garbage/invalid bank names
