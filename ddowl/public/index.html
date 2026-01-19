@@ -1855,8 +1855,8 @@
       // Hide paused card
       document.getElementById('pausedSessionCard').style.display = 'none';
 
-      // Start SSE connection to resume - use dedicated resume function
-      startScreeningResume(savedSessionId, savedName);
+      // Start SSE connection to resume - startScreening() handles reconnection
+      startScreening();
     }
 
     // Disconnect active screening (keeps session in Redis)
