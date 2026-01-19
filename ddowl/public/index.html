@@ -404,6 +404,28 @@
       color: #666;
     }
 
+    .copy-log-btn {
+      background: transparent;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 4px 6px;
+      cursor: pointer;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .copy-log-btn:hover {
+      background: #222;
+      color: #7cc576;
+      border-color: #7cc576;
+    }
+    .copy-log-btn.copied {
+      color: #7cc576;
+      border-color: #7cc576;
+    }
+
     .activity-status {
       display: flex;
       align-items: center;
@@ -512,10 +534,16 @@
       text-decoration: underline;
     }
 
-    .toggle-panel {
+    .bottom-controls {
       position: fixed;
       bottom: 20px;
       right: 20px;
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    .toggle-panel {
       padding: 10px 16px;
       background: #1a1a1a;
       border: 1px solid #333;
@@ -523,7 +551,8 @@
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 1px;
-      z-index: 100;
+      cursor: pointer;
+      border-radius: 6px;
     }
 
     .toggle-panel:hover {
@@ -533,6 +562,36 @@
 
     .toggle-panel.hidden {
       display: none;
+    }
+
+    .disconnect-btn {
+      padding: 10px 16px;
+      background: #2a1a1a;
+      border: 1px solid #ff6b6b;
+      color: #ff6b6b;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .disconnect-btn:hover {
+      background: #3a2020;
+    }
+
+    .resume-btn {
+      padding: 10px 16px;
+      background: #1a2a1a;
+      border: 1px solid #7cc576;
+      color: #7cc576;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    .resume-btn:hover {
+      background: #2a3a2a;
     }
 
     /* Report Modal */
@@ -1027,6 +1086,135 @@
       color: #ccc;
       line-height: 1.6;
     }
+
+    /* Paused Session Card */
+    .paused-session-card {
+      background: #1a1a1a;
+      border: 2px solid #f5a623;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .paused-header {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: #f5a623;
+    }
+    .paused-indicator {
+      margin-right: 8px;
+    }
+    .paused-status {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .paused-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-resume {
+      background: #f5a623;
+      color: black;
+      padding: 10px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+    }
+    .btn-resume:hover {
+      background: #ffc04d;
+    }
+    .btn-discard {
+      background: transparent;
+      color: #888;
+      padding: 10px 24px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .btn-discard:hover {
+      color: #ff4757;
+      border-color: #ff4757;
+    }
+
+    /* Recent Sessions Panel */
+    .recent-sessions-panel {
+      max-width: 900px;
+      margin: 0 auto 24px auto;
+      background: #111;
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid #222;
+    }
+    .recent-sessions-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .recent-sessions-header h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .clear-history-btn {
+      background: none;
+      border: none;
+      color: #555;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+    }
+    .clear-history-btn:hover { color: #ff4757; }
+    .recent-session-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: #0a0a0a;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid #1a1a1a;
+    }
+    .recent-session-item:last-child { margin-bottom: 0; }
+    .session-info { flex: 1; }
+    .session-name { font-weight: 600; color: #e0e0e0; font-size: 15px; }
+    .session-meta { font-size: 11px; color: #555; margin-top: 4px; }
+    .session-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      margin-right: 8px;
+      text-transform: uppercase;
+    }
+    .status-in-progress { background: #332b00; color: #ffa502; }
+    .status-complete { background: #1a2d1a; color: #2ed573; }
+    .status-expired { background: #2d1a1a; color: #ff4757; }
+    .session-actions { display: flex; gap: 8px; }
+    .session-actions button {
+      padding: 8px 14px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 11px;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .resume-btn { background: #fff; color: #000; }
+    .resume-btn:hover { background: #e0e0e0; }
+    .delete-btn { background: #1a1a1a; color: #666; border: 1px solid #333 !important; }
+    .delete-btn:hover { background: #222; color: #888; }
   </style>
 </head>
 <body>
@@ -1043,6 +1231,19 @@
         <div class="logo">DD OWL</div>
         <p class="subtitle">Red Flag Detector</p>
       </header>
+
+      <!-- Paused Session Card - shown when there's a paused session -->
+      <div id="pausedSessionCard" class="paused-session-card" style="display: none;">
+        <div class="paused-header">
+          <span class="paused-indicator"></span>
+          <span>Paused: <strong id="pausedName"></strong></span>
+        </div>
+        <div class="paused-status" id="pausedStatus"></div>
+        <div class="paused-actions">
+          <button onclick="resumePausedSession()" class="btn-resume">Resume</button>
+          <button onclick="discardPausedSession()" class="btn-discard">Discard</button>
+        </div>
+      </div>
 
       <div class="search-box">
         <!-- Main row: Name + Language + Screen -->
@@ -1186,6 +1387,12 @@
   <div class="activity-panel" id="activityPanel">
     <div class="activity-header">
       <span class="activity-title">Activity Log</span>
+      <button class="copy-log-btn" onclick="copyActivityLog()" title="Copy log to clipboard">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </button>
       <div class="activity-status">
         <div class="status-dot" id="statusDot"></div>
         <span class="activity-stats" id="activityStats">Ready</span>
@@ -1194,9 +1401,17 @@
     <div class="activity-log" id="activityLog"></div>
   </div>
 
-  <button class="toggle-panel hidden" id="togglePanel" onclick="toggleActivityPanel()">
-    Show Log
-  </button>
+  <div class="bottom-controls">
+    <button class="toggle-panel hidden" id="togglePanel" onclick="toggleActivityPanel()">
+      Show Log
+    </button>
+    <button class="disconnect-btn" id="disconnectBtn" onclick="disconnectScreening()" style="display: none;">
+      Disconnect
+    </button>
+    <button class="resume-btn" id="resumeBtn" onclick="resumeScreening()" style="display: none;">
+      Resume
+    </button>
+  </div>
 
   <script>
     let currentReport = null;
@@ -1207,6 +1422,245 @@
     let urlsProcessed = 0;
     let furtherLinks = []; // Content mismatch items for manual review
     let sessionId = null; // For SSE reconnection (stored in Redis on server)
+
+    // ============================================================
+    // SESSION HISTORY MANAGER - LocalStorage for recent sessions
+    // ============================================================
+    const SessionHistory = {
+      STORAGE_KEY: 'ddowl_recent_sessions',
+      MAX_SESSIONS: 10,
+
+      // Get all recent sessions
+      getAll() {
+        try {
+          const data = localStorage.getItem(this.STORAGE_KEY);
+          return data ? JSON.parse(data) : [];
+        } catch (e) {
+          console.error('Failed to read session history:', e);
+          return [];
+        }
+      },
+
+      // Save a session to history
+      save(session) {
+        const sessions = this.getAll();
+        // Remove existing entry for same sessionId
+        const filtered = sessions.filter(s => s.sessionId !== session.sessionId);
+        // Add new session at front
+        filtered.unshift({
+          sessionId: session.sessionId,
+          subjectName: session.subjectName,
+          language: session.language || 'en',
+          startTime: session.startTime || Date.now(),
+          lastAccess: Date.now(),
+          status: session.status || 'in_progress',
+          phase: session.phase || 'gather',
+          findingsCount: session.findingsCount || 0,
+        });
+        // Keep only MAX_SESSIONS
+        const trimmed = filtered.slice(0, this.MAX_SESSIONS);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(trimmed));
+      },
+
+      // Update session status
+      update(sessionId, updates) {
+        const sessions = this.getAll();
+        const idx = sessions.findIndex(s => s.sessionId === sessionId);
+        if (idx !== -1) {
+          sessions[idx] = { ...sessions[idx], ...updates, lastAccess: Date.now() };
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
+        }
+      },
+
+      // Remove a session
+      remove(sessionId) {
+        const sessions = this.getAll().filter(s => s.sessionId !== sessionId);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(sessions));
+      },
+
+      // Clear all sessions
+      clear() {
+        localStorage.removeItem(this.STORAGE_KEY);
+      }
+    };
+
+    // ============================================================
+    // URL HASH ROUTER - For shareable session URLs
+    // ============================================================
+    const Router = {
+      // Get session ID from URL hash (e.g., /#/session/abc123)
+      getSessionIdFromUrl() {
+        const hash = window.location.hash;
+        const match = hash.match(/^#\/session\/([a-zA-Z0-9-]+)$/);
+        return match ? match[1] : null;
+      },
+
+      // Update URL to session URL (without page reload)
+      setSessionUrl(sessionId) {
+        const newUrl = `${window.location.pathname}#/session/${sessionId}`;
+        window.history.pushState({ sessionId }, '', newUrl);
+      },
+
+      // Clear session from URL (go to homepage)
+      clearSessionUrl() {
+        window.history.pushState({}, '', window.location.pathname);
+      },
+
+      // Check if we're on homepage (no session in URL)
+      isHomepage() {
+        return !this.getSessionIdFromUrl();
+      }
+    };
+
+    // ============================================================
+    // RECENT SESSIONS UI - Render and manage recent sessions panel
+    // ============================================================
+
+    // Helper: time ago formatting
+    function getTimeAgo(timestamp) {
+      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+      if (seconds < 60) return 'just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      return `${Math.floor(seconds / 86400)}d ago`;
+    }
+
+    // Helper: escape HTML to prevent XSS
+    function escapeHtmlForSessions(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Render recent sessions panel
+    async function renderRecentSessions() {
+      const panel = document.getElementById('recent-sessions-panel');
+      const list = document.getElementById('recent-sessions-list');
+      if (!panel || !list) return;
+
+      const sessions = SessionHistory.getAll();
+
+      if (sessions.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      // Validate sessions against backend (check if still exists)
+      const validatedSessions = await Promise.all(sessions.map(async (s) => {
+        try {
+          const resp = await fetch(`/api/session/${s.sessionId}/status`);
+          const data = await resp.json();
+          if (data.exists) {
+            return { ...s, status: data.phase === 'complete' ? 'complete' : 'in_progress', phase: data.phase, findingsCount: data.findingsCount || 0, progress: data.progress };
+          } else {
+            return { ...s, status: 'expired' };
+          }
+        } catch (e) {
+          return { ...s, status: 'unknown' };
+        }
+      }));
+
+      // Update localStorage with validated data
+      validatedSessions.forEach(s => {
+        if (s.status === 'expired') {
+          SessionHistory.update(s.sessionId, { status: 'expired' });
+        } else if (s.status !== 'unknown') {
+          SessionHistory.update(s.sessionId, { status: s.status, phase: s.phase, findingsCount: s.findingsCount });
+        }
+      });
+
+      // Render HTML
+      list.innerHTML = validatedSessions.map(s => {
+        const timeAgo = getTimeAgo(s.startTime);
+        const statusClass = s.status === 'complete' ? 'status-complete' :
+                            s.status === 'expired' ? 'status-expired' : 'status-in-progress';
+        const statusText = s.status === 'complete' ? `Complete - ${s.findingsCount || 0} findings` :
+                           s.status === 'expired' ? 'Expired' :
+                           s.progress || `In Progress (${s.phase || 'processing'})`;
+        const actionBtn = s.status === 'expired'
+          ? `<button class="resume-btn" onclick="startNewSearchFor('${escapeHtmlForSessions(s.subjectName)}')">Search Again</button>`
+          : `<button class="resume-btn" onclick="resumeSessionFromHistory('${s.sessionId}')">Resume</button>`;
+
+        return `
+          <div class="recent-session-item">
+            <div class="session-info">
+              <div class="session-name">${escapeHtmlForSessions(s.subjectName)}</div>
+              <div class="session-meta">
+                <span class="session-status ${statusClass}">${statusText}</span>
+                Started ${timeAgo}
+              </div>
+            </div>
+            <div class="session-actions">
+              ${actionBtn}
+              <button class="delete-btn" onclick="removeFromHistory('${s.sessionId}')">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      panel.style.display = 'block';
+    }
+
+    // Remove session from history
+    function removeFromHistory(sid) {
+      SessionHistory.remove(sid);
+      renderRecentSessions();
+    }
+
+    // Start new search for a given subject name
+    function startNewSearchFor(subjectName) {
+      document.getElementById('nameInput').value = subjectName;
+      startScreening();
+    }
+
+    // Resume session from history panel
+    async function resumeSessionFromHistory(sid) {
+      // Get session info from history to populate name field
+      const sessions = SessionHistory.getAll();
+      let session = sessions.find(s => s.sessionId === sid);
+
+      // If not in localStorage, fetch from server (e.g., direct URL or popstate)
+      if (!session) {
+        try {
+          const resp = await fetch(`/api/session/${sid}/status`);
+          const data = await resp.json();
+          if (data.exists) {
+            session = { subjectName: data.subjectName };
+          } else {
+            alert('Session not found or expired.');
+            Router.clearSessionUrl();
+            return;
+          }
+        } catch (e) {
+          alert('Failed to load session');
+          return;
+        }
+      }
+
+      // Set up state for resume
+      sessionId = sid;
+      Router.setSessionUrl(sid);
+      document.getElementById('nameInput').value = session.subjectName;
+
+      // Hide recent sessions panel
+      document.getElementById('recent-sessions-panel').style.display = 'none';
+
+      // Call startScreening which handles reconnection properly
+      startScreening();
+    }
+
+    // Clear history button handler
+    document.addEventListener('DOMContentLoaded', () => {
+      const clearBtn = document.getElementById('clear-history-btn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          if (confirm('Clear all recent searches?')) {
+            SessionHistory.clear();
+            renderRecentSessions();
+          }
+        });
+      }
+    });
 
     // Language Selector - native names, grouped by region
     const LANGUAGES = [
@@ -1281,10 +1735,374 @@
       }
     });
 
-    // Initialize language list on page load
-    document.addEventListener('DOMContentLoaded', () => {
-      renderLanguageList();
+    // Handle browser back/forward navigation
+    window.addEventListener('popstate', async () => {
+      const urlSessionId = Router.getSessionIdFromUrl();
+      if (urlSessionId) {
+        // Resume this session via resumeSessionFromHistory
+        await resumeSessionFromHistory(urlSessionId);
+      } else {
+        // Back to homepage - refresh recent sessions
+        window.location.reload();
+      }
     });
+
+    // Initialize language list on page load + check for existing session + render recent sessions
+    document.addEventListener('DOMContentLoaded', async () => {
+      renderLanguageList();
+
+      // Check if we're resuming from a URL with session ID
+      const urlSessionId = Router.getSessionIdFromUrl();
+      if (urlSessionId) {
+        // Resume from URL (could be direct link or bookmark)
+        try {
+          const resp = await fetch(`/api/session/${urlSessionId}/status`);
+          const data = await resp.json();
+          if (data.exists) {
+            // Set up state for resume
+            sessionId = urlSessionId;
+            document.getElementById('nameInput').value = data.subjectName || '';
+            document.getElementById('recent-sessions-panel').style.display = 'none';
+
+            // Call startScreening which handles reconnection properly
+            startScreening();
+            return;
+          } else {
+            alert('Session not found or expired.');
+            Router.clearSessionUrl();
+          }
+        } catch (e) {
+          console.error('Failed to resume from URL:', e);
+          Router.clearSessionUrl();
+        }
+      }
+
+      // Check for paused session and show card if exists
+      await checkForPausedSession();
+    });
+
+    // Check localStorage for a paused session on page load
+    async function checkForPausedSession() {
+      const savedSessionId = localStorage.getItem('ddowl_sessionId');
+      const savedName = localStorage.getItem('ddowl_sessionName');
+
+      if (!savedSessionId || !savedName) {
+        document.getElementById('pausedSessionCard').style.display = 'none';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/session/${savedSessionId}/status`);
+        const status = await response.json();
+
+        if (status.exists && status.phase !== 'complete') {
+          // Show paused session card
+          document.getElementById('pausedName').textContent = savedName;
+          document.getElementById('pausedStatus').textContent = `${status.phase} - ${status.progress}`;
+          document.getElementById('pausedSessionCard').style.display = 'block';
+        } else {
+          // Session expired or completed, clear localStorage
+          localStorage.removeItem('ddowl_sessionId');
+          localStorage.removeItem('ddowl_sessionName');
+          document.getElementById('pausedSessionCard').style.display = 'none';
+        }
+      } catch (e) {
+        console.error('Failed to check session status:', e);
+        document.getElementById('pausedSessionCard').style.display = 'none';
+      }
+    }
+
+    // Discard paused session
+    async function discardPausedSession() {
+      const savedSessionId = localStorage.getItem('ddowl_sessionId');
+
+      // Clear from localStorage
+      localStorage.removeItem('ddowl_sessionId');
+      localStorage.removeItem('ddowl_sessionName');
+      sessionId = null;
+
+      // Hide card
+      document.getElementById('pausedSessionCard').style.display = 'none';
+
+      // Delete from server too
+      if (savedSessionId) {
+        try {
+          await fetch(`/api/session/${savedSessionId}`, { method: 'DELETE' });
+        } catch (e) {
+          console.error('Failed to delete session from server:', e);
+        }
+      }
+    }
+
+    // Resume paused session
+    async function resumePausedSession() {
+      const savedSessionId = localStorage.getItem('ddowl_sessionId');
+      const savedName = localStorage.getItem('ddowl_sessionName');
+
+      if (!savedSessionId || !savedName) return;
+
+      // Clear pause flag on server
+      try {
+        await fetch(`/api/session/${savedSessionId}/resume`, { method: 'POST' });
+      } catch (e) {
+        console.error('Failed to clear pause flag:', e);
+      }
+
+      // Set up state
+      sessionId = savedSessionId;
+      document.getElementById('nameInput').value = savedName;
+
+      // Hide paused card
+      document.getElementById('pausedSessionCard').style.display = 'none';
+
+      // Start SSE connection to resume - use dedicated resume function
+      startScreeningResume(savedSessionId, savedName);
+    }
+
+    // Disconnect active screening (keeps session in Redis)
+    let currentEventSource = null;  // Track the active EventSource
+    let currentHealthCheckInterval = null;  // Track health check interval for cleanup
+    async function disconnectScreening() {
+      // Clear health check interval to prevent auto-reconnect
+      if (currentHealthCheckInterval) {
+        clearInterval(currentHealthCheckInterval);
+        currentHealthCheckInterval = null;
+      }
+      if (currentEventSource) {
+        currentEventSource.close();
+        currentEventSource = null;
+      }
+
+      // CRITICAL: Tell server to PAUSE processing
+      if (sessionId) {
+        try {
+          await fetch(`/api/session/${sessionId}/pause`, { method: 'POST' });
+          console.log('[PAUSE] Sent pause request to server');
+        } catch (e) {
+          console.error('[PAUSE] Failed to pause server:', e);
+        }
+      }
+
+      document.getElementById('disconnectBtn').style.display = 'none';
+      document.getElementById('resumeBtn').style.display = 'inline-block';
+      document.getElementById('searchBtn').disabled = false;
+      addLogEntry('warn', 'Paused. Session preserved - click Resume to continue.');
+      updateActivityStats('Paused');
+    }
+
+    // Resume from disconnect (reconnect to same session)
+    async function resumeScreening() {
+      const savedSessionId = localStorage.getItem('ddowl_sessionId');
+      const savedName = localStorage.getItem('ddowl_sessionName');
+
+      if (!savedSessionId || !savedName) {
+        addLogEntry('error', 'No session to resume');
+        return;
+      }
+
+      // Clear pause flag on server FIRST
+      try {
+        await fetch(`/api/session/${savedSessionId}/resume`, { method: 'POST' });
+        console.log('[RESUME] Cleared pause flag on server');
+      } catch (e) {
+        console.error('[RESUME] Failed to clear pause flag:', e);
+      }
+
+      // Set state for resume
+      sessionId = savedSessionId;
+      document.getElementById('nameInput').value = savedName;
+      document.getElementById('resumeBtn').style.display = 'none';
+      document.getElementById('disconnectBtn').style.display = 'inline-block';
+
+      addLogEntry('search', `Resuming screening for: ${savedName}`);
+      updateActivityStats('Resuming...');
+
+      // Start SSE connection with existing sessionId
+      const variations = [savedName];
+      const language = selectedLanguage;
+
+      // Retry state
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+      let eventSource = null;
+      let lastMessageTime = Date.now();
+
+      function connectSSE() {
+        const variationsParam = variations.length > 1 ? `&variations=${encodeURIComponent(variations.join(','))}` : '';
+        const languageParam = `&language=${language}`;
+        const url = `/api/screen/v4?name=${encodeURIComponent(savedName)}${variationsParam}${languageParam}&sessionId=${savedSessionId}`;
+        console.log(`[SSE RESUME] Connecting: ${url}`);
+        eventSource = new EventSource(url);
+        currentEventSource = eventSource;
+
+        // Health check
+        if (currentHealthCheckInterval) {
+          clearInterval(currentHealthCheckInterval);
+        }
+        lastMessageTime = Date.now();
+        currentHealthCheckInterval = setInterval(() => {
+          const gap = Date.now() - lastMessageTime;
+          if (gap > 60000) {
+            console.warn(`[SSE] No heartbeat for ${gap}ms, reconnecting...`);
+            addLogEntry('warn', `Connection stale, reconnecting...`);
+            eventSource.close();
+            clearInterval(currentHealthCheckInterval);
+            currentHealthCheckInterval = null;
+            if (retryCount < MAX_RETRIES) {
+              retryCount++;
+              setTimeout(connectSSE, 1000);
+            }
+          }
+        }, 5000);
+
+        // Handle SSE messages for resume
+        eventSource.onmessage = (event) => {
+          lastMessageTime = Date.now();
+          retryCount = 0;
+          const data = JSON.parse(event.data);
+
+          // Skip heartbeat
+          if (data.type === 'heartbeat') return;
+
+          // Handle reconnection status
+          if (data.type === 'reconnect_status') {
+            addLogEntry('result', `✓ Reconnected. ${data.message}`);
+            updateActivityStats(`Reconnected: ${data.phaseName} phase${data.progress ? ` (${data.progress})` : ''}`);
+          }
+
+          // Handle phase events
+          if (data.type === 'phase') {
+            addLogEntry('search', `━━━ PHASE ${data.phase}: ${data.name} ━━━`);
+            addLogEntry('search', data.message);
+            updateActivityStats(`Phase ${data.phase}: ${data.name}`);
+          }
+
+          if (data.type === 'phase_skipped') {
+            addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
+          }
+
+          // Handle search progress
+          if (data.type === 'search_page') {
+            const stopReason = data.pageResults === 0 ? ' → STOP (empty)' : (data.pageResults < 10 ? ' → STOP (last page)' : '');
+            addLogEntry('search', `  Q${data.queryIndex} Page ${data.page}: ${data.pageResults} results${stopReason}`);
+          }
+
+          if (data.type === 'search_progress') {
+            addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries} | ${data.resultsFound} results | ${data.query}`);
+            updateActivityStats(`Searching ${data.queryIndex}/${data.totalQueries} (${data.totalSoFar} total)`);
+          }
+
+          // Handle clustering
+          if (data.type === 'cluster_batch_start') {
+            addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Clustering ${data.articlesInBatch} articles...`);
+            updateActivityStats(`Clustering batch ${data.batch}/${data.totalBatches}`);
+          }
+
+          if (data.type === 'cluster_batch_complete') {
+            const labels = data.clusterLabels?.slice(0, 5).join(', ') || '';
+            addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Found ${data.clustersFound} incidents: ${labels}`);
+          }
+
+          // Handle categorization
+          if (data.type === 'categorize_batch_complete') {
+            addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
+            updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
+          }
+
+          // Handle analyze
+          if (data.type === 'analyze_start') {
+            addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
+          }
+
+          if (data.type === 'analyze_result') {
+            if (data.isAdverse) {
+              const color = data.severity === 'RED' ? 'red' : 'amber';
+              addLogEntry(color, `${data.severity}: ${data.headline}`, data.url);
+              addResultToUI({
+                url: data.url,
+                title: data.title,
+                severity: data.severity,
+                summary: data.headline + ' - ' + data.summary
+              });
+            } else {
+              addLogEntry('green', `Clear`, data.url);
+            }
+          }
+
+          // Handle paused event (server stopped due to pause flag)
+          if (data.type === 'paused') {
+            addLogEntry('warn', `Server paused at ${data.phase} phase`);
+            updateActivityStats('Paused by server');
+          }
+
+          // Handle completion
+          if (data.type === 'complete') {
+            if (currentHealthCheckInterval) {
+              clearInterval(currentHealthCheckInterval);
+              currentHealthCheckInterval = null;
+            }
+            eventSource.close();
+            const stats = data.stats || {};
+
+            addLogEntry('result', `━━━ SCREENING COMPLETE ━━━`);
+            addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
+            addLogEntry('result', `Findings: ${stats.red || 0} RED, ${stats.amber || 0} AMBER`);
+
+            currentSubjectName = savedName;
+            currentFindings = data.findings || [];
+
+            if (data.findings && data.findings.length > 0) {
+              document.getElementById('redFlagsList').innerHTML = '';
+              document.getElementById('amberFlagsList').innerHTML = '';
+              redCount = 0;
+              amberCount = 0;
+              for (let i = 0; i < data.findings.length; i++) {
+                addConsolidatedResultToUI(data.findings[i], i);
+              }
+              selectedFindings.clear();
+              updateSelectedCount();
+              document.getElementById('generateReportBtn').disabled = false;
+            }
+
+            document.getElementById('statusDot').classList.remove('active');
+            document.getElementById('searchBtn').disabled = false;
+            document.getElementById('disconnectBtn').style.display = 'none';
+            document.getElementById('resumeBtn').style.display = 'none';
+            currentEventSource = null;
+            updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
+
+            // Clear session on complete
+            localStorage.removeItem('ddowl_sessionId');
+            localStorage.removeItem('ddowl_sessionName');
+            sessionId = null;
+          }
+
+          if (data.type === 'error') {
+            addLogEntry('error', `[ERROR] ${data.message}`);
+            eventSource.close();
+            resetUI();
+          }
+        };
+
+        eventSource.onerror = () => {
+          eventSource.close();
+          if (currentHealthCheckInterval) {
+            clearInterval(currentHealthCheckInterval);
+            currentHealthCheckInterval = null;
+          }
+          if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
+            setTimeout(connectSSE, 2000 * retryCount);
+          } else {
+            addLogEntry('error', 'Max retries exceeded. Please try again.');
+            resetUI();
+          }
+        };
+      }
+
+      connectSSE();
+    }
 
     function getTimestamp() {
       const now = new Date();
@@ -1327,6 +2145,18 @@
       btn.textContent = panel.classList.contains('active') ? 'Hide Log' : 'Show Log';
     }
 
+    function copyActivityLog() {
+      const logDiv = document.getElementById('activityLog');
+      const logText = logDiv.innerText;
+      navigator.clipboard.writeText(logText).then(() => {
+        const btn = document.querySelector('.copy-log-btn');
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+      }).catch(err => {
+        console.error('Failed to copy log:', err);
+      });
+    }
+
     // Name variation management
     function addVariation() {
       const container = document.getElementById('variationsContainer');
@@ -1364,6 +2194,7 @@
       return variations;
     }
 
+    // Start a NEW screening - always fresh, always clears old session
     function startScreening() {
       const name = document.getElementById('nameInput').value.trim();
       const additionalVariations = getVariations();
@@ -1382,7 +2213,12 @@
         }
       });
 
-      // Reset UI
+      // ALWAYS start fresh - clear any old session
+      sessionId = null;
+      localStorage.removeItem('ddowl_sessionId');
+      localStorage.removeItem('ddowl_sessionName');
+
+      // Reset all UI state
       redCount = 0;
       amberCount = 0;
       greenCount = 0;
@@ -1392,9 +2228,8 @@
       currentFindings = [];
       currentSubjectName = '';
       furtherLinks = [];
-      sessionId = null; // Reset for new screening
-      localStorage.removeItem('ddowl_sessionId');
-      localStorage.removeItem('ddowl_sessionName');
+
+      // Clear UI elements
       document.getElementById('furtherLinksBtn').style.display = 'none';
       document.getElementById('furtherLinksCount').textContent = '0';
       document.getElementById('redFlagsList').innerHTML = '';
@@ -1403,6 +2238,11 @@
       document.getElementById('amberCount').textContent = '0';
       document.getElementById('activityLog').innerHTML = '';
       document.getElementById('generateReportBtn').disabled = true;
+
+      // Hide paused card, show pause button
+      document.getElementById('pausedSessionCard').style.display = 'none';
+      document.getElementById('disconnectBtn').style.display = 'inline-block';
+      document.getElementById('resumeBtn').style.display = 'none';
 
       // Show activity panel
       document.getElementById('activityPanel').classList.add('active');
@@ -1419,7 +2259,6 @@
       let lastQueryIndex = 0;
       let eventSource = null;
       let lastMessageTime = Date.now();
-      let healthCheckInterval = null;
 
       function connectSSE() {
         // Build reconnection URL - use sessionId (stored in Redis on server)
@@ -1430,16 +2269,22 @@
         const url = `/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${sessionParam}`;
         console.log(`[SSE] Connecting: ${url}`);
         eventSource = new EventSource(url);
+        currentEventSource = eventSource;  // Track globally for disconnect button
 
         // Health check: detect stale connections before they die
+        // Clear any existing health check first
+        if (currentHealthCheckInterval) {
+          clearInterval(currentHealthCheckInterval);
+        }
         lastMessageTime = Date.now();
-        healthCheckInterval = setInterval(() => {
+        currentHealthCheckInterval = setInterval(() => {
           const gap = Date.now() - lastMessageTime;
           if (gap > 60000) { // 60 seconds without any message (allow time for Gemini categorization)
             console.warn(`[SSE] No heartbeat for ${gap}ms, proactively reconnecting...`);
             addLogEntry('warn', `Connection stale (${Math.round(gap/1000)}s), reconnecting...`);
             eventSource.close();
-            clearInterval(healthCheckInterval);
+            clearInterval(currentHealthCheckInterval);
+            currentHealthCheckInterval = null;
             if (retryCount < MAX_RETRIES) {
               retryCount++;
               setTimeout(connectSSE, 1000);
@@ -1458,6 +2303,19 @@
             localStorage.setItem('ddowl_sessionId', sessionId);
             localStorage.setItem('ddowl_sessionName', name);
             console.log(`[SSE] Received session ID: ${sessionId}`);
+
+            // Save to session history for Recent Searches panel
+            SessionHistory.save({
+              sessionId: sessionId,
+              subjectName: name,
+              language: selectedLanguage,
+              startTime: Date.now(),
+              status: 'in_progress',
+              phase: 'gather'
+            });
+
+            // Update URL for bookmarking/sharing
+            Router.setSessionUrl(sessionId);
           }
 
           // Handle reconnection status - show clear context about where we are
@@ -1487,6 +2345,43 @@
             addLogEntry('search', `━━━ PHASE ${data.phase}: ${data.name} ━━━`);
             addLogEntry('search', data.message);
             updateActivityStats(`Phase ${data.phase}: ${data.name}`);
+            // Update session history with current phase
+            if (sessionId) {
+              SessionHistory.update(sessionId, { phase: data.name.toLowerCase() });
+            }
+          }
+
+          // === CLUSTERING EVENTS ===
+          if (data.type === 'cluster_batch_start') {
+            addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Clustering ${data.articlesInBatch} articles...`);
+            updateActivityStats(`Clustering batch ${data.batch}/${data.totalBatches}`);
+          }
+
+          if (data.type === 'cluster_batch_complete') {
+            const labels = data.clusterLabels?.slice(0, 5).join(', ') || '';
+            const more = data.clusterLabels?.length > 5 ? ` (+${data.clusterLabels.length - 5} more)` : '';
+            addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Found ${data.clustersFound} incidents: ${labels}${more}`);
+          }
+
+          if (data.type === 'cluster_merge_complete') {
+            addLogEntry('result', `Merged to ${data.totalClusters} unique incidents`);
+            // Log first 10 incident labels
+            if (data.clusterLabels && data.clusterLabels.length > 0) {
+              const toShow = data.clusterLabels.slice(0, 10);
+              toShow.forEach((label, i) => {
+                addLogEntry('analyze', `  ${i + 1}. ${label}`);
+              });
+              if (data.clusterLabels.length > 10) {
+                addLogEntry('analyze', `  ... and ${data.clusterLabels.length - 10} more incidents`);
+              }
+            }
+          }
+
+          if (data.type === 'incident_clusters') {
+            addLogEntry('result', `━━━ CLUSTERING RESULT ━━━`);
+            addLogEntry('result', `${data.totalArticles} articles → ${data.totalClusters} incidents`);
+            addLogEntry('result', `Keeping ${data.articlesToAnalyze} for analysis, parking ${data.articlesParked} duplicates`);
+            addLogEntry('analyze', `Duration: ${(data.duration/1000).toFixed(1)}s`);
           }
 
           if (data.type === 'search_page') {
@@ -1686,9 +2581,21 @@
 
           // === COMPLETION ===
           if (data.type === 'complete') {
-            clearInterval(healthCheckInterval);
+            if (currentHealthCheckInterval) {
+              clearInterval(currentHealthCheckInterval);
+              currentHealthCheckInterval = null;
+            }
             eventSource.close();
             const stats = data.stats || {};
+
+            // Update session history to completed
+            if (sessionId) {
+              SessionHistory.update(sessionId, {
+                status: 'complete',
+                phase: 'complete',
+                findingsCount: data.findings?.length || 0
+              });
+            }
             addLogEntry('result', `━━━ SCREENING COMPLETE ━━━`);
             addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
             addLogEntry('result', `Total cleared: ${stats.totalCleared || 0}`);
@@ -1736,6 +2643,9 @@
 
             document.getElementById('statusDot').classList.remove('active');
             document.getElementById('searchBtn').disabled = false;
+            document.getElementById('disconnectBtn').style.display = 'none';
+            document.getElementById('resumeBtn').style.display = 'none';
+            currentEventSource = null;
             updateActivityStats(`Done: ${stats.red || 0} red, ${stats.amber || 0} amber`);
 
             // Show Further Links summary if there are any
@@ -1778,7 +2688,10 @@
 
         eventSource.onerror = () => {
           eventSource.close();
-          clearInterval(healthCheckInterval);
+          if (currentHealthCheckInterval) {
+            clearInterval(currentHealthCheckInterval);
+            currentHealthCheckInterval = null;
+          }
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
@@ -1913,6 +2826,9 @@
     function resetUI() {
       document.getElementById('searchBtn').disabled = false;
       document.getElementById('statusDot').classList.remove('active');
+      document.getElementById('disconnectBtn').style.display = 'none';
+      document.getElementById('resumeBtn').style.display = 'none';
+      currentEventSource = null;
     }
 
     function downloadReport() {

@@ -17,7 +17,8 @@ export type EliminationReason =
   | 'noise_domain'           // Rule 1: job sites, corporate aggregators
   | 'noise_title_pattern'    // Rule 2: job posting keywords
   | 'name_char_separation'   // Rule 3: "张,三" instead of "张三"
-  | 'missing_dirty_word';    // Rule 4: no dirty word present
+  | 'missing_dirty_word'     // Rule 4: no dirty word present
+  | 'part_of_longer_name';   // Rule 5: 2-char name appears only as part of 3-char names
 
 export interface EliminatedResult extends BatchSearchResult {
   reason: EliminationReason;
@@ -35,6 +36,7 @@ export interface EliminationBreakdown {
   noise_title_pattern: number;
   name_char_separation: number;
   missing_dirty_word: number;
+  part_of_longer_name: number;
 }
 
 // ============================================================
@@ -49,6 +51,8 @@ const NOISE_DOMAINS = [
   '51job.com', 'zhaopin.com', 'kanzhun.com',
   // Corporate aggregators (searched separately)
   'qichacha.com', 'tianyancha.com', 'qixin.com', 'aiqicha.com',
+  // Problematic sites (hang, block, or return garbage)
+  'xueqiu.com', 'douyin.com',
 ];
 
 // Noise title patterns - job posting keywords
@@ -91,6 +95,49 @@ function hasNameCharSeparation(text: string, name: string): boolean {
   // Check for patterns like "张,三" or "张 三" when "张三" doesn't appear
   const separatorPattern = chars.join('[,;，；、\\s]+');
   return new RegExp(separatorPattern).test(text);
+}
+
+/**
+ * Rule 5: Check if 2-char name only appears as part of 3-char names
+ * E.g., searching "李原" but finding "李原地" or "盛李原" (different people)
+ */
+function isOnlyPartOfLongerName(text: string, name: string): boolean {
+  // Only applies to 2-character Chinese names
+  if (name.length !== 2) return false;
+
+  // Check if the name even appears in the text
+  if (!text.includes(name)) return false;
+
+  const chineseCharRegex = /[\u4e00-\u9fff]/;
+
+  // Common Chinese grammatical particles that follow names (not part of names)
+  const nonNameChars = ['被', '在', '的', '是', '等', '與', '与', '和', '或', '及', '為', '为', '已', '曾', '因', '于', '對', '对', '向', '从', '從'];
+
+  let index = 0;
+  let hasStandaloneOccurrence = false;
+
+  while ((index = text.indexOf(name, index)) !== -1) {
+    const charBefore = index > 0 ? text[index - 1] : '';
+    const charAfter = text[index + name.length] || '';
+
+    const hasChineBefore = chineseCharRegex.test(charBefore);
+    const hasChineAfter = chineseCharRegex.test(charAfter);
+
+    // Check if this is part of a longer name
+    const isPartOfLongerBefore = hasChineBefore && !nonNameChars.includes(charBefore);
+    const isPartOfLongerAfter = hasChineAfter && !nonNameChars.includes(charAfter);
+
+    // If neither before nor after is a name character, this is a standalone occurrence
+    if (!isPartOfLongerBefore && !isPartOfLongerAfter) {
+      hasStandaloneOccurrence = true;
+      break;
+    }
+
+    index++;
+  }
+
+  // Eliminate if ALL occurrences are part of longer names (no standalone)
+  return !hasStandaloneOccurrence;
 }
 
 /**
@@ -173,6 +220,12 @@ export function eliminateObviousNoise(
     //   continue;
     // }
 
+    // Rule 5: 2-char name only appears as part of 3-char names (different person)
+    if (isOnlyPartOfLongerName(text, subjectName)) {
+      eliminated.push({ ...result, reason: 'part_of_longer_name' });
+      continue;
+    }
+
     // Passed all rules
     passed.push(result);
   }
@@ -193,5 +246,6 @@ export function getEliminationBreakdown(
     noise_title_pattern: eliminated.filter(e => e.reason === 'noise_title_pattern').length,
     name_char_separation: eliminated.filter(e => e.reason === 'name_char_separation').length,
     missing_dirty_word: eliminated.filter(e => e.reason === 'missing_dirty_word').length,
+    part_of_longer_name: eliminated.filter(e => e.reason === 'part_of_longer_name').length,
   };
 }

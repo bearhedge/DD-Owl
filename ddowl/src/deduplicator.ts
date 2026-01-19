@@ -4,8 +4,7 @@
 import axios from 'axios';
 import { BatchSearchResult } from './searcher.js';
 
-// LLM Configuration (reuse same providers as triage)
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+// LLM Configuration (DeepSeek primary, Kimi fallback)
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 
@@ -80,32 +79,11 @@ Output ONLY valid JSON (no markdown, no explanation):
 {"clusters": [[1,2], [3,4,5], [6]], "labels": ["incident 1", "incident 2", "incident 3"]}`;
 }
 
-// Call LLM for clustering (with fallback chain)
+// Call LLM for clustering (with fallback chain: DeepSeek → Kimi)
 async function callLLMForClustering(prompt: string): Promise<BatchClusterResponse> {
   const providers = [];
 
-  // Build provider list in priority order
-  if (GEMINI_API_KEY) {
-    providers.push({
-      name: 'Gemini',
-      call: async () => {
-        const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 4096,
-            },
-          },
-          { timeout: 60000 }
-        );
-        const text = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        return text;
-      }
-    });
-  }
-
+  // Build provider list: DeepSeek primary (cheap, good Chinese), Kimi fallback
   if (DEEPSEEK_API_KEY) {
     providers.push({
       name: 'DeepSeek',

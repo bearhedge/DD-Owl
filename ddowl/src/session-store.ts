@@ -48,6 +48,10 @@ export interface ScreeningSession {
     amber: CategorizedResult[];
     green: CategorizedResult[];
   };
+
+  // === Pause/Resume support ===
+  isPaused?: boolean;   // true = server should stop processing
+  pausedAt?: number;    // Timestamp when paused
 }
 
 const SESSION_TTL = 14400; // 4 hours in seconds

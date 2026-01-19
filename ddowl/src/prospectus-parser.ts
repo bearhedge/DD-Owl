@@ -103,6 +103,7 @@ function isValidBankName(name: string): boolean {
     'INTERNATIONAL', 'ASIA', 'HONG KONG', 'FAR EAST', 'PACIFIC',
     'FUTU', 'TIGER', 'LIVERMORE', 'VALUABLE', 'YUNFENG',
     'FINANCIAL', 'CORPORATE FINANCE', 'ADVISORY', 'PARTNERS',
+    'AMTD', 'GLOBAL MARKETS',
   ];
 
   const hasFinancialKeyword = financialKeywords.some(kw => upper.includes(kw));

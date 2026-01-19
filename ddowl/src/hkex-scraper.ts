@@ -201,6 +201,58 @@ export async function extractBankDataFromPdf(pdfBuffer: Buffer): Promise<{
     }
   }
 
+  // Method 3: DEFINITIONS section format - "Role" \t Bank1, Bank2 and Bank3
+  // This captures banks from prospectus glossary sections
+  const definitionsRoles = [
+    'Sole Sponsor',
+    'Joint Sponsors',
+    'Sponsor',
+    'Sole Overall Coordinator',
+    'Joint Overall Coordinators',
+    'Overall Coordinator',
+    'Sole Global Coordinator',
+    'Joint Global Coordinators',
+    'Global Coordinator',
+    'Joint Bookrunners',
+    'Bookrunner',
+    'Joint Lead Managers',
+    'Lead Manager',
+  ];
+
+  for (const roleName of definitionsRoles) {
+    // Match "Role" followed by tab/spaces and bank names
+    const pattern = new RegExp(
+      `"${roleName}s?"\\s+([A-Z][^"]+?)(?=\\s*"[A-Z]|DEFINITIONS|$)`,
+      'gi'
+    );
+
+    let match;
+    while ((match = pattern.exec(allText)) !== null) {
+      const bankText = match[1].trim();
+      // Split on comma and "and" to get individual banks
+      const bankNames = bankText
+        .replace(/\s+/g, ' ')
+        .split(/,\s*|\s+and\s+/i)
+        .map(b => b.trim())
+        .filter(b => b.match(/Limited$/i) && b.length > 5 && b.length < 100);
+
+      for (const bankName of bankNames) {
+        if (bankName.toLowerCase() === company.toLowerCase()) continue;
+        if (bankName.match(/Holdings\s+Limited$/i) && !bankName.match(/Capital|Securities|Financial|Bank|Markets/i)) continue;
+
+        if (!banks.find(b => b.bank === bankName)) {
+          const roles = normalizeRole(roleName);
+          banks.push({
+            bank: bankName,
+            rawRole: roleName,
+            roles: roles,
+            isLead: isLeadRole(roles),
+          });
+        }
+      }
+    }
+  }
+
   return {
     company,
     companyChineseName,

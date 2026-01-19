@@ -268,6 +268,17 @@ initLogDirectories();
 // Track active screenings to prevent duplicates
 const activeScreenings = new Map<string, AbortController>();
 
+// Helper to check if a session has been paused by the user
+async function isSessionPaused(sessionId: string): Promise<boolean> {
+  try {
+    const session = await getSession(sessionId);
+    return session?.isPaused === true;
+  } catch (e) {
+    console.error(`[PAUSE CHECK] Error checking pause state for ${sessionId}:`, e);
+    return false;
+  }
+}
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
@@ -1348,6 +1359,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Start from gatherStartIndex to skip already-completed queries on mid-gather resume
       for (let i = gatherStartIndex; i < selectedTemplates.length; i++) {
 
+      // Check if user paused the session
+      if (await isSessionPaused(sessionId)) {
+        console.log(`[V4] Session ${sessionId} paused at gather query ${i + 1}/${selectedTemplates.length}`);
+        sendEvent({ type: 'paused', phase: 'gather', queryIndex: i + 1 });
+        clearInterval(heartbeat);
+        activeScreenings.delete(screeningKey);
+        return;
+      }
+
       const template = selectedTemplates[i];
 
       // Build query with all name variants using OR
@@ -1480,6 +1500,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
         // Start from companyExpansionStartIndex to skip already-completed companies on resume
         for (let compIdx = companyExpansionStartIndex; compIdx < detectedCompanies.length; compIdx++) {
+          // Check if user paused the session
+          if (await isSessionPaused(sessionId)) {
+            console.log(`[V4] Session ${sessionId} paused at company expansion ${compIdx + 1}/${detectedCompanies.length}`);
+            sendEvent({ type: 'paused', phase: 'company_expansion', companyIndex: compIdx + 1 });
+            clearInterval(heartbeat);
+            activeScreenings.delete(screeningKey);
+            return;
+          }
+
           const company = detectedCompanies[compIdx];
           if (signal.aborted) break;
 
@@ -1646,6 +1675,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 2.5: INCIDENT CLUSTERING (LLM batch)
     // ========================================
+    // Check if user paused before starting clustering
+    if (await isSessionPaused(sessionId)) {
+      console.log(`[V4] Session ${sessionId} paused before clustering phase`);
+      sendEvent({ type: 'paused', phase: 'cluster' });
+      clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
+      return;
+    }
+
     if (skipCluster && restoredPassed) {
       // Skip clustering - already done in previous session
       sendEvent({ type: 'phase_skipped', phase: '2.5', reason: 'Restored from session' });
@@ -1744,6 +1782,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // ========================================
     // PHASE 3: CATEGORIZE (batched LLM calls with progress)
     // ========================================
+    // Check if user paused before starting categorization
+    if (await isSessionPaused(sessionId)) {
+      console.log(`[V4] Session ${sessionId} paused before categorize phase`);
+      sendEvent({ type: 'paused', phase: 'categorize' });
+      clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
+      return;
+    }
+
     let categorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] };
 
     if (skipCategorize && restoredCategorized) {
@@ -1939,6 +1986,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     const processedUrls = new Set<string>();
 
     for (let i = analyzeStartIndex; i < toProcess.length; i++) {
+      // Check if user paused the session
+      if (await isSessionPaused(sessionId)) {
+        console.log(`[V4] Session ${sessionId} paused at analyze ${i + 1}/${toProcess.length}`);
+        sendEvent({ type: 'paused', phase: 'analyze', articleIndex: i + 1 });
+        clearInterval(heartbeat);
+        activeScreenings.delete(screeningKey);
+        return;
+      }
+
       const item = toProcess[i];
 
       // Skip duplicates
@@ -2261,6 +2317,38 @@ app.get('/api/session/:sessionId/status', async (req: Request, res: Response) =>
   } catch (e) {
     console.error(`[SESSION] Error getting status for ${sessionId}:`, e);
     res.json({ exists: false });
+  }
+});
+
+// ============================================================
+// SESSION PAUSE/RESUME API - True pause functionality
+// ============================================================
+app.post('/api/session/:sessionId/pause', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  try {
+    const session = await getSession(sessionId);
+    if (!session) {
+      res.status(404).json({ error: 'Session not found' });
+      return;
+    }
+    await updateSession(sessionId, { isPaused: true, pausedAt: Date.now() });
+    console.log(`[PAUSE] Session ${sessionId} paused at phase ${session.currentPhase}`);
+    res.json({ paused: true, phase: session.currentPhase });
+  } catch (err) {
+    console.error(`[PAUSE] Error pausing session ${sessionId}:`, err);
+    res.status(500).json({ error: 'Failed to pause session' });
+  }
+});
+
+app.post('/api/session/:sessionId/resume', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  try {
+    await updateSession(sessionId, { isPaused: false, pausedAt: undefined });
+    console.log(`[RESUME] Session ${sessionId} resumed`);
+    res.json({ resumed: true });
+  } catch (err) {
+    console.error(`[RESUME] Error resuming session ${sessionId}:`, err);
+    res.status(500).json({ error: 'Failed to resume session' });
   }
 });
 

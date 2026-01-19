@@ -2,10 +2,9 @@
 import axios from 'axios';
 
 // LLM Configuration for Triage with Fallback Chain
-// Priority: Gemini 2.5 Pro (best for triage) → DeepSeek → Kimi
+// Priority: Kimi (primary, no content blocks) → DeepSeek (fallback)
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 interface LLMProvider {
   name: string;
@@ -20,15 +19,14 @@ interface LLMProvider {
 function getProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
 
-  // 1. Gemini 2.5 Pro (PRIMARY for triage - 1M context, best accuracy)
-  if (GEMINI_API_KEY) {
+  // 1. Kimi (PRIMARY - no content moderation blocks on Chinese adverse media)
+  if (KIMI_API_KEY) {
     providers.push({
-      name: 'Gemini',
-      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-06-05:generateContent',
-      model: 'gemini-2.5-pro-preview-06-05',
-      apiKey: GEMINI_API_KEY,
-      timeout: 180000,
-      isGemini: true,
+      name: 'Kimi',
+      url: 'https://api.moonshot.ai/v1/chat/completions',
+      model: 'moonshot-v1-8k',
+      apiKey: KIMI_API_KEY,
+      timeout: 120000,
     });
   }
 
@@ -39,17 +37,6 @@ function getProviders(): LLMProvider[] {
       url: 'https://api.deepseek.com/v1/chat/completions',
       model: 'deepseek-chat',
       apiKey: DEEPSEEK_API_KEY,
-      timeout: 120000,
-    });
-  }
-
-  // 3. Kimi (last resort fallback)
-  if (KIMI_API_KEY) {
-    providers.push({
-      name: 'Kimi',
-      url: 'https://api.moonshot.ai/v1/chat/completions',
-      model: 'moonshot-v1-8k',
-      apiKey: KIMI_API_KEY,
       timeout: 120000,
     });
   }
