@@ -2,6 +2,7 @@
  * Enrich baseline data with:
  * 1. Deal metrics from Excel (shares, price, size)
  * 2. Chinese names from HKEX scraping
+ * 3. Dates extracted from PDF URLs (for Unavailable/numeric dates)
  */
 import XLSX from 'xlsx';
 import fs from 'fs';
@@ -15,6 +16,9 @@ interface DealMetrics {
   price: number | null;
   sizeHKDm: number | null;
 }
+
+// Minimum deal size threshold - show "-" for anything below
+const MIN_DEAL_SIZE_HKDM = 10;
 
 interface BaselineRow {
   ticker: string;
@@ -46,18 +50,22 @@ async function main() {
   const metrics = loadExcelMetrics();
   console.log(`Loaded ${metrics.size} deal metrics from Excel`);
 
+  // Step 1b: Load dates and PDF URLs from Index sheet
+  const { dates, pdfUrls } = loadDatesAndUrlsFromIndex();
+  console.log(`Loaded ${dates.size} dates and ${pdfUrls.size} PDF URLs from Excel Index sheet`);
+
   // Step 2: Load current baseline
   const baseline = loadBaseline();
   console.log(`Loaded ${baseline.length} baseline entries`);
 
-  // Step 3: Load Chinese names from database
+  // Step 3: Load Chinese names from database with full name preference
   const chineseNames = loadChineseNames();
 
   // Step 4: Merge and enrich
-  const enriched = enrichData(baseline, metrics, chineseNames);
+  const enriched = enrichData(baseline, metrics, chineseNames, dates, pdfUrls);
   console.log(`Enriched ${enriched.length} deals`);
 
-  // Step 4: Save enriched baseline
+  // Step 5: Save enriched baseline
   saveEnrichedBaseline(enriched);
   console.log('Done!');
 }
@@ -86,6 +94,82 @@ function loadExcelMetrics(): Map<number, DealMetrics> {
   }
 
   return metrics;
+}
+
+function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map<number, string> } {
+  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+  const ws = wb.Sheets['Index'];
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+
+  const dates = new Map<number, string>();
+  const pdfUrls = new Map<number, string>();
+
+  // Row 0 is empty, row 1 is headers, data starts at row 2
+  // Columns: [empty, Ticker, Company, Type, Documents, Date, Info]
+  for (let i = 2; i < data.length; i++) {
+    const row = data[i];
+    const ticker = row[1]; // Column B
+    const url = row[4];    // Column E - Documents (PDF URL)
+    const date = row[5];   // Column F
+    if (ticker) {
+      if (date) {
+        dates.set(ticker, String(date));
+      }
+      if (url && typeof url === 'string' && url.startsWith('http')) {
+        pdfUrls.set(ticker, url);
+      }
+    }
+  }
+
+  return { dates, pdfUrls };
+}
+
+/**
+ * Extract date from PDF URL
+ * Pattern: https://www1.hkexnews.hk/listedco/listconews/sehk/YYYY/MMDD/filename.pdf
+ * Returns date in DD/MM/YYYY format
+ */
+function extractDateFromUrl(url: string): string | null {
+  if (!url) return null;
+
+  // Pattern: /sehk/YYYY/MMDD/
+  const match = url.match(/\/sehk\/(\d{4})\/(\d{2})(\d{2})\//);
+  if (match) {
+    const [_, year, month, day] = match;
+    return `${day}/${month}/${year}`;
+  }
+  return null;
+}
+
+/**
+ * Convert Excel serial date to DD/MM/YYYY string
+ * Excel serial date: days since 1900-01-01 (with the 1900 leap year bug)
+ */
+function excelDateToString(serial: number): string {
+  // Excel's epoch is December 30, 1899 (due to the 1900 leap year bug)
+  // The formula: (serial - 25569) * 86400 * 1000 converts to Unix timestamp
+  const date = new Date((serial - 25569) * 86400 * 1000);
+  const day = date.getUTCDate().toString().padStart(2, '0');
+  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+  const year = date.getUTCFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+/**
+ * Check if a date string is actually an Excel serial number
+ */
+function isExcelSerialDate(dateStr: string): boolean {
+  // Excel serial dates are 5-digit numbers (e.g., 41894, 45235)
+  return /^\d{5}$/.test(dateStr.trim());
+}
+
+/**
+ * Check if date is unavailable or needs fixing
+ */
+function needsDateFix(dateStr: string | undefined | null): boolean {
+  if (!dateStr) return true;
+  const d = dateStr.trim().toLowerCase();
+  return d === 'unavailable' || d === '' || isExcelSerialDate(dateStr);
 }
 
 function parseNumber(val: any): number | null {
@@ -136,11 +220,140 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
+// Manual Chinese name overrides for companies where PDF extraction failed
+// Use FULL legal names ending with 有限公司, 控股, 集團 where possible
+const KNOWN_CHINESE_NAMES: Record<number, string> = {
+  // ADRs and well-known companies
+  9999: '網易公司',
+  9898: '微博公司',
+  9618: '京東集團股份有限公司',
+  9626: '嗶哩嗶哩股份有限公司',
+  2605: '美達凱控股有限公司',
+
+  // Major HK/China companies with full names
+  6993: '藍月亮集團控股有限公司',
+  6869: '長飛光纖光纜股份有限公司',
+  6858: '本間高爾夫有限公司',
+  6606: '諾輝健康科技有限公司',
+  6183: '中國綠色食品控股有限公司',
+  6181: '老鋪黃金股份有限公司',
+  6169: '中國宇華教育集團有限公司',
+  6166: '中國恒大產業集團有限公司',
+  6138: '哈爾濱銀行股份有限公司',
+  6116: '拉夏貝爾服飾股份有限公司',
+  6099: '招商證券股份有限公司',
+  6088: '鴻騰精密科技股份有限公司',
+  6066: '中信建投證券股份有限公司',
+  6055: '中煙國際(香港)有限公司',
+  3866: '青島銀行股份有限公司',
+  3600: '現代牙科集團有限公司',
+
+  // Tech companies
+  2590: '北京極智嘉科技股份有限公司',
+  2597: '北京訊眾通信技術股份有限公司',
+  1304: '峰岹科技(深圳)股份有限公司',
+  6613: '藍思科技股份有限公司',
+  2076: 'BOSS直聘控股有限公司',           // Kanzhun - use actual listed name
+  1828: '富衛集團有限公司',
+  9660: '地平線機器人控股有限公司',        // Horizon Robotics
+  2382: '舜宇光學科技(集團)有限公司',
+  9888: '百度集團股份有限公司',
+  9988: '阿里巴巴集團控股有限公司',
+  3690: '美團控股有限公司',
+  700: '騰訊控股有限公司',
+  9961: '攜程集團有限公司',
+  1810: '小米集團控股有限公司',
+  9866: '蔚來控股有限公司',
+  9868: '小鵬汽車有限公司',
+  2015: '理想汽車控股有限公司',
+  285: '比亞迪電子(國際)有限公司',
+  1211: '比亞迪股份有限公司',
+
+  // Full names from search-chinese-names.ts
+  9680: '如祺出行控股有限公司',
+  9638: '法拉帝(意大利)股份有限公司',
+  9933: '冠豪國際控股有限公司',
+  6866: '佐力科創小額貸款股份有限公司',
+  6886: '華泰證券股份有限公司',
+  6860: '指尖悅動有限公司',
+  6161: '標達保險(控股)有限公司',
+  6139: '金茂投資管理有限公司',
+  6113: '優腦思行銷方案集團有限公司',
+  6090: '盛世民安控股有限公司',
+
+  // Fix abbreviated names with full versions
+  1530: '三生製藥控股有限公司',           // Was "三生製藥"
+  1244: '思路迪醫藥股份有限公司',         // Fix incomplete name
+
+  // SPACs (no Chinese names needed)
+  7855: '',
+  7836: '',
+  7827: '',
+  7801: '',
+
+  // Foreign companies (no Chinese name)
+  3668: '',
+};
+
+/**
+ * Check if a Chinese name is a "full" legal name
+ * Full names typically end with 有限公司, 股份有限公司, etc.
+ */
+function isFullChineseName(name: string): boolean {
+  if (!name) return false;
+  return name.endsWith('有限公司') ||
+         name.endsWith('股份公司') ||
+         name.endsWith('股份有限公司') ||
+         name.endsWith('控股有限公司') ||
+         name.endsWith('集團有限公司');
+}
+
+/**
+ * Choose the better Chinese name between two options
+ * Prefers: longer names, names ending with proper legal suffixes
+ */
+function chooseBetterChineseName(name1: string | null, name2: string | null): string | null {
+  if (!name1) return name2;
+  if (!name2) return name1;
+
+  // Prefer full legal names
+  const is1Full = isFullChineseName(name1);
+  const is2Full = isFullChineseName(name2);
+
+  if (is1Full && !is2Full) return name1;
+  if (is2Full && !is1Full) return name2;
+
+  // Both are full or both are short - prefer longer one
+  return name1.length >= name2.length ? name1 : name2;
+}
+
 function loadChineseNames(): Map<string, string> {
   const db = new Database('data/ddowl.db', { readonly: true });
   const rows = db.prepare("SELECT ticker, company_cn FROM ipo_deals WHERE company_cn IS NOT NULL AND company_cn != ''").all() as { ticker: number; company_cn: string }[];
   const map = new Map<string, string>();
-  rows.forEach(r => map.set(String(r.ticker), r.company_cn));
+
+  // First pass: load from database, preferring full names
+  for (const r of rows) {
+    const ticker = String(r.ticker);
+    const existing = map.get(ticker);
+    const better = chooseBetterChineseName(existing || null, r.company_cn);
+    if (better) {
+      map.set(ticker, better);
+    }
+  }
+
+  // Second pass: apply manual overrides (these take precedence if non-empty)
+  // Manual overrides are authoritative - they represent verified full names
+  for (const [ticker, name] of Object.entries(KNOWN_CHINESE_NAMES)) {
+    if (name === '') {
+      // Empty string means explicitly no Chinese name (SPACs, foreign companies)
+      map.delete(ticker);
+    } else {
+      // Manual override takes precedence
+      map.set(ticker, name);
+    }
+  }
+
   db.close();
   console.log(`Loaded ${map.size} Chinese company names from database`);
   return map;
@@ -219,7 +432,7 @@ function normalizeBankToFamily(name: string): string {
 
   // Partial match - check if name contains a known variant
   for (const [variant, canonical] of BANK_CANONICAL.entries()) {
-    if (upper.includes(variant) || variant.includes(upper)) {
+    if (upper.includes(variant)) {
       return canonical;
     }
   }
@@ -280,7 +493,13 @@ function isActualSponsor(rawRole: string, isSponsorFlag: string): boolean {
   return true;
 }
 
-function enrichData(baseline: BaselineRow[], metrics: Map<number, DealMetrics>, chineseNames: Map<string, string>): EnrichedDeal[] {
+function enrichData(
+  baseline: BaselineRow[],
+  metrics: Map<number, DealMetrics>,
+  chineseNames: Map<string, string>,
+  dates: Map<number, string>,
+  pdfUrls: Map<number, string>
+): EnrichedDeal[] {
   const dealMap = new Map<string, EnrichedDeal>();
 
   for (const row of baseline) {
@@ -288,16 +507,47 @@ function enrichData(baseline: BaselineRow[], metrics: Map<number, DealMetrics>, 
     let deal = dealMap.get(ticker);
 
     if (!deal) {
-      const m = metrics.get(parseInt(ticker)) || {} as DealMetrics;
+      const tickerNum = parseInt(ticker);
+      const m = metrics.get(tickerNum) || {} as DealMetrics;
+
+      // Get date from Excel, or extract from URL if unavailable/numeric
+      let date = dates.get(tickerNum) || row.date || '';
+
+      // Fix dates: if unavailable or Excel serial, try to extract from PDF URL
+      if (needsDateFix(date)) {
+        const pdfUrl = pdfUrls.get(tickerNum);
+        if (pdfUrl) {
+          const urlDate = extractDateFromUrl(pdfUrl);
+          if (urlDate) {
+            date = urlDate;
+          }
+        }
+        // If still an Excel serial number, convert it
+        if (isExcelSerialDate(date)) {
+          date = excelDateToString(parseInt(date));
+        }
+        // If still "Unavailable", set to empty string
+        if (date.toLowerCase() === 'unavailable') {
+          date = '';
+        }
+      }
+
+      // Apply deal size threshold - show null for sizes below minimum
+      let sizeHKDm = m.sizeHKDm;
+      if (sizeHKDm !== null && sizeHKDm < MIN_DEAL_SIZE_HKDM) {
+        // Size is suspiciously low - likely placeholder value
+        sizeHKDm = null;
+      }
+
       deal = {
         ticker,
         company: cleanCompanyName(row.company),
         companyCn: chineseNames.get(ticker) || null,
         type: row.type,
-        date: row.date,
+        date,
         shares: m.shares || null,
         price: m.price || null,
-        sizeHKDm: m.sizeHKDm || null,
+        sizeHKDm,
         sponsors: [],
         others: [],
       };
