@@ -1805,6 +1805,40 @@
       }
     }
 
+    // Restore queue state on page load - check if running items are still alive on server
+    async function restoreQueueState() {
+      const queue = QueueManager.getAll();
+
+      for (const item of queue) {
+        if (item.status === 'running' && item.sessionId) {
+          // Check if session is still alive on server
+          try {
+            const resp = await fetch(`/api/session/${item.sessionId}/status`);
+            if (resp.ok) {
+              const status = await resp.json();
+              if (!status.exists) {
+                // Session expired or not found
+                QueueManager.update(item.id, { status: 'error' });
+              } else if (status.phase === 'complete') {
+                QueueManager.update(item.id, {
+                  status: 'complete',
+                  stats: status.stats
+                });
+              }
+              // If still running on server, leave as 'running' - user can resume
+            } else {
+              // HTTP error
+              QueueManager.update(item.id, { status: 'error' });
+            }
+          } catch {
+            QueueManager.update(item.id, { status: 'error' });
+          }
+        }
+      }
+
+      renderQueue();
+    }
+
     // ============================================================
     // QUEUE SEQUENTIAL RUNNER - Process queue items one at a time
     // ============================================================
@@ -2134,7 +2168,7 @@
     // Initialize language list on page load + check for existing session + render recent sessions
     document.addEventListener('DOMContentLoaded', async () => {
       renderLanguageList();
-      renderQueue();
+      await restoreQueueState(); // Restore queue state and render (checks server for running items)
 
       // Check if we're resuming from a URL with session ID
       const urlSessionId = Router.getSessionIdFromUrl();
@@ -3030,6 +3064,11 @@
 
             // Update URL for bookmarking/sharing
             Router.setSessionUrl(sessionId);
+
+            // Save sessionId to queue item for persistence across browser close
+            if (currentQueueItemId) {
+              QueueManager.update(currentQueueItemId, { sessionId: data.sessionId });
+            }
           }
 
           // Handle reconnection status - show clear context about where we are
