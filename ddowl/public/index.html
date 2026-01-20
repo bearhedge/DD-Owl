@@ -2177,13 +2177,17 @@
           const resp = await fetch(`/api/session/${urlSessionId}/status`);
           const data = await resp.json();
           if (data.exists) {
+            // Save to localStorage so resumeScreening() can find it
+            localStorage.setItem('ddowl_sessionId', urlSessionId);
+            localStorage.setItem('ddowl_sessionName', data.subjectName || '');
+
             // Set up state for resume
             sessionId = urlSessionId;
             document.getElementById('nameInput').value = data.subjectName || '';
             document.getElementById('recent-sessions-panel').style.display = 'none';
 
-            // Call startScreening which handles reconnection properly
-            startScreening();
+            // Call resumeScreening() instead of startScreening() - preserves sessionId!
+            resumeScreening();
             return;
           } else {
             alert('Session not found or expired.');
