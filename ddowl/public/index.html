@@ -1754,6 +1754,57 @@
     };
 
     // ============================================================
+    // QUEUE PANEL RENDERING - Display and manage queue UI
+    // ============================================================
+    function renderQueue() {
+      const queue = QueueManager.getAll();
+      const panel = document.getElementById('queuePanel');
+      const list = document.getElementById('queueList');
+      const count = document.getElementById('queueCount');
+
+      // Show/hide panel based on queue length
+      if (queue.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+
+      panel.style.display = 'block';
+      count.textContent = queue.length;
+
+      list.innerHTML = queue.map(item => `
+        <div class="queue-item ${item.status}">
+          <div>
+            <span class="queue-item-name">${escapeHtml(item.subjectName)}</span>
+            ${item.variants?.length ? `<span style="color:#666;font-size:11px;margin-left:8px;">(+${item.variants.length} variants)</span>` : ''}
+          </div>
+          <div class="queue-item-status ${item.status}">
+            ${item.status === 'running' ? `${item.progress || 0}%` : item.status}
+            ${item.status === 'complete' && item.stats ? ` · ${item.stats.red}R ${item.stats.amber}A` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleQueuePanel() {
+      const body = document.getElementById('queueBody');
+      const toggle = document.querySelector('.queue-toggle');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        toggle.textContent = '▼';
+      } else {
+        body.style.display = 'none';
+        toggle.textContent = '▶';
+      }
+    }
+
+    function clearQueue() {
+      if (confirm('Clear all queued subjects?')) {
+        QueueManager.clear();
+        renderQueue();
+      }
+    }
+
+    // ============================================================
     // URL HASH ROUTER - For shareable session URLs
     // ============================================================
     const Router = {
@@ -2038,6 +2089,7 @@
     // Initialize language list on page load + check for existing session + render recent sessions
     document.addEventListener('DOMContentLoaded', async () => {
       renderLanguageList();
+      renderQueue();
 
       // Check if we're resuming from a URL with session ID
       const urlSessionId = Router.getSessionIdFromUrl();
