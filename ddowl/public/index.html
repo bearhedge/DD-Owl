@@ -1459,6 +1459,7 @@
           <button class="btn-primary" id="searchBtn" onclick="startScreening()">
             Screen
           </button>
+          <button class="btn-secondary" id="addToQueueBtn" onclick="addToQueue()" title="Add to queue">+</button>
         </div>
 
         <!-- Name Variations Section -->
@@ -2832,6 +2833,33 @@
         }
       });
       return variations;
+    }
+
+    function addToQueue() {
+      const name = document.getElementById('nameInput').value.trim();
+      const variations = getVariations();
+      const language = selectedLanguage;
+
+      if (name.length < 2) {
+        alert('Please enter a valid name (2+ characters)');
+        return;
+      }
+
+      QueueManager.add({
+        name: name,
+        variants: variations,
+        language: language
+      });
+
+      // Clear input
+      document.getElementById('nameInput').value = '';
+      // Clear all variation inputs
+      document.querySelectorAll('.variation-input').forEach(input => {
+        input.value = '';
+      });
+
+      // Re-render queue
+      renderQueue();
     }
 
     // Start a NEW screening - always fresh, always clears old session
