@@ -44,11 +44,10 @@ import { validateDeals } from './validator.js';
 import { initLogDirectories, saveScreeningLog as saveLog, loadScreeningLog as loadLog, listScreeningLogs, saveBenchmarkResult, loadBenchmarkResults } from './logging/storage.js';
 import { MetricsTracker } from './metrics/tracker.js';
 import { evaluateBenchmark, getBenchmarkCase } from './metrics/benchmarks.js';
-import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown, EliminatedResult } from './eliminator.js';
+import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown, EliminatedResult, llmBatchTitleDedupe, TitleDedupeProgress } from './eliminator.js';
 import { getChineseVariantsLLM } from './utils/chinese.js';
 import { createSession, getSession, updateSession, deleteSession, ScreeningSession, DetectedCompany } from './session-store.js';
 import { clusterByIncidentLLM, ClusteringResult, ClusterProgressCallback, IncidentCluster } from './deduplicator.js';
-
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
@@ -933,7 +932,7 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
     let consolidatedFindings: ConsolidatedFinding[] = [];
     if (allFindings.length > 0) {
       sendEvent({ type: 'consolidating', count: allFindings.length });
-      consolidatedFindings = await consolidateFindings(allFindings, subjectName);
+      consolidatedFindings = await consolidateFindings(allFindings, subjectName, []);
       tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
       sendEvent({
         type: 'consolidated',
@@ -1145,6 +1144,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     let sessionId: string;
     let skipGather = false;
     let skipElimination = false;
+    let skipTitleDedupe = false;
     let skipCluster = false;
     let skipCategorize = false;
     let skipConsolidate = false;
@@ -1159,6 +1159,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     let restoredCategorized: { red: CategorizedResult[]; amber: CategorizedResult[]; green: CategorizedResult[] } | null = null;
     let restoredPassed: BatchSearchResult[] | null = null;
     let restoredConsolidated: ConsolidatedFinding[] | null = null;
+    let parkedArticles: BatchSearchResult[] = [];  // Track parked duplicates for consolidation
 
     if (existingSession && incomingSessionId) {
       // Reconnection: reuse existing session
@@ -1247,6 +1248,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       if (phase === 'cluster' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
         skipElimination = true;
+        skipTitleDedupe = true;  // Skip title dedupe if past elimination phase
         // Only skip cluster if we're past it (categorize or later), not if we're mid-cluster
         if (phase !== 'cluster') {
           skipCluster = true;
@@ -1296,7 +1298,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // If reconnecting, send status so user knows where we are
     if (existingSession && incomingSessionId) {
       const phase = existingSession.currentPhase;
-      const phaseName = phase === 'gather' ? 'gathering' : phase === 'eliminate' ? 'filtering' : phase === 'categorize' ? 'categorizing' : phase === 'analyze' ? 'analyzing' : 'consolidating';
+      const phaseName = phase === 'gather' ? 'gathering' : phase === 'eliminate' ? 'filtering' : phase === 'cluster' ? 'clustering' : phase === 'categorize' ? 'categorizing' : phase === 'analyze' ? 'analyzing' : 'consolidating';
       const progress = phase === 'analyze' ? `${existingSession.currentIndex}/${existingSession.categorized.red.length + existingSession.categorized.amber.length}` : '';
       sendEvent({
         type: 'reconnect_status',
@@ -1659,15 +1661,83 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         breakdown,
         duration: Date.now() - elimStart,
       });
-
-      // Update session with elimination results (Redis)
-      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'cluster' });
     } // End of elimination phase else block
 
     if (passed.length === 0) {
       clearInterval(heartbeat);
       activeScreenings.delete(screeningKey);
       sendEvent({ type: 'complete', stats: { totalResults: allResults.length, programmaticEliminated: progEliminated.length, findings: 0 }, findings: [] });
+      res.end();
+      return;
+    }
+
+    // ========================================
+    // PHASE 1.75: LLM TITLE DEDUPLICATION
+    // Batch dedupe before clustering to save LLM costs
+    // ========================================
+    let titleDedupeDuplicates: typeof passed = [];
+
+    // Check if user paused before title dedupe
+    if (await isSessionPaused(sessionId)) {
+      console.log(`[V4] Session ${sessionId} paused before title dedupe phase`);
+      sendEvent({ type: 'paused', phase: 'title_dedupe' });
+      clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
+      return;
+    }
+
+    // Skip title dedupe if resuming from a later phase
+    if (skipTitleDedupe) {
+      sendEvent({ type: 'phase_skipped', phase: '1.75', reason: 'Restored from session' });
+      console.log(`[V4] Skipped title dedupe phase, resuming from later phase`);
+    } else if (passed.length >= 50) {
+      // Only run if we have enough articles (worth the LLM cost)
+      sendEvent({
+        type: 'phase',
+        phase: '1.75',
+        name: 'TITLE_DEDUPE',
+        message: `Batch deduplicating ${passed.length} titles...`
+      });
+
+      const titleDedupeStart = Date.now();
+      const dedupeResult = await llmBatchTitleDedupe(passed, async (progress: TitleDedupeProgress) => {
+        sendEvent({
+          type: 'title_dedupe_progress',
+          batchNumber: progress.batchNumber,
+          totalBatches: progress.totalBatches,
+          processedSoFar: progress.processedSoFar,
+          totalItems: progress.totalItems,
+          duplicatesFound: progress.duplicatesFound,
+        });
+      });
+
+      titleDedupeDuplicates = dedupeResult.duplicates;
+      passed = dedupeResult.unique;
+
+      sendEvent({
+        type: 'title_dedupe_complete',
+        before: dedupeResult.unique.length + dedupeResult.duplicates.length,
+        after: dedupeResult.unique.length,
+        duplicatesRemoved: dedupeResult.duplicates.length,
+        groupsFound: dedupeResult.groups.length,
+        duration: Date.now() - titleDedupeStart,
+      });
+
+      console.log(`[V4] Title dedupe complete: ${dedupeResult.unique.length} unique, ${dedupeResult.duplicates.length} duplicates removed`);
+    } else {
+      sendEvent({ type: 'phase_skipped', phase: '1.75', reason: `Only ${passed.length} articles, skipping LLM dedupe` });
+    }
+
+    // Update session with elimination + dedupe results (Redis)
+    // Only update phase if not skipping (don't overwrite 'analyze' with 'cluster' on resume)
+    if (!skipTitleDedupe) {
+      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'cluster' });
+    }
+
+    if (passed.length === 0) {
+      clearInterval(heartbeat);
+      activeScreenings.delete(screeningKey);
+      sendEvent({ type: 'complete', stats: { totalResults: allResults.length, programmaticEliminated: progEliminated.length, titleDedupeDuplicates: titleDedupeDuplicates.length, findings: 0 }, findings: [] });
       res.end();
       return;
     }
@@ -1737,7 +1807,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         }
       };
 
-      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 3, clusterProgress);
+      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 5, clusterProgress);
 
       // Send cluster summary
       sendEvent({
@@ -1751,6 +1821,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       // Park redundant articles (visible in UI as "further links")
+      // Store parked articles for later inclusion in consolidated findings
+      parkedArticles = clusterResult.parked;
       for (const item of clusterResult.parked) {
         sendEvent({
           type: 'further_link',
@@ -2000,6 +2072,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Skip duplicates
       if (processedUrls.has(item.url)) {
         urlTracker.eliminated.push({ url: item.url, query: item.query, reason: 'duplicate' });
+        sendEvent({
+          type: 'analyze_skip',
+          index: i + 1,
+          total: toProcess.length,
+          url: item.url,
+          title: item.title,
+          reason: 'duplicate'
+        });
         continue;
       }
       processedUrls.add(item.url);
@@ -2007,6 +2087,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Skip invalid URLs
       if (!isValidUrl(item.url)) {
         urlTracker.eliminated.push({ url: item.url, query: item.query, reason: 'invalid_url' });
+        sendEvent({
+          type: 'analyze_skip',
+          index: i + 1,
+          total: toProcess.length,
+          url: item.url,
+          title: item.title,
+          reason: 'invalid_url'
+        });
         continue;
       }
 
@@ -2136,7 +2224,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Update session to consolidate phase BEFORE starting (for reconnection tracking)
       await updateSession(sessionId, { currentPhase: 'consolidate' });
 
-      consolidatedFindings = await consolidateFindings(allFindings, subjectName);
+      consolidatedFindings = await consolidateFindings(allFindings, subjectName, parkedArticles);
       tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
 
       // Store consolidated results in session (for reconnection)
@@ -2238,7 +2326,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
 
     activeScreenings.delete(screeningKey);
-    await deleteSession(sessionId);
+    // Keep session for resume - mark as completed instead of deleting
+    await updateSession(sessionId, { currentPhase: 'complete' });
     res.end();
   } catch (error) {
     clearInterval(heartbeat);
@@ -2306,6 +2395,12 @@ app.get('/api/session/:sessionId/status', async (req: Request, res: Response) =>
       progress = `${session.consolidatedFindings?.length || session.findings?.length || 0} findings`;
     }
 
+    // Count RED and AMBER findings for stats display
+    // Use consolidatedFindings for completed sessions, fall back to findings
+    const allFindings = session.consolidatedFindings || session.findings || [];
+    const redCount = allFindings.filter((f: { severity: string }) => f.severity === 'RED').length;
+    const amberCount = allFindings.filter((f: { severity: string }) => f.severity === 'AMBER').length;
+
     res.json({
       exists: true,
       name: session.name,
@@ -2313,10 +2408,42 @@ app.get('/api/session/:sessionId/status', async (req: Request, res: Response) =>
       progress,
       findingsCount: session.findings?.length || 0,
       gatheredCount: session.gatheredResults?.length || 0,
+      stats: { red: redCount, amber: amberCount },
     });
   } catch (e) {
     console.error(`[SESSION] Error getting status for ${sessionId}:`, e);
     res.json({ exists: false });
+  }
+});
+
+// Get session findings for UI restoration on resume
+app.get('/api/session/:sessionId/findings', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  try {
+    const session = await getSession(sessionId);
+    if (!session) {
+      res.status(404).json({ error: 'Session not found', findings: [] });
+      return;
+    }
+
+    // Return findings array with fields needed for UI display
+    // Use consolidatedFindings for completed sessions (has richer data), fall back to findings
+    const rawFindings = session.consolidatedFindings || session.findings || [];
+    const findings = rawFindings.map((f: any) => ({
+      url: f.url,
+      title: f.title,
+      severity: f.severity || f.category,  // Handle both field names
+      category: f.severity || f.category,
+      headline: f.headline,
+      summary: f.summary,
+      sources: f.sources || [{ url: f.url, title: f.title }],
+      dateRange: f.dateRange || '',
+    }));
+
+    res.json({ findings });
+  } catch (e) {
+    console.error(`[SESSION] Error getting findings for ${sessionId}:`, e);
+    res.status(500).json({ error: 'Failed to get findings', findings: [] });
   }
 });
 
