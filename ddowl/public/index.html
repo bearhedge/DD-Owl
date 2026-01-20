@@ -1693,6 +1693,180 @@
     };
 
     // ============================================================
+    // MULTI-TAB SYNC - BroadcastChannel for tab-to-tab communication
+    // ============================================================
+    const ScreeningSync = {
+      channel: null,
+      isLeader: false,
+      sessionId: null,
+      lastHeartbeat: 0,
+      heartbeatInterval: null,
+      watchdogInterval: null,
+
+      init(sessionId) {
+        this.cleanup(); // Clean up any previous channel
+        this.sessionId = sessionId;
+        this.channel = new BroadcastChannel(`ddowl-screening-${sessionId}`);
+        this.channel.onmessage = (e) => this.handleMessage(e.data);
+      },
+
+      handleMessage(data) {
+        // Leader responds to pings
+        if (data.type === 'ping' && this.isLeader) {
+          this.channel.postMessage({
+            type: 'pong',
+            state: this.getCurrentState()
+          });
+          return;
+        }
+
+        // Follower receives state from leader
+        if (data.type === 'pong' && !this.isLeader) {
+          this.applyState(data.state);
+          return;
+        }
+
+        // Follower receives progress updates
+        if (data.type === 'progress' && !this.isLeader) {
+          this.handleProgressEvent(data.event);
+          return;
+        }
+
+        // Follower receives heartbeat
+        if (data.type === 'heartbeat') {
+          this.lastHeartbeat = Date.now();
+          return;
+        }
+
+        // Leader is closing - take over
+        if (data.type === 'leader_closing') {
+          console.log('[SYNC] Leader closing, becoming leader...');
+          this.becomeLeader();
+          resumeScreening();
+          return;
+        }
+      },
+
+      getCurrentState() {
+        return {
+          progress: progressState.percentage,
+          redCount: redCount,
+          amberCount: amberCount,
+          greenCount: greenCount,
+          subjectName: currentSubjectName || localStorage.getItem('ddowl_sessionName') || '',
+          activityLog: Array.from(document.getElementById('activityLog').children).map(el => el.outerHTML),
+          findings: {
+            red: Array.from(document.getElementById('redFlagsList').children).map(el => el.outerHTML),
+            amber: Array.from(document.getElementById('amberFlagsList').children).map(el => el.outerHTML)
+          }
+        };
+      },
+
+      applyState(state) {
+        // Update progress bar
+        updateProgressCard('running', state.progress, state.redCount, state.amberCount, state.subjectName);
+
+        // Update counts
+        redCount = state.redCount;
+        amberCount = state.amberCount;
+        greenCount = state.greenCount;
+        currentSubjectName = state.subjectName;
+
+        // Restore activity log
+        const logEl = document.getElementById('activityLog');
+        logEl.innerHTML = state.activityLog.join('');
+
+        // Restore findings
+        document.getElementById('redFlagsList').innerHTML = state.findings.red.join('');
+        document.getElementById('amberFlagsList').innerHTML = state.findings.amber.join('');
+        document.getElementById('redCount').textContent = state.redCount;
+        document.getElementById('amberCount').textContent = state.amberCount;
+
+        // Show activity panel
+        document.getElementById('activityPanel').classList.add('active');
+        document.getElementById('togglePanel').classList.remove('hidden');
+      },
+
+      handleProgressEvent(eventData) {
+        // Process event exactly like SSE handler does
+        processSSEEvent(eventData);
+      },
+
+      broadcast(eventData) {
+        if (this.isLeader && this.channel) {
+          this.channel.postMessage({ type: 'progress', event: eventData });
+        }
+      },
+
+      becomeLeader() {
+        this.isLeader = true;
+        this.startHeartbeat();
+
+        // Announce closing when tab closes
+        window.addEventListener('beforeunload', () => {
+          if (this.isLeader && this.channel) {
+            this.channel.postMessage({ type: 'leader_closing', sessionId: this.sessionId });
+          }
+        });
+      },
+
+      startHeartbeat() {
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = setInterval(() => {
+          if (this.isLeader && this.channel) {
+            this.channel.postMessage({ type: 'heartbeat' });
+          }
+        }, 2000);
+      },
+
+      startWatchdog() {
+        this.lastHeartbeat = Date.now();
+        if (this.watchdogInterval) clearInterval(this.watchdogInterval);
+        this.watchdogInterval = setInterval(() => {
+          if (!this.isLeader && Date.now() - this.lastHeartbeat > 5000) {
+            console.log('[SYNC] Leader died, taking over...');
+            this.becomeLeader();
+            resumeScreening();
+          }
+        }, 1000);
+      },
+
+      async checkForLeader(sessionId) {
+        return new Promise((resolve) => {
+          this.init(sessionId);
+          let responded = false;
+
+          const originalHandler = this.channel.onmessage;
+          this.channel.onmessage = (e) => {
+            if (e.data.type === 'pong') {
+              responded = true;
+              this.channel.onmessage = originalHandler;
+              resolve({ hasLeader: true, state: e.data.state });
+            }
+          };
+
+          this.channel.postMessage({ type: 'ping' });
+
+          setTimeout(() => {
+            if (!responded) {
+              this.channel.onmessage = originalHandler;
+              resolve({ hasLeader: false });
+            }
+          }, 500);
+        });
+      },
+
+      cleanup() {
+        if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+        if (this.watchdogInterval) clearInterval(this.watchdogInterval);
+        if (this.channel) this.channel.close();
+        this.isLeader = false;
+        this.sessionId = null;
+        this.channel = null;
+      }
+    };
+
+    // ============================================================
     // QUEUE MANAGER - LocalStorage for multi-subject queue
     // ============================================================
     const QueueManager = {
@@ -2199,8 +2373,8 @@
         }
       }
 
-      // Check for paused session and show card if exists
-      await checkForPausedSession();
+      // Check for paused session and show card if exists (with multi-tab sync)
+      await checkForPausedSessionWithSync();
     });
 
     // ===== PROGRESS BAR SYSTEM =====
@@ -2298,6 +2472,194 @@
     }
 
     // ===== END PROGRESS BAR SYSTEM =====
+
+    // ===== SHARED SSE EVENT HANDLER =====
+    // Used by both leader (SSE) and follower (BroadcastChannel) tabs
+    function processSSEEvent(data, subjectName) {
+      // Skip heartbeat
+      if (data.type === 'heartbeat') return;
+
+      // Get subject name from param or state
+      const name = subjectName || currentSubjectName || localStorage.getItem('ddowl_sessionName') || '';
+
+      // Handle phase events
+      if (data.type === 'phase') {
+        addLogEntry('search', `━━━ PHASE ${data.phase}: ${data.name} ━━━`);
+        addLogEntry('search', data.message);
+        updateActivityStats(`Phase ${data.phase}: ${data.name}`);
+        const phaseName = data.name?.toLowerCase() || '';
+        const phaseKey = phaseName.includes('gather') ? 'gather' :
+                        phaseName.includes('eliminat') ? 'eliminate' :
+                        phaseName.includes('cluster') ? 'cluster' :
+                        phaseName.includes('categor') ? 'categorize' :
+                        phaseName.includes('analyz') ? 'analyze' :
+                        phaseName.includes('consolid') ? 'consolidate' : null;
+        if (phaseKey && PHASE_WEIGHTS[phaseKey]) {
+          updateProgressCard('running', PHASE_WEIGHTS[phaseKey].start, progressState.redCount, progressState.amberCount, name);
+        }
+      }
+
+      if (data.type === 'phase_skipped') {
+        addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
+      }
+
+      // Handle search progress
+      if (data.type === 'search_page') {
+        const stopReason = data.pageResults === 0 ? ' → STOP (empty)' : (data.pageResults < 10 ? ' → STOP (last page)' : '');
+        addLogEntry('search', `  Q${data.queryIndex} Page ${data.page}: ${data.pageResults} results${stopReason}`);
+      }
+
+      if (data.type === 'search_progress') {
+        addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries} | ${data.resultsFound} results | ${data.query}`);
+        updateActivityStats(`Searching ${data.queryIndex}/${data.totalQueries} (${data.totalSoFar} total)`);
+        const pct = calculateOverallProgress('gather', data.queryIndex, data.totalQueries);
+        updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+      }
+
+      // Handle clustering
+      if (data.type === 'cluster_batch_start') {
+        addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Clustering ${data.articlesInBatch} articles...`);
+        updateActivityStats(`Clustering batch ${data.batch}/${data.totalBatches}`);
+      }
+
+      if (data.type === 'cluster_batch_complete') {
+        const labels = data.clusterLabels?.slice(0, 5).join(', ') || '';
+        const more = data.clusterLabels?.length > 5 ? ` (+${data.clusterLabels.length - 5} more)` : '';
+        addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Found ${data.clustersFound} incidents: ${labels}${more}`);
+        const pct = calculateOverallProgress('cluster', data.batch, data.totalBatches);
+        updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+      }
+
+      if (data.type === 'cluster_merge_complete') {
+        addLogEntry('result', `Merged to ${data.totalClusters} unique incidents`);
+        if (data.clusterLabels && data.clusterLabels.length > 0) {
+          const toShow = data.clusterLabels.slice(0, 10);
+          toShow.forEach((label, i) => {
+            addLogEntry('analyze', `  ${i + 1}. ${label}`);
+          });
+          if (data.clusterLabels.length > 10) {
+            addLogEntry('analyze', `  ... and ${data.clusterLabels.length - 10} more incidents`);
+          }
+        }
+      }
+
+      if (data.type === 'incident_clusters') {
+        addLogEntry('result', `━━━ CLUSTERING RESULT ━━━`);
+        addLogEntry('result', `${data.totalArticles} articles → ${data.totalClusters} incidents`);
+        addLogEntry('result', `Keeping ${data.articlesToAnalyze} for analysis, parking ${data.articlesParked} duplicates`);
+        addLogEntry('analyze', `Duration: ${(data.duration/1000).toFixed(1)}s`);
+      }
+
+      // Handle phase_resumed
+      if (data.type === 'phase_resumed') {
+        if (data.partialResults) {
+          progressState.redCount = data.partialResults.red || 0;
+          progressState.amberCount = data.partialResults.amber || 0;
+          updateProgressCard('running', progressState.percentage || 0, progressState.redCount, progressState.amberCount, name);
+          addLogEntry('result', `Restored counts: ${progressState.redCount} RED, ${progressState.amberCount} AMBER from previous batches`);
+        }
+        addLogEntry('info', data.message || `Resuming ${data.phase} phase`);
+      }
+
+      // Handle categorization
+      if (data.type === 'categorize_batch_complete') {
+        addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
+        updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
+        const pct = calculateOverallProgress('categorize', data.batch, data.totalBatches);
+        progressState.redCount = (progressState.redCount || 0) + (data.batchRed || 0);
+        progressState.amberCount = (progressState.amberCount || 0) + (data.batchAmber || 0);
+        updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+      }
+
+      if (data.type === 'categorize_complete') {
+        addLogEntry('result', `Categorized: ${data.red} RED, ${data.amber} AMBER, ${data.green} GREEN`);
+      }
+
+      // Handle analyze
+      if (data.type === 'analyze_start') {
+        addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
+        const pct = calculateOverallProgress('analyze', data.index, data.total);
+        updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+      }
+
+      if (data.type === 'analyze_skip') {
+        addLogEntry('analyze', `[${data.index}/${data.total}] Skipped: ${data.reason} | ${data.title}`, data.url);
+        const pct = calculateOverallProgress('analyze', data.index, data.total);
+        updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+      }
+
+      if (data.type === 'analyze_result') {
+        if (data.action === 'SKIP') {
+          addLogEntry('analyze', `Cleared: ${data.reason}`, data.url);
+        } else if (data.isAdverse) {
+          const color = data.severity === 'RED' ? 'red' : 'amber';
+          addLogEntry(color, `${data.severity}: ${data.headline}`, data.url);
+          addResultToUI({
+            url: data.url,
+            title: data.title,
+            severity: data.severity,
+            summary: data.headline + ' - ' + data.summary
+          });
+          const newRed = progressState.redCount + (data.severity === 'RED' ? 1 : 0);
+          const newAmber = progressState.amberCount + (data.severity === 'AMBER' ? 1 : 0);
+          updateProgressCard('running', progressState.percentage, newRed, newAmber, name);
+        } else {
+          addLogEntry('green', `Clear`, data.url);
+        }
+      }
+
+      // Handle paused event
+      if (data.type === 'paused') {
+        addLogEntry('warn', `Server paused at ${data.phase} phase`);
+        updateActivityStats('Paused by server');
+      }
+
+      // Handle consolidation
+      if (data.type === 'consolidating') {
+        addLogEntry('fetch', `Consolidating ${data.count} findings...`);
+        updateActivityStats('Consolidating...');
+      }
+
+      if (data.type === 'consolidated') {
+        if (data.before !== data.after) {
+          addLogEntry('result', `Consolidated: ${data.before} findings → ${data.after} unique incidents`);
+        }
+      }
+
+      // Handle reconnection status
+      if (data.type === 'reconnect_status') {
+        addLogEntry('result', `✓ Reconnected. ${data.message}`);
+        updateActivityStats(`Reconnected: ${data.phaseName} phase${data.progress ? ` (${data.progress})` : ''}`);
+        if (data.findingsCount > 0) {
+          addLogEntry('result', `  ${data.findingsCount} findings restored from previous session`);
+        }
+      }
+    }
+    // ===== END SHARED SSE EVENT HANDLER =====
+
+    // Check for paused session with multi-tab sync support
+    async function checkForPausedSessionWithSync() {
+      const savedSessionId = localStorage.getItem('ddowl_sessionId');
+      if (!savedSessionId) {
+        return; // No session to check
+      }
+
+      // First, check if another tab is already running this session
+      const { hasLeader, state } = await ScreeningSync.checkForLeader(savedSessionId);
+
+      if (hasLeader) {
+        // Another tab is running - become follower and show synced state
+        console.log('[SYNC] Found leader, becoming follower');
+        ScreeningSync.applyState(state);
+        ScreeningSync.startWatchdog();
+        document.getElementById('nameInput').value = state.subjectName;
+        document.getElementById('recent-sessions-panel').style.display = 'none';
+        return;
+      }
+
+      // No leader - fall back to original paused session check
+      await checkForPausedSession();
+    }
 
     // Check localStorage for a paused session on page load
     async function checkForPausedSession() {
@@ -2542,6 +2904,10 @@
         eventSource = new EventSource(url);
         currentEventSource = eventSource;
 
+        // Initialize multi-tab sync and become leader
+        ScreeningSync.init(savedSessionId);
+        ScreeningSync.becomeLeader();
+
         // Health check
         if (currentHealthCheckInterval) {
           clearInterval(currentHealthCheckInterval);
@@ -2738,6 +3104,9 @@
             eventSource.close();
             resetUI();
           }
+
+          // Broadcast to follower tabs
+          ScreeningSync.broadcast(data);
         };
 
         eventSource.onerror = () => {
@@ -3072,6 +3441,10 @@
             if (currentQueueItemId) {
               QueueManager.update(currentQueueItemId, { sessionId: data.sessionId });
             }
+
+            // Initialize multi-tab sync and become leader
+            ScreeningSync.init(sessionId);
+            ScreeningSync.becomeLeader();
           }
 
           // Handle reconnection status - show clear context about where we are
@@ -3526,6 +3899,9 @@
               renderQueue();
             }
           }
+
+          // Broadcast to follower tabs
+          ScreeningSync.broadcast(data);
         };
 
         eventSource.onerror = () => {
