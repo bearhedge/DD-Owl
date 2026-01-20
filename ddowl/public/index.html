@@ -388,6 +388,32 @@
       transform: translateY(0);
     }
 
+    .activity-resize-handle {
+      height: 8px;
+      background: linear-gradient(to bottom, #333 0%, #1a1a1a 100%);
+      cursor: ns-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid #222;
+    }
+
+    .activity-resize-handle:hover {
+      background: linear-gradient(to bottom, #444 0%, #222 100%);
+    }
+
+    .activity-resize-handle::before {
+      content: '';
+      width: 40px;
+      height: 4px;
+      background: #555;
+      border-radius: 2px;
+    }
+
+    .activity-resize-handle:hover::before {
+      background: #777;
+    }
+
     .activity-header {
       display: flex;
       justify-content: space-between;
@@ -1284,6 +1310,7 @@
   <nav class="top-nav">
     <div class="nav-links">
       <a href="/" class="nav-link active">Screening</a>
+      <a href="/pipeline.html" class="nav-link">Pipeline</a>
       <a href="/ipo" class="nav-link">IPO Tracker</a>
     </div>
   </nav>
@@ -1459,6 +1486,7 @@
 
   <!-- Activity Log Panel -->
   <div class="activity-panel" id="activityPanel">
+    <div class="activity-resize-handle" id="activityResizeHandle"></div>
     <div class="activity-header">
       <span class="activity-title">Activity Log</span>
       <button class="copy-log-btn" onclick="copyActivityLog()" title="Copy log to clipboard">
@@ -1553,6 +1581,67 @@
       },
 
       // Clear all sessions
+      clear() {
+        localStorage.removeItem(this.STORAGE_KEY);
+      }
+    };
+
+    // ============================================================
+    // QUEUE MANAGER - LocalStorage for multi-subject queue
+    // ============================================================
+    const QueueManager = {
+      STORAGE_KEY: 'ddowl_queue',
+
+      getAll() {
+        try {
+          const data = localStorage.getItem(this.STORAGE_KEY);
+          return data ? JSON.parse(data) : [];
+        } catch {
+          return [];
+        }
+      },
+
+      add(subject) {
+        const queue = this.getAll();
+        const newItem = {
+          id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          subjectName: subject.name,
+          variants: subject.variants || [],
+          language: subject.language || 'chinese',
+          status: 'queued', // queued | running | complete | error
+          sessionId: null,
+          progress: 0,
+          createdAt: Date.now(),
+          completedAt: null,
+          stats: null // { red, amber, green }
+        };
+        queue.push(newItem);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
+        return newItem;
+      },
+
+      update(id, updates) {
+        const queue = this.getAll();
+        const idx = queue.findIndex(q => q.id === id);
+        if (idx !== -1) {
+          queue[idx] = { ...queue[idx], ...updates };
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
+        }
+      },
+
+      remove(id) {
+        const queue = this.getAll().filter(q => q.id !== id);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
+      },
+
+      getNext() {
+        return this.getAll().find(q => q.status === 'queued');
+      },
+
+      hasRunning() {
+        return this.getAll().some(q => q.status === 'running');
+      },
+
       clear() {
         localStorage.removeItem(this.STORAGE_KEY);
       }
@@ -1719,6 +1808,25 @@
       // Hide recent sessions panel
       document.getElementById('recent-sessions-panel').style.display = 'none';
 
+      // Fetch and display existing findings before reconnecting
+      try {
+        const findingsResponse = await fetch(`/api/session/${sid}/findings`);
+        const findingsData = await findingsResponse.json();
+        if (findingsData.findings && findingsData.findings.length > 0) {
+          // Clear any existing findings in UI first
+          document.getElementById('redFlagsList').innerHTML = '';
+          document.getElementById('amberFlagsList').innerHTML = '';
+
+          // Add each finding to UI using consolidated format (has sources, dateRange, etc.)
+          findingsData.findings.forEach((finding, index) => {
+            addConsolidatedResultToUI(finding, index);
+          });
+          addLogEntry('result', `Restored ${findingsData.findings.length} findings from previous session`);
+        }
+      } catch (e) {
+        console.warn('Could not restore findings:', e);
+      }
+
       // Call startScreening which handles reconnection properly
       startScreening();
     }
@@ -1881,7 +1989,7 @@
       if (!phaseInfo) return progressState.percentage; // Keep current if unknown phase
 
       const phaseProgress = batchTotal > 0 ? (batchCurrent / batchTotal) * 100 : 0;
-      return Math.round(phaseInfo.start + (phaseProgress / 100) * phaseInfo.weight);
+      return Math.round((phaseInfo.start + (phaseProgress / 100) * phaseInfo.weight) * 10) / 10;
     }
 
     // Update the progress card UI
@@ -1971,6 +2079,8 @@
           const red = status.stats?.red || 0;
           const amber = status.stats?.amber || 0;
           updateProgressCard('paused', percentage, red, amber, savedName);
+          // Show the "Show Log" button so user can view activity log
+          document.getElementById('togglePanel').classList.remove('hidden');
         } else {
           // Session expired or completed, clear localStorage
           localStorage.removeItem('ddowl_sessionId');
@@ -2093,8 +2203,27 @@
       // Hide paused card
       document.getElementById('pausedSessionCard').style.display = 'none';
 
-      // Start SSE connection to resume - startScreening() handles reconnection
-      startScreening();
+      // Fetch and display existing findings before reconnecting SSE
+      try {
+        const findingsResponse = await fetch(`/api/session/${savedSessionId}/findings`);
+        const findingsData = await findingsResponse.json();
+        if (findingsData.findings && findingsData.findings.length > 0) {
+          // Clear any existing findings in UI first
+          document.getElementById('redFlagsList').innerHTML = '';
+          document.getElementById('amberFlagsList').innerHTML = '';
+
+          // Add each finding to UI using consolidated format (has sources, dateRange, etc.)
+          findingsData.findings.forEach((finding, index) => {
+            addConsolidatedResultToUI(finding, index);
+          });
+          addLogEntry('result', `Restored ${findingsData.findings.length} findings from previous session`);
+        }
+      } catch (e) {
+        console.warn('Could not restore findings:', e);
+      }
+
+      // Use resumeScreening() which connects to existing session without resetting
+      resumeScreening();
     }
 
     // Disconnect active screening (keeps session in Redis)
@@ -2255,21 +2384,41 @@
             updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, savedName);
           }
 
+          // Handle phase_resumed - restore cumulative counts from batches processed before disconnect
+          if (data.type === 'phase_resumed') {
+            if (data.partialResults) {
+              progressState.redCount = data.partialResults.red || 0;
+              progressState.amberCount = data.partialResults.amber || 0;
+              // Update progress card display immediately with restored counts
+              updateProgressCard('running', progressState.percentage || 0, progressState.redCount, progressState.amberCount, savedName);
+              addLogEntry('result', `Restored counts: ${progressState.redCount} RED, ${progressState.amberCount} AMBER from previous batches`);
+            }
+            addLogEntry('info', data.message || `Resuming ${data.phase} phase`);
+          }
+
           // Handle categorization
           if (data.type === 'categorize_batch_complete') {
             addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
             updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
             // Update progress bar for categorization with cumulative counts
             const pct = calculateOverallProgress('categorize', data.batch, data.totalBatches);
-            const totalRed = (progressState.redCount || 0) + (data.batchRed || 0);
-            const totalAmber = (progressState.amberCount || 0) + (data.batchAmber || 0);
-            updateProgressCard('running', pct, totalRed, totalAmber, savedName);
+            // Add batch counts to running total
+            progressState.redCount = (progressState.redCount || 0) + (data.batchRed || 0);
+            progressState.amberCount = (progressState.amberCount || 0) + (data.batchAmber || 0);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, savedName);
           }
 
           // Handle analyze
           if (data.type === 'analyze_start') {
             addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
             // Update progress bar for analyze phase
+            const pct = calculateOverallProgress('analyze', data.index, data.total);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, savedName);
+          }
+
+          if (data.type === 'analyze_skip') {
+            addLogEntry('analyze', `[${data.index}/${data.total}] Skipped: ${data.reason} | ${data.title}`, data.url);
+            // Update progress bar even for skipped items
             const pct = calculateOverallProgress('analyze', data.index, data.total);
             updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, savedName);
           }
@@ -2411,6 +2560,72 @@
       panel.classList.toggle('active');
       btn.textContent = panel.classList.contains('active') ? 'Hide Log' : 'Show Log';
     }
+
+    // Activity panel resize functionality
+    (function initActivityResize() {
+      const panel = document.getElementById('activityPanel');
+      const handle = document.getElementById('activityResizeHandle');
+      let isResizing = false;
+      let startY = 0;
+      let startHeight = 0;
+
+      handle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = panel.offsetHeight;
+        panel.style.transition = 'none'; // Disable transition during drag
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        const deltaY = startY - e.clientY;
+        const newHeight = Math.min(Math.max(startHeight + deltaY, 150), window.innerHeight - 100);
+        panel.style.height = newHeight + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isResizing) {
+          isResizing = false;
+          panel.style.transition = ''; // Re-enable transition
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          // Save height preference
+          localStorage.setItem('ddowl_activityHeight', panel.style.height);
+        }
+      });
+
+      // Restore saved height
+      const savedHeight = localStorage.getItem('ddowl_activityHeight');
+      if (savedHeight) {
+        panel.style.height = savedHeight;
+      }
+
+      // Touch support for mobile
+      handle.addEventListener('touchstart', (e) => {
+        isResizing = true;
+        startY = e.touches[0].clientY;
+        startHeight = panel.offsetHeight;
+        panel.style.transition = 'none';
+      }, { passive: true });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isResizing) return;
+        const deltaY = startY - e.touches[0].clientY;
+        const newHeight = Math.min(Math.max(startHeight + deltaY, 150), window.innerHeight - 100);
+        panel.style.height = newHeight + 'px';
+      }, { passive: true });
+
+      document.addEventListener('touchend', () => {
+        if (isResizing) {
+          isResizing = false;
+          panel.style.transition = '';
+          localStorage.setItem('ddowl_activityHeight', panel.style.height);
+        }
+      });
+    })();
 
     function copyActivityLog() {
       const logDiv = document.getElementById('activityLog');
@@ -2618,6 +2833,17 @@
             if (sessionId) {
               SessionHistory.update(sessionId, { phase: data.name.toLowerCase() });
             }
+            // Update progress bar to phase start
+            const phaseName = data.name?.toLowerCase() || '';
+            const phaseKey = phaseName.includes('gather') ? 'gather' :
+                            phaseName.includes('eliminat') ? 'eliminate' :
+                            phaseName.includes('cluster') ? 'cluster' :
+                            phaseName.includes('categor') ? 'categorize' :
+                            phaseName.includes('analyz') ? 'analyze' :
+                            phaseName.includes('consolid') ? 'consolidate' : null;
+            if (phaseKey && PHASE_WEIGHTS[phaseKey]) {
+              updateProgressCard('running', PHASE_WEIGHTS[phaseKey].start, progressState.redCount, progressState.amberCount, name);
+            }
           }
 
           // === CLUSTERING EVENTS ===
@@ -2630,6 +2856,9 @@
             const labels = data.clusterLabels?.slice(0, 5).join(', ') || '';
             const more = data.clusterLabels?.length > 5 ? ` (+${data.clusterLabels.length - 5} more)` : '';
             addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Found ${data.clustersFound} incidents: ${labels}${more}`);
+            // Update progress bar
+            const pct = calculateOverallProgress('cluster', data.batch, data.totalBatches);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
           }
 
           if (data.type === 'cluster_merge_complete') {
@@ -2662,6 +2891,9 @@
           if (data.type === 'search_progress') {
             addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries} | ${data.resultsFound} results | ${data.query}`);
             updateActivityStats(`Searching ${data.queryIndex}/${data.totalQueries} (${data.totalSoFar} total)`);
+            // Update progress bar
+            const pct = calculateOverallProgress('gather', data.queryIndex, data.totalQueries);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
           }
 
           if (data.type === 'gather_complete') {
@@ -2681,6 +2913,15 @@
             }
           }
 
+          // Phase 1.75: LLM Title Deduplication
+          if (data.type === 'title_dedupe_progress') {
+            addLogEntry('fetch', `Title dedupe batch ${data.batchNumber}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.duplicatesFound} duplicates found)`);
+          }
+
+          if (data.type === 'title_dedupe_complete') {
+            addLogEntry('analyze', `Title dedupe: ${data.before} → ${data.after} (${data.duplicatesRemoved} duplicates removed, ${data.groupsFound} groups)`);
+          }
+
           // Per-item elimination logging - clickable full URL
           if (data.type === 'elimination_item') {
             if (data.status === 'PASSED') {
@@ -2692,9 +2933,27 @@
             }
           }
 
+          // Handle phase_resumed - restore cumulative counts from batches processed before disconnect
+          if (data.type === 'phase_resumed') {
+            if (data.partialResults) {
+              progressState.redCount = data.partialResults.red || 0;
+              progressState.amberCount = data.partialResults.amber || 0;
+              // Update progress card display immediately with restored counts
+              updateProgressCard('running', progressState.percentage || 0, progressState.redCount, progressState.amberCount, name);
+              addLogEntry('result', `Restored counts: ${progressState.redCount} RED, ${progressState.amberCount} AMBER from previous batches`);
+            }
+            addLogEntry('info', data.message || `Resuming ${data.phase} phase`);
+          }
+
           if (data.type === 'categorize_batch_complete') {
             addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
             updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
+            // Update progress bar with cumulative counts
+            const pct = calculateOverallProgress('categorize', data.batch, data.totalBatches);
+            // Add batch counts to running total
+            progressState.redCount = (progressState.redCount || 0) + (data.batchRed || 0);
+            progressState.amberCount = (progressState.amberCount || 0) + (data.batchAmber || 0);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
           }
 
           if (data.type === 'categorize_complete') {
@@ -2794,6 +3053,16 @@
           // === STAGE 3: DEEP ANALYSIS ===
           if (data.type === 'analyze_start') {
             addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
+            // Update progress bar
+            const pct = calculateOverallProgress('analyze', data.index, data.total);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+          }
+
+          if (data.type === 'analyze_skip') {
+            addLogEntry('analyze', `[${data.index}/${data.total}] Skipped: ${data.reason} | ${data.title}`, data.url);
+            // Update progress bar even for skipped items
+            const pct = calculateOverallProgress('analyze', data.index, data.total);
+            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
           }
 
           if (data.type === 'analyze_result') {
@@ -2809,6 +3078,10 @@
                 severity: data.severity,
                 summary: data.headline + ' - ' + data.summary
               });
+              // Update progress bar with new finding counts
+              const newRed = progressState.redCount + (data.severity === 'RED' ? 1 : 0);
+              const newAmber = progressState.amberCount + (data.severity === 'AMBER' ? 1 : 0);
+              updateProgressCard('running', progressState.percentage, newRed, newAmber, name);
             } else {
               addLogEntry('green', `Clear`, data.url);
             }
@@ -2869,6 +3142,9 @@
             addLogEntry('result', `Total searched: ${stats.totalSearchResults || 0}`);
             addLogEntry('result', `Total cleared: ${stats.totalCleared || 0}`);
             addLogEntry('result', `Findings: ${stats.red || 0} RED, ${stats.amber || 0} AMBER`);
+
+            // Update progress bar to 100%
+            updateProgressCard('complete', 100, stats.red || 0, stats.amber || 0, name);
 
             // Update clear count (green counter removed from UI)
             greenCount = stats.totalCleared || 0;
