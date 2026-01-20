@@ -1806,6 +1806,50 @@
     }
 
     // ============================================================
+    // QUEUE SEQUENTIAL RUNNER - Process queue items one at a time
+    // ============================================================
+    let currentQueueItemId = null;
+
+    function runNextInQueue() {
+      // Don't start if something is already running
+      if (QueueManager.hasRunning()) {
+        console.log('[Queue] Already running a subject');
+        return;
+      }
+
+      const next = QueueManager.getNext();
+      if (!next) {
+        console.log('[Queue] No subjects in queue');
+        return;
+      }
+
+      // Mark as running
+      currentQueueItemId = next.id;
+      QueueManager.update(next.id, { status: 'running' });
+      renderQueue();
+
+      // Set up the input as if user typed it (for existing startScreening logic)
+      document.getElementById('nameInput').value = next.subjectName;
+
+      // Clear existing variations and add from queue item
+      document.querySelectorAll('.variation-input').forEach(input => {
+        input.value = '';
+      });
+      if (next.variants?.length) {
+        // Add variations to the first available inputs
+        const variationInputs = document.querySelectorAll('.variation-input');
+        next.variants.forEach((v, i) => {
+          if (variationInputs[i]) variationInputs[i].value = v;
+        });
+      }
+
+      selectedLanguage = next.language || 'chinese';
+
+      // Start screening
+      startScreening();
+    }
+
+    // ============================================================
     // URL HASH ROUTER - For shareable session URLs
     // ============================================================
     const Router = {
@@ -3408,12 +3452,37 @@
             sessionId = null;
 
             eventSource.close();
+
+            // After successful completion, update queue and run next
+            if (currentQueueItemId) {
+              QueueManager.update(currentQueueItemId, {
+                status: 'complete',
+                completedAt: Date.now(),
+                stats: { red: stats.red || 0, amber: stats.amber || 0, green: greenCount }
+              });
+              currentQueueItemId = null;
+              renderQueue();
+
+              // Auto-run next in queue after short delay
+              setTimeout(() => {
+                if (QueueManager.getNext()) {
+                  runNextInQueue();
+                }
+              }, 2000);
+            }
           }
 
           if (data.type === 'error') {
             addLogEntry('error', `[ERROR] ${data.message}`);
             eventSource.close();
             resetUI();
+
+            // Mark queue item as error
+            if (currentQueueItemId) {
+              QueueManager.update(currentQueueItemId, { status: 'error' });
+              currentQueueItemId = null;
+              renderQueue();
+            }
           }
         };
 
@@ -3430,6 +3499,13 @@
           } else {
             addLogEntry('error', 'Max retries exceeded. Please try again.');
             resetUI();
+
+            // Mark queue item as error on max retries
+            if (currentQueueItemId) {
+              QueueManager.update(currentQueueItemId, { status: 'error' });
+              currentQueueItemId = null;
+              renderQueue();
+            }
           }
         };
       }
