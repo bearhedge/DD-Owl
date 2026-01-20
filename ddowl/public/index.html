@@ -70,6 +70,97 @@
       margin-bottom: 24px;
     }
 
+    .queue-panel {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .queue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #0d0d0d;
+      border-bottom: 1px solid #222;
+    }
+
+    .queue-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+    }
+
+    .queue-toggle {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .queue-body {
+      padding: 12px 16px;
+    }
+
+    .queue-list {
+      margin-bottom: 12px;
+    }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .queue-item.running {
+      border-left: 3px solid #4a9eff;
+    }
+
+    .queue-item.complete {
+      border-left: 3px solid #2ed573;
+    }
+
+    .queue-item.error {
+      border-left: 3px solid #ff4757;
+    }
+
+    .queue-item-name {
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .queue-item-status {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    .queue-item-status.running { color: #4a9eff; }
+    .queue-item-status.complete { color: #2ed573; }
+    .queue-item-status.error { color: #ff4757; }
+
+    .queue-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn-sm {
+      padding: 8px 14px;
+      font-size: 11px;
+    }
+
     .input-group {
       display: flex;
       gap: 12px;
@@ -1385,6 +1476,21 @@
             </div>
           </div>
           <button type="button" onclick="addVariation()" style="padding: 10px 16px; background: transparent; border: 1px dashed #333; border-radius: 6px; color: #666; cursor: pointer; font-size: 13px; width: 100%; transition: all 0.2s;" onmouseover="this.style.borderColor='#555'; this.style.color='#999'" onmouseout="this.style.borderColor='#333'; this.style.color='#666'">+ Add variation</button>
+        </div>
+      </div>
+
+      <!-- Queue Panel -->
+      <div class="queue-panel" id="queuePanel" style="display: none;">
+        <div class="queue-header">
+          <span class="queue-title">Queue (<span id="queueCount">0</span>)</span>
+          <button class="queue-toggle" onclick="toggleQueuePanel()">▼</button>
+        </div>
+        <div class="queue-body" id="queueBody">
+          <div class="queue-list" id="queueList"></div>
+          <div class="queue-actions">
+            <button class="btn-secondary btn-sm" onclick="clearQueue()">Clear All</button>
+            <button class="btn-primary btn-sm" onclick="runNextInQueue()">Run Next</button>
+          </div>
         </div>
       </div>
 
