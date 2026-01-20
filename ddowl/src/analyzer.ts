@@ -4,6 +4,7 @@ import iconv from 'iconv-lite';
 import puppeteer, { Browser } from 'puppeteer';
 import { SearchResult, AnalyzedResult } from './types.js';
 import { detectCategory } from './searchStrings.js';
+import { validateClaims, buildNarrativeFromClaims, ValidatedClaim } from './quoteValidator.js';
 
 // LLM Configuration - supports DeepSeek (preferred) or Kimi fallback
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
@@ -14,7 +15,7 @@ const LLM_API_KEY = DEEPSEEK_API_KEY || KIMI_API_KEY;
 const LLM_URL = DEEPSEEK_API_KEY
   ? 'https://api.deepseek.com/v1/chat/completions'
   : 'https://api.moonshot.ai/v1/chat/completions';
-const LLM_MODEL = DEEPSEEK_API_KEY ? 'deepseek-chat' : (process.env.KIMI_MODEL || 'moonshot-v1-8k');
+const LLM_MODEL = DEEPSEEK_API_KEY ? 'deepseek-chat' : (process.env.KIMI_MODEL || 'kimi-k2');
 
 // Shared browser instance for Puppeteer fallback
 let browser: Browser | null = null;
@@ -273,11 +274,12 @@ Answer in JSON:
   return { shouldAnalyze: true, reason: 'parse failed, defaulting yes' };
 }
 
-// Analyze content with Kimi/Moonshot
+// Analyze content with Kimi/Moonshot - Quote-Grounded Anti-Hallucination Version
 export async function analyzeWithLLM(
   content: string,
   subjectName: string,
-  searchTerm: string
+  searchTerm: string,
+  sourceUrl?: string
 ): Promise<{ isAdverse: boolean; severity: 'RED' | 'AMBER' | 'GREEN' | 'REVIEW'; headline: string; summary: string }> {
   if (!content || content.length < 50) {
     console.error(`[ANALYZE FAIL] Content too short (${content?.length || 0} chars) - requires manual review`);
@@ -289,64 +291,71 @@ export async function analyzeWithLLM(
     return { isAdverse: false, severity: 'REVIEW', headline: 'LLM not configured', summary: 'LLM API key not configured - requires manual review' };
   }
 
-  const prompt = `You are a senior due diligence analyst. Analyze this content for mentions of the name "${subjectName}".
+  // Store full content for quote validation (before truncation)
+  const fullContent = content;
+  const truncatedContent = content.slice(0, 6000);
 
-Content:
-${content.slice(0, 6000)}
+  const prompt = `You are a senior due diligence analyst. Extract factual claims about "${subjectName}" from this article.
 
-INSTRUCTIONS:
-1. Does this content mention the name "${subjectName}"?
-2. If yes, extract ALL factual details about any adverse information.
-3. Write a professional narrative summary in English.
+ARTICLE CONTENT:
+${truncatedContent}
 
-CRITICAL - NAME MATCH LANGUAGE:
-- This is a NAME MATCH search. We found an article containing the name "${subjectName}".
-- We CANNOT confirm this is the same person as our subject without additional context.
-- Use language like "An individual named ${subjectName}..." or "A person named ${subjectName}..."
-- Include ANY identifying details from the article: company, job title, location, age, gender
-- These details help distinguish different people with the same name
+CRITICAL ANTI-HALLUCINATION RULES:
+1. Every factual claim MUST include an EXACT QUOTE from the article text above
+2. If you cannot quote the exact text, do NOT make the claim
+3. Do NOT infer, assume, or generate any details not explicitly written in the article
+4. It is MUCH better to return fewer claims than to fabricate quotes
+5. Quotes must be in the original language (Chinese if article is Chinese)
 
-IMPORTANT RULES:
-- Only include facts EXPLICITLY stated in the article. Do not invent or infer details.
-- If specific amounts, case numbers, dates, or names are NOT in the article, do NOT include them.
-- Include identifying context when stated: company name, job title, location
-- Do NOT include information from the search query - only what's in the article
-- When information is unclear or not stated, write "not specified" or "unclear"
-
-Respond in JSON format ONLY:
+OUTPUT FORMAT (JSON only):
 {
   "mentions_subject": true/false,
   "is_adverse": true/false,
   "severity": "RED" | "AMBER" | "GREEN",
-  "headline": "[Name (中文名)] [action/event] (year or year-year)",
-  "summary": "Professional due diligence narrative - see examples below"
+  "headline": "[Name (中文名)] [action/event] (year)",
+  "media_outlet": "Name of the publication if stated",
+  "claims": [
+    {
+      "claim_en": "English description of this specific fact",
+      "claim_zh": "Chinese version of the claim",
+      "quote": "EXACT text from article (copy-paste, do not paraphrase)",
+      "quote_location": "approximate location in article"
+    }
+  ]
 }
 
-Severity guide:
+SEVERITY GUIDE:
 - RED: Criminal conviction, sanctions, serious fraud, money laundering
 - AMBER: Regulatory investigation, civil litigation, allegations, historical issues
 - GREEN: No adverse information, or name not actually mentioned
 
-SUMMARY FORMAT:
-"According to an article published by [Media Outlet] (中文名 if applicable) on [date/month year], [topic sentence about subject]. [3-5 sentences of factual detail from the article]."
+CLAIM EXAMPLES (showing required quote format):
 
-EXAMPLES OF GOOD SUMMARIES (follow this style exactly):
+Good claim (has exact quote):
+{
+  "claim_en": "Chen was sentenced to 2.5 years imprisonment",
+  "claim_zh": "陈某被判处有期徒刑2年6个月",
+  "quote": "被告人陈某犯内幕交易罪，判处有期徒刑二年六个月",
+  "quote_location": "judgment section"
+}
 
-Example 1 (RED - conviction):
-headline: "Chen Yuxing (陈玉兴) sentenced to 2.5 years for insider trading (2007-2008)"
-summary: "According to an article published by Shanghai Securities News (上海证券报) in December 2007, Chen Yuxing was charged with insider trading alongside two co-conspirators. Chen Yuxing (陈玉兴) worked at Hangxiao Steel Structure Co. Ltd. (杭萧钢构股份有限公司, 600477.SS) from 2004 to December 2006. He was detained in May 2007 and arrested in June 2007 for insider trading resulting in illegal profits of CNY 40.37 million (USD 5.68 million). Chen Yuxing was convicted in February 2008 (case no.: （2007）丽中刑初字第44号) and sentenced to 2.5 years. He appealed to the Zhejiang Higher People's Court but in March 2008, the court upheld the original ruling."
+Bad claim (DO NOT do this - fabricated quote):
+{
+  "claim_en": "Chen was fined 500,000 RMB",
+  "claim_zh": "陈某被罚款50万",
+  "quote": "罚款人民币五十万元",  // ← If this text is NOT in the article, this is HALLUCINATION
+  "quote_location": "penalty section"
+}
 
-Example 2 (AMBER - allegations dismissed):
-headline: "Cao Guoqing (曹国庆) sued for stealing Eli Lilly trade secrets (2013-2014)"
-summary: "According to an article published by Indiana Business Journal on 5 December 2014, Cao Guoqing faced trade secret theft allegations that were ultimately dismissed. Cao (曹国庆) is the founder, chairman and CEO of Minghui Pharmaceutical who worked at Eli Lilly & Company (USA) from 1999 to around 2012. In October 2013, Cao and Li Shuyu (李树玉) were accused of stealing trade secrets valued at USD 55 million. Cao and Li were detained at the Marion County Jail in Indiana. The case collapsed in December 2014 when prosecutors filed a motion to dismiss all charges."
-
-Example 3 (AMBER - named in lawsuit, no wrongdoing alleged):
-headline: "Wang included in Sinovac proxy fight lawsuit (2025)"
-summary: "According to court filings in the New York County Supreme Court on 22 April 2025, Wang was named as a defendant in a proxy fight lawsuit. Three funds affiliated with Vivo Capital LLC sued OrbiMed, Wang, and several others for allegations of breach of fiduciary duties surrounding Sinovac Biotech Ltd. Vivo Capital did not make any specific allegations against Wang; he appears to have been included solely due to his role as a director. Both sides agreed to dismiss the case without prejudice on 26 August 2025."
-
-Example 4 (GREEN - mentioned but no adverse info):
-headline: "Referenced as non-executive director in Ascentage Pharma critique (2019)"
-summary: "According to an article published by Tolfin (tolfin.com) in December 2019, the subject was mentioned in connection with Ascentage Pharma Group. The company was characterized as a 'flop' following reports it had never turned a profit over its 10-year operating history. The subject was listed as a non-executive director but was not accused of any wrongdoing. No allegations of misconduct were made against the subject personally."`;
+If the article does NOT mention "${subjectName}" or has NO adverse information, return:
+{
+  "mentions_subject": false,
+  "is_adverse": false,
+  "severity": "GREEN",
+  "headline": "",
+  "media_outlet": "",
+  "claims": []
+}`;
 
   try {
     const response = await axios.post(
@@ -382,11 +391,43 @@ summary: "According to an article published by Tolfin (tolfin.com) in December 2
       return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Subject not mentioned' };
     }
 
+    // ANTI-HALLUCINATION: Validate claims against source content
+    const rawClaims = analysis.claims || [];
+    let validatedClaims: ValidatedClaim[] = [];
+
+    if (rawClaims.length > 0) {
+      console.log(`[QUOTE_VALIDATION] Validating ${rawClaims.length} claims against source content`);
+      validatedClaims = validateClaims(rawClaims, fullContent, sourceUrl);
+      console.log(`[QUOTE_VALIDATION] ${validatedClaims.length}/${rawClaims.length} claims passed validation`);
+
+      // If ALL claims were rejected, downgrade to GREEN (likely hallucination)
+      if (validatedClaims.length === 0 && rawClaims.length > 0) {
+        console.log(`[HALLUCINATION_DETECTED] All ${rawClaims.length} claims rejected - downgrading to GREEN`);
+        return {
+          isAdverse: false,
+          severity: 'GREEN',
+          headline: '',
+          summary: 'No verifiable adverse information found'
+        };
+      }
+    }
+
+    // Build narrative from validated claims only
+    let summary: string;
+    if (validatedClaims.length > 0) {
+      summary = buildNarrativeFromClaims(validatedClaims, sourceUrl || 'the source', analysis.media_outlet);
+    } else if (analysis.is_adverse) {
+      // LLM said adverse but no claims provided - flag for review
+      summary = 'Potential adverse information detected but could not be verified - requires manual review';
+    } else {
+      summary = 'No adverse information found';
+    }
+
     return {
-      isAdverse: analysis.is_adverse || false,
-      severity: analysis.severity || 'GREEN',
-      headline: analysis.headline || '',
-      summary: analysis.summary || 'No summary',
+      isAdverse: analysis.is_adverse && validatedClaims.length > 0,
+      severity: validatedClaims.length > 0 ? (analysis.severity || 'GREEN') : 'GREEN',
+      headline: validatedClaims.length > 0 ? (analysis.headline || '') : '',
+      summary: summary,
     };
   } catch (error: any) {
     console.error(`[ANALYZE FAIL] LLM error: ${error?.message || error}`);
@@ -401,7 +442,8 @@ export async function analyzeResult(
   searchTerm: string
 ): Promise<AnalyzedResult> {
   const content = await fetchPageContent(result.link);
-  const analysis = await analyzeWithLLM(content, subjectName, searchTerm);
+  // Pass sourceUrl for quote validation logging
+  const analysis = await analyzeWithLLM(content, subjectName, searchTerm, result.link);
 
   return {
     url: result.link,
