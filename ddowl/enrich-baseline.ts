@@ -54,6 +54,16 @@ async function main() {
   const { dates, pdfUrls } = loadDatesAndUrlsFromIndex();
   console.log(`Loaded ${dates.size} dates and ${pdfUrls.size} PDF URLs from Excel Index sheet`);
 
+  // Step 1c: Load prospectus URLs from database (fallback for when Index sheet has "Unavailable")
+  const dbUrls = loadProspectusUrls();
+  // Merge: database URLs fill in gaps where Index sheet has no URL
+  for (const [ticker, url] of dbUrls) {
+    if (!pdfUrls.has(ticker)) {
+      pdfUrls.set(ticker, url);
+    }
+  }
+  console.log(`Total PDF URLs after merging: ${pdfUrls.size}`);
+
   // Step 2: Load current baseline
   const baseline = loadBaseline();
   console.log(`Loaded ${baseline.length} baseline entries`);
@@ -127,15 +137,16 @@ function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map
 /**
  * Extract date from PDF URL
  * Pattern: https://www1.hkexnews.hk/listedco/listconews/sehk/YYYY/MMDD/filename.pdf
+ * Also handles: /gem/YYYY/MMDD/ and case variations like /SEHK/
  * Returns date in DD/MM/YYYY format
  */
 function extractDateFromUrl(url: string): string | null {
   if (!url) return null;
 
-  // Pattern: /sehk/YYYY/MMDD/
-  const match = url.match(/\/sehk\/(\d{4})\/(\d{2})(\d{2})\//);
+  // Pattern: /sehk/YYYY/MMDD/ or /gem/YYYY/MMDD/ (case insensitive)
+  const match = url.match(/\/(sehk|gem)\/(\d{4})\/(\d{2})(\d{2})\//i);
   if (match) {
-    const [_, year, month, day] = match;
+    const [_, _board, year, month, day] = match;
     return `${day}/${month}/${year}`;
   }
   return null;
@@ -170,6 +181,27 @@ function needsDateFix(dateStr: string | undefined | null): boolean {
   if (!dateStr) return true;
   const d = dateStr.trim().toLowerCase();
   return d === 'unavailable' || d === '' || isExcelSerialDate(dateStr);
+}
+
+// Manual date overrides for companies with wrong/missing dates
+const KNOWN_DATES: Record<number, string> = {
+  1970: '08/10/2015',  // IMAX China - was showing garbage "2"
+  7801: '16/09/2022',  // Interra Acquisition - SPAC, URL not on HKEX
+  9877: '10/10/2022',  // Jenscare Scientific - URL not on HKEX
+};
+
+/**
+ * Fix date formatting issues (e.g., "26/1/2021" -> "26/01/2021")
+ */
+function fixDateFormat(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  // Match D/M/YYYY or DD/M/YYYY patterns
+  const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [_, day, month, year] = match;
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
+  }
+  return dateStr;
 }
 
 function parseNumber(val: any): number | null {
@@ -253,7 +285,7 @@ const KNOWN_CHINESE_NAMES: Record<number, string> = {
   2597: '北京訊眾通信技術股份有限公司',
   1304: '峰岹科技(深圳)股份有限公司',
   6613: '藍思科技股份有限公司',
-  2076: 'BOSS直聘控股有限公司',           // Kanzhun - use actual listed name
+  2076: '看準科技有限公司',               // Kanzhun - Phase 2 fix
   1828: '富衛集團有限公司',
   9660: '地平線機器人控股有限公司',        // Horizon Robotics
   2382: '舜宇光學科技(集團)有限公司',
@@ -292,8 +324,203 @@ const KNOWN_CHINESE_NAMES: Record<number, string> = {
   7801: '',
 
   // Foreign companies (no Chinese name)
-  3668: '',
+  3668: '',  // Yancoal Australia
+  1245: '',  // Niraku GC Holdings (Japan)
+  3395: '',  // Persta Resources (Canada)
+
+  // Phase 2 fixes - batch 1 (24 companies)
+  3880: '泰德醫藥股份有限公司',
+  9881: '容大合眾（廈門）科技集團股份公司',
+  2596: '宜賓市商業銀行股份有限公司',
+  2577: '英諾賽科（蘇州）科技股份有限公司',
+  1471: '眾淼控股（青島）股份有限公司',
+  2495: '上海聲通信息科技股份有限公司',
+  2545: '中贛通信集團控股有限公司',
+  2559: '嘀嗒出行',
+  2479: '天聚地合（蘇州）科技股份有限公司',
+  2228: '晶泰科技',
+  2505: 'EDA集團控股有限公司',
+  2517: '鍋圈食品（上海）股份有限公司',
+  9890: '中旭未來',
+  2415: '梅斯健康控股有限公司',
+  2433: '中天建設（湖南）集團有限公司',
+  3660: '360數科',
+  3931: '中創新航科技股份有限公司',
+  692: '康灃生物科技（上海）股份有限公司',
+  2391: '塗鴉智能',
+  2390: '知乎',
+  1024: '快手科技',
+  2125: '稻草熊娛樂集團',
+  6618: '京東健康',
+  1209: '華潤萬象生活',
+
+  // Phase 2 fixes - batch 2 (Definitely Need - 30 companies)
+  13: '和黃醫藥',
+  95: '綠景（中國）地產投資有限公司',
+  520: '呷哺呷哺餐飲管理（中國）控股有限公司',
+  839: '中國教育集團控股有限公司',
+  1156: '中國新能源有限公司',
+  1317: '中國楓葉教育集團有限公司',
+  1337: '雷蛇',  // Delisted 2022
+  1357: '美圖公司',
+  1456: '國聯證券股份有限公司',
+  1503: '招商局商業房地產投資信託基金',
+  1508: '中國再保險（集團）股份有限公司',
+  1551: '廣州農村商業銀行股份有限公司',
+  1599: '北京城建設計發展集團股份有限公司',
+  1610: '中糧家佳康食品有限公司',
+  1671: '天津天保能源股份有限公司',
+  1739: '齊屹科技',
+  1763: '中國同輻股份有限公司',
+  1801: '信達生物製藥',
+  1873: '維亞生物科技控股集團',
+  1896: '貓眼娛樂',
+  1970: 'IMAX中國控股有限公司',
+  2057: '中通快遞',
+  2298: '都市麗人（中國）控股有限公司',
+  2518: '汽車之家',
+  2552: '華領醫藥',
+  2616: '基石藥業',
+  2618: '京東物流',
+  3650: '卡路里科技',
+  6608: '百融雲創',
+  6820: '友誼時光股份有限公司',
+
+  // Phase 2 fixes - batch 2 (Probably Need - 22 companies with confirmed Chinese names)
+  1310: '香港寬頻有限公司',
+  1330: '綠色動力環保集團股份有限公司',
+  1415: '高偉電子',
+  1438: '富貴生命國際有限公司',
+  1442: '鷹輝物流有限公司',
+  1478: '丘鈦科技（集團）有限公司',
+  1509: '和美醫療控股有限公司',
+  1526: '瑞慈醫療',
+  1612: '永勝醫療控股有限公司',
+  1617: '南方通信控股有限公司',
+  1619: '天合化工集團有限公司',
+  1647: '雄岸科技集團有限公司',
+  1675: '亞信科技控股有限公司',
+  1696: '復銳醫療科技有限公司',
+  1809: '浦林成山控股有限公司',
+  1839: '中集車輛（集團）股份有限公司',
+  2189: '嘉濤（香港）控股有限公司',
+  2360: '優品360控股有限公司',
+  2511: '君聖泰醫藥',
+  2528: '尚晉（國際）控股有限公司',
+  3358: '榮威國際',
+  9606: '映恩生物',
+
+  // Phase 2 fixes - batch 3 (Corrections for wrong Chinese names from database)
+  788: '中國鐵塔股份有限公司',    // Was wrongly 中信建投國際
+  1651: '津上精密機床（中國）有限公司',  // Was wrongly 香港資產管理
+  6068: '睿見教育國際控股有限公司',  // Was wrongly 以誠心服務社會 (a slogan)
+
+  // Phase 2 fixes - batch 4 (Incomplete Chinese names - adding full legal names)
+  1274: '知行汽車科技（蘇州）股份有限公司',  // Was 知行汽車科技
+  1635: '上海大眾公用事業（集團）股份有限公司',  // Was 上海大眾公用事業
+  2235: '微泰醫療器械（杭州）股份有限公司',  // Was 微泰醫療器械
+  2252: '上海微創醫療機器人（集團）股份有限公司',  // Was 上海微创医疗机器人
+  2281: '瀘州興瀘水務（集團）股份有限公司',  // Was 瀘州市興瀘水務
+  2291: '樂普心泰醫療科技（上海）股份有限公司',  // Was 樂普心泰醫療科技
+  2565: '派格生物醫藥（杭州）股份有限公司',  // Was 派格生物醫藥
+  6922: '康灃生物科技（上海）股份有限公司',  // Was 康灃生物科技
+  9663: '國鴻氫能科技（嘉興）股份有限公司',  // Was 國鴻氫能科技
+  9995: '榮昌生物製藥（煙台）股份有限公司',  // Was 榮昌生物製藥
+  2599: '祥生控股（集團）有限公司',  // Was 祥生控股
+  6893: '衍生集團（國際）控股有限公司',  // Was 衍生集團
+
+  // Phase 2 fixes - batch 5 (More incomplete Chinese names)
+  2589: '滬上阿姨（上海）實業股份有限公司',  // Was 實業股份有限公司 (missing prefix)
+  2315: '百奧賽圖（北京）醫藥科技股份有限公司',  // Was 醫藥科技股份有限公司 (missing prefix)
+
+  // Phase 2 fixes - batch 6 (Missing province/city in brackets)
+  6821: '凱萊英醫藥集團（天津）股份有限公司',  // Was 凱萊英醫藥集團 (missing 天津)
+  1541: '宜明昂科生物醫藥技術（上海）股份有限公司',  // Was 宜明昂科生物醫藥技術 (missing 上海)
+  2617: '藥捷安康（南京）科技股份有限公司',  // Was 科技股份有限公司 (garbage - missing everything)
+  2500: '杭州啓明醫療器械股份有限公司',  // Was 杭州明醫療器械股份有限公司 (missing 啓 character)
+
+  // Phase 3 fixes - Data Quality Audit (24 companies)
+  865: '第一電訊集團有限公司',              // First Mobile Group
+  933: '非凡領越有限公司',                  // VIVA GOODS (formerly 非凡中國)
+  1367: '恒寶企業控股有限公司',             // Hanbo Enterprises (now SFund International)
+  1490: '車市控股有限公司',                 // Cheshi Holdings (now Cheshi Technology)
+  1499: '前進控股集團有限公司',             // LEAP Holdings (now OKG Technology)
+  1721: 'FSM控股集團有限公司',              // FSM Holdings
+  2483: 'K Cash金融科技股份有限公司',       // K Cash Corporation
+  2561: '維昇藥業（上海）有限公司',         // VISEN Pharmaceuticals
+  3958: '東方證券股份有限公司',             // DFZQ (Orient Securities)
+  6998: '嘉和生物藥業控股有限公司',         // JHBP (Genor Biopharma)
+
+  // Foreign companies without Chinese names (skip)
+  1025: '',   // KNT Holdings - HK company, uses English name
+  1376: '',   // Raffles Interior - Singapore company
+  1401: '',   // Sprocomm Intelligence - now Future Machine, uses English
+  1416: '',   // CTR Holdings - Singapore company
+  1463: '',   // C-Link Squared - Malaysia company
+  1489: '',   // GC Construction - HK company, English name
+  1552: '',   // BHCC Holding - Singapore company
+  1650: '',   // Hygieia Group - Singapore company
+  1653: '',   // MOS House Group - HK company, uses English name
+  1655: '',   // Okura Holdings - Japan company
+  1693: '',   // BGMC International - Malaysia company
+  1707: '',   // Geotech Holdings - HK company, English name
+  1726: '',   // HKE Holdings - HK company, uses English name
+  1742: '',   // HPC Holdings - Singapore company
 };
+
+// Company status notes for delisted/privatized/suspended companies (appended to company name)
+const COMPANY_STATUS_NOTES: Record<number, string> = {
+  // Privatized companies
+  1337: '[Privatized 2022]',
+  1821: '[Privatized 2024]',
+  1992: '[Privatized 2025]',
+  3799: '[Privatized 2023]',
+  1381: '[Privatized 2025]',
+  6600: '[Privatized 2024]',
+  1438: '[Privatized 2016]',
+  1035: '[Privatized 2020]',
+
+  // Delisted companies (fraud/suspended/failed requirements)
+  1619: '[Delisted 2020]',
+  1761: '[Delisted 2024]',
+  2014: '[Delisted 2022]',
+  1573: '[Delisted 2021]',
+  2599: '[Delisted 2024]',
+  1859: '[Delisted 2025]',
+  2718: '[Delisted 2024]',
+  1365: '[Delisted]',
+  1492: '[Delisted]',
+
+  // SPACs
+  7836: '[SPAC - Pending De-SPAC]',
+  7841: '[SPAC - Merged to 2562]',
+  7801: '[SPAC - Delisted 2025]',
+  7827: '[SPAC - Delisted 2025]',
+  7855: '[SPAC - Merged to Seyond]',
+
+};
+
+/**
+ * Check if a Chinese name is garbage (just suffix or truncated)
+ * These are invalid extractions that only contain company type suffixes
+ */
+function isGarbageChineseName(name: string): boolean {
+  if (!name) return true;
+  // Just suffixes without actual company name (truncated extraction artifacts)
+  const garbagePatterns = [
+    /^[份股控集]?[份股]?有限公司$/,
+    /^控股有限公司$/,
+    /^股份有限公司$/,
+    /^集團有限公司$/,
+    /^集團控股有限公司$/,
+    /^有限公司$/,
+  ];
+  if (garbagePatterns.some(p => p.test(name))) return true;
+  // Names ending with 公司 must have at least 6 chars (e.g., "XX有限公司" minimum)
+  // Otherwise they're truncated garbage
+  if (name.endsWith('公司') && name.length < 6) return true;
+  return false;
+}
 
 /**
  * Check if a Chinese name is a "full" legal name
@@ -327,17 +554,31 @@ function chooseBetterChineseName(name1: string | null, name2: string | null): st
   return name1.length >= name2.length ? name1 : name2;
 }
 
+function loadProspectusUrls(): Map<number, string> {
+  const db = new Database('data/ddowl.db', { readonly: true });
+  const rows = db.prepare("SELECT ticker, prospectus_url FROM ipo_deals WHERE prospectus_url IS NOT NULL AND prospectus_url != ''").all() as { ticker: number; prospectus_url: string }[];
+  const map = new Map<number, string>();
+  for (const r of rows) {
+    if (r.prospectus_url && r.prospectus_url.includes('hkex')) {
+      map.set(r.ticker, r.prospectus_url);
+    }
+  }
+  db.close();
+  console.log(`Loaded ${map.size} prospectus URLs from database`);
+  return map;
+}
+
 function loadChineseNames(): Map<string, string> {
   const db = new Database('data/ddowl.db', { readonly: true });
   const rows = db.prepare("SELECT ticker, company_cn FROM ipo_deals WHERE company_cn IS NOT NULL AND company_cn != ''").all() as { ticker: number; company_cn: string }[];
   const map = new Map<string, string>();
 
-  // First pass: load from database, preferring full names
+  // First pass: load from database, preferring full names, filtering garbage
   for (const r of rows) {
     const ticker = String(r.ticker);
     const existing = map.get(ticker);
     const better = chooseBetterChineseName(existing || null, r.company_cn);
-    if (better) {
+    if (better && !isGarbageChineseName(better)) {
       map.set(ticker, better);
     }
   }
@@ -510,8 +751,8 @@ function enrichData(
       const tickerNum = parseInt(ticker);
       const m = metrics.get(tickerNum) || {} as DealMetrics;
 
-      // Get date from Excel, or extract from URL if unavailable/numeric
-      let date = dates.get(tickerNum) || row.date || '';
+      // Get date: first check manual overrides, then Excel, then row data
+      let date = KNOWN_DATES[tickerNum] || dates.get(tickerNum) || row.date || '';
 
       // Fix dates: if unavailable or Excel serial, try to extract from PDF URL
       if (needsDateFix(date)) {
@@ -532,6 +773,9 @@ function enrichData(
         }
       }
 
+      // Fix date formatting (e.g., "26/1/2021" -> "26/01/2021")
+      date = fixDateFormat(date);
+
       // Apply deal size threshold - show null for sizes below minimum
       let sizeHKDm = m.sizeHKDm;
       if (sizeHKDm !== null && sizeHKDm < MIN_DEAL_SIZE_HKDM) {
@@ -539,9 +783,16 @@ function enrichData(
         sizeHKDm = null;
       }
 
+      // Get company name and append status note if exists
+      let companyName = cleanCompanyName(row.company);
+      const statusNote = COMPANY_STATUS_NOTES[tickerNum];
+      if (statusNote) {
+        companyName = `${companyName} ${statusNote}`;
+      }
+
       deal = {
         ticker,
-        company: cleanCompanyName(row.company),
+        company: companyName,
         companyCn: chineseNames.get(ticker) || null,
         type: row.type,
         date,
@@ -573,6 +824,10 @@ function enrichData(
   // Manual sponsor overrides for deals where parser failed
   const SPONSOR_OVERRIDES: Record<string, string[]> = {
     '3750': ['CICC', 'China Securities', 'J.P. Morgan', 'Bank of America'], // CATL - parser failed
+    '1970': ['Morgan Stanley'],                                              // IMAX China - sole sponsor
+    '1612': ['BOSC International'],                                          // Vincent Medical - sole sponsor
+    '2191': ['Credit Suisse', 'DBS', 'J.P. Morgan'],                        // SF REIT - joint sponsors
+    '1931': ['BOCI'],                                                        // IVD Medical - sole sponsor
   };
 
   // Apply overrides

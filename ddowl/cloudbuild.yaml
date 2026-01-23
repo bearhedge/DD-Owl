@@ -1,0 +1,38 @@
+substitutions:
+  _REGION: asia-east1
+  _REPO: cloud-run-source-deploy
+  _SERVICE: ddowl
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  - id: 'Docker build'
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -t
+      - asia-east1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+      - -f
+      - Dockerfile
+      - .
+
+  - id: 'Docker push'
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - asia-east1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+
+  - id: 'Deploy to Cloud Run'
+    name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=asia-east1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
+      - --region=${_REGION}
+      - --allow-unauthenticated
+      - --quiet
+
+images:
+  - asia-east1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA

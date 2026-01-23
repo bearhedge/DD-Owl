@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DD Owl - Due Diligence Screening</title>
+  <title>DD Owl</title>
   <style>
     * {
       margin: 0;
@@ -149,6 +149,69 @@
     .queue-item-status.running { color: #4a9eff; }
     .queue-item-status.complete { color: #2ed573; }
     .queue-item-status.error { color: #ff4757; }
+
+    .queue-item.complete.clickable {
+      cursor: pointer;
+    }
+
+    .queue-item.complete.clickable:hover {
+      background: #151515;
+    }
+
+    .queue-item-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .queue-item-stats {
+      font-size: 11px;
+      color: #888;
+      margin-left: 8px;
+    }
+
+    .queue-item-stats .red-count {
+      color: #ff4757;
+      font-weight: 600;
+    }
+
+    .queue-item-stats .amber-count {
+      color: #ffa502;
+      font-weight: 600;
+    }
+
+    .queue-item-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-left: 12px;
+    }
+
+    .queue-item-actions button {
+      padding: 4px 8px;
+      font-size: 10px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .queue-item-actions .btn-view {
+      background: #1a3a5c;
+      color: #4a9eff;
+    }
+
+    .queue-item-actions .btn-view:hover {
+      background: #234b73;
+    }
+
+    .queue-item-actions .btn-remove {
+      background: transparent;
+      color: #666;
+      padding: 4px 6px;
+    }
+
+    .queue-item-actions .btn-remove:hover {
+      color: #ff4757;
+    }
 
     .queue-actions {
       display: flex;
@@ -1488,7 +1551,8 @@
         <div class="queue-body" id="queueBody">
           <div class="queue-list" id="queueList"></div>
           <div class="queue-actions">
-            <button class="btn-secondary btn-sm" onclick="clearQueue()">Clear All</button>
+            <button class="btn-secondary btn-sm" onclick="clearQueue()">Clear Queued</button>
+            <button class="btn-secondary btn-sm" onclick="clearCompletedQueue()">Clear Done</button>
             <button class="btn-primary btn-sm" onclick="runNextInQueue()">Run Next</button>
           </div>
         </div>
@@ -1702,6 +1766,7 @@
       lastHeartbeat: 0,
       heartbeatInterval: null,
       watchdogInterval: null,
+      screeningState: 'idle', // 'idle' | 'running' | 'paused' | 'cancelled'
 
       init(sessionId) {
         this.cleanup(); // Clean up any previous channel
@@ -1745,10 +1810,18 @@
           resumeScreening();
           return;
         }
+
+        // Any tab receives state change
+        if (data.type === 'state_change') {
+          this.screeningState = data.state;
+          updateProgressCard(data.state, data.progress, data.redCount, data.amberCount, data.subjectName);
+          return;
+        }
       },
 
       getCurrentState() {
         return {
+          screeningState: this.screeningState,
           progress: progressState.percentage,
           redCount: redCount,
           amberCount: amberCount,
@@ -1763,8 +1836,15 @@
       },
 
       applyState(state) {
-        // Update progress bar
-        updateProgressCard('running', state.progress, state.redCount, state.amberCount, state.subjectName);
+        // Update progress bar with actual state
+        this.screeningState = state.screeningState || 'running';
+        updateProgressCard(this.screeningState, state.progress, state.redCount, state.amberCount, state.subjectName);
+
+        // Update progressState so broadcasts have correct values
+        progressState.percentage = state.progress;
+        progressState.redCount = state.redCount;
+        progressState.amberCount = state.amberCount;
+        progressState.subjectName = state.subjectName;
 
         // Update counts
         redCount = state.redCount;
@@ -1795,6 +1875,20 @@
       broadcast(eventData) {
         if (this.isLeader && this.channel) {
           this.channel.postMessage({ type: 'progress', event: eventData });
+        }
+      },
+
+      broadcastState(newState) {
+        this.screeningState = newState;
+        if (this.channel) {
+          this.channel.postMessage({
+            type: 'state_change',
+            state: newState,
+            progress: progressState.percentage,
+            redCount: progressState.redCount,
+            amberCount: progressState.amberCount,
+            subjectName: progressState.subjectName
+          });
         }
       },
 
@@ -1924,6 +2018,18 @@
 
       clear() {
         localStorage.removeItem(this.STORAGE_KEY);
+      },
+
+      // Clear only queued items (not completed or running)
+      clearQueued() {
+        const queue = this.getAll().filter(q => q.status !== 'queued');
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
+      },
+
+      // Clear only completed items
+      clearCompleted() {
+        const queue = this.getAll().filter(q => q.status !== 'complete');
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
       }
     };
 
@@ -1945,18 +2051,78 @@
       panel.style.display = 'block';
       count.textContent = queue.length;
 
-      list.innerHTML = queue.map(item => `
-        <div class="queue-item ${item.status}">
-          <div>
-            <span class="queue-item-name">${escapeHtml(item.subjectName)}</span>
-            ${item.variants?.length ? `<span style="color:#666;font-size:11px;margin-left:8px;">(+${item.variants.length} variants)</span>` : ''}
+      list.innerHTML = queue.map(item => {
+        const isComplete = item.status === 'complete';
+        const hasFindings = isComplete && item.findings?.length > 0;
+        const statsHtml = item.stats
+          ? `<span class="queue-item-stats"><span class="red-count">${item.stats.red}R</span> <span class="amber-count">${item.stats.amber}A</span></span>`
+          : '';
+
+        return `
+          <div class="queue-item ${item.status}${hasFindings ? ' clickable' : ''}"${hasFindings ? ` onclick="viewQueueResults('${item.id}')"` : ''}>
+            <div class="queue-item-main">
+              <span class="queue-item-name">${escapeHtml(item.subjectName)}</span>
+              ${item.variants?.length ? `<span style="color:#666;font-size:11px;margin-left:8px;">(+${item.variants.length} variants)</span>` : ''}
+              ${isComplete ? statsHtml : ''}
+            </div>
+            <div class="queue-item-actions">
+              ${item.status === 'running' ? `<span class="queue-item-status running">${item.progress || 0}%</span>` : ''}
+              ${item.status === 'queued' ? `<span class="queue-item-status">queued</span>` : ''}
+              ${item.status === 'error' ? `<span class="queue-item-status error">error</span>` : ''}
+              ${hasFindings ? `<button class="btn-view" onclick="event.stopPropagation(); viewQueueResults('${item.id}')">View</button>` : ''}
+              <button class="btn-remove" onclick="event.stopPropagation(); removeQueueItem('${item.id}')" title="Remove">×</button>
+            </div>
           </div>
-          <div class="queue-item-status ${item.status}">
-            ${item.status === 'running' ? `${item.progress || 0}%` : item.status}
-            ${item.status === 'complete' && item.stats ? ` · ${item.stats.red}R ${item.stats.amber}A` : ''}
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+    }
+
+    // View results from a completed queue item
+    function viewQueueResults(itemId) {
+      const queue = QueueManager.getAll();
+      const item = queue.find(q => q.id === itemId);
+
+      if (!item || !item.findings || item.findings.length === 0) {
+        console.log('[Queue] No findings for item:', itemId);
+        return;
+      }
+
+      // Clear current results display
+      document.getElementById('redFlagsList').innerHTML = '';
+      document.getElementById('amberFlagsList').innerHTML = '';
+      redCount = 0;
+      amberCount = 0;
+      document.getElementById('redCount').textContent = '0';
+      document.getElementById('amberCount').textContent = '0';
+      selectedFindings.clear();
+      updateSelectedCount();
+
+      // Load saved findings
+      currentFindings = item.findings;
+      currentSubjectName = item.subjectName;
+
+      // Re-render each finding
+      currentFindings.forEach((finding, index) => {
+        addConsolidatedResultToUI(finding, index);
+      });
+
+      // Update subject display
+      const subjectDisplay = document.getElementById('subjectNameDisplay');
+      if (subjectDisplay) {
+        subjectDisplay.textContent = item.subjectName;
+      }
+
+      // Show results section
+      document.getElementById('resultsSection').classList.add('active');
+
+      // Scroll to results
+      document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Remove a single queue item
+    function removeQueueItem(itemId) {
+      QueueManager.remove(itemId);
+      renderQueue();
     }
 
     function toggleQueuePanel() {
@@ -1972,8 +2138,15 @@
     }
 
     function clearQueue() {
-      if (confirm('Clear all queued subjects?')) {
-        QueueManager.clear();
+      if (confirm('Clear all queued (pending) subjects?')) {
+        QueueManager.clearQueued();
+        renderQueue();
+      }
+    }
+
+    function clearCompletedQueue() {
+      if (confirm('Clear all completed screenings?')) {
+        QueueManager.clearCompleted();
         renderQueue();
       }
     }
@@ -2017,21 +2190,54 @@
     // ============================================================
     let currentQueueItemId = null;
 
-    function runNextInQueue() {
-      // Don't start if something is already running
+    function runNextInQueue(force = false) {
+      // Don't start if something is already running (unless forced)
       if (QueueManager.hasRunning()) {
-        console.log('[Queue] Already running a subject');
-        return;
+        if (!force) {
+          // If user clicks Run Next while something shows as running,
+          // check if it's actually running or stuck
+          const running = QueueManager.getAll().find(q => q.status === 'running');
+          if (running && !currentQueueItemId) {
+            // Item shows as running but we're not tracking it - it's stuck
+            console.log('[Queue] Found stuck running item, marking as error:', running.id);
+            QueueManager.update(running.id, { status: 'error' });
+            renderQueue();
+            // Now try again
+            runNextInQueue();
+            return;
+          }
+          // Actually running something
+          addLogEntry('warn', '[Queue] A screening is already running');
+          return;
+        }
       }
 
       const next = QueueManager.getNext();
       if (!next) {
-        console.log('[Queue] No subjects in queue');
+        const allItems = QueueManager.getAll();
+        const queuedCount = allItems.filter(i => i.status === 'queued').length;
+        const runningCount = allItems.filter(i => i.status === 'running').length;
+        const completeCount = allItems.filter(i => i.status === 'complete').length;
+
+        if (allItems.length === 0) {
+          addLogEntry('info', '[Queue] Queue is empty. Add subjects using the + button.');
+        } else if (queuedCount === 0 && completeCount > 0) {
+          addLogEntry('info', `[Queue] All ${completeCount} subjects completed. Add more or click completed items to view results.`);
+        } else if (runningCount > 0) {
+          addLogEntry('warn', '[Queue] A screening is in progress.');
+        } else {
+          addLogEntry('info', '[Queue] No queued subjects. Add subjects using the + button.');
+        }
+        console.log('[Queue] All items:', allItems.map(i => ({ id: i.id, name: i.subjectName, status: i.status })));
         return;
       }
 
-      // Mark as running
+      console.log('[Queue] Starting next item:', next.subjectName, next.id);
+      addLogEntry('info', `[Queue] Starting: ${next.subjectName}`);
+
+      // Mark as running - persist to localStorage for reconnection recovery
       currentQueueItemId = next.id;
+      localStorage.setItem('ddowl_queueItemId', next.id);
       QueueManager.update(next.id, { status: 'running' });
       renderQueue();
 
@@ -2353,11 +2559,11 @@
           if (data.exists) {
             // Save to localStorage so resumeScreening() can find it
             localStorage.setItem('ddowl_sessionId', urlSessionId);
-            localStorage.setItem('ddowl_sessionName', data.subjectName || '');
+            localStorage.setItem('ddowl_sessionName', data.name || '');
 
             // Set up state for resume
             sessionId = urlSessionId;
-            document.getElementById('nameInput').value = data.subjectName || '';
+            document.getElementById('nameInput').value = data.name || '';
             document.getElementById('recent-sessions-panel').style.display = 'none';
 
             // Call resumeScreening() instead of startScreening() - preserves sessionId!
@@ -2650,6 +2856,7 @@
       if (hasLeader) {
         // Another tab is running - become follower and show synced state
         console.log('[SYNC] Found leader, becoming follower');
+        ScreeningSync.init(savedSessionId);
         ScreeningSync.applyState(state);
         ScreeningSync.startWatchdog();
         document.getElementById('nameInput').value = state.subjectName;
@@ -2748,6 +2955,7 @@
       );
 
       addLogEntry('warn', 'Paused. Click Resume to continue.');
+      ScreeningSync.broadcastState('paused');
     }
 
     // Cancel active search entirely
@@ -2782,6 +2990,7 @@
       }
 
       addLogEntry('warn', 'Search cancelled.');
+      ScreeningSync.broadcastState('cancelled');
     }
 
     // Resume paused session
@@ -2869,6 +3078,13 @@
         return;
       }
 
+      // Restore queue item context if resuming a queue-initiated screening
+      const savedQueueItemId = localStorage.getItem('ddowl_queueItemId');
+      if (savedQueueItemId && !currentQueueItemId) {
+        currentQueueItemId = savedQueueItemId;
+        console.log('[RESUME] Restored queue item ID:', savedQueueItemId);
+      }
+
       // Clear pause flag on server FIRST
       try {
         await fetch(`/api/session/${savedSessionId}/resume`, { method: 'POST' });
@@ -2907,6 +3123,7 @@
         // Initialize multi-tab sync and become leader
         ScreeningSync.init(savedSessionId);
         ScreeningSync.becomeLeader();
+        ScreeningSync.broadcastState('running');
 
         // Health check
         if (currentHealthCheckInterval) {
@@ -3097,12 +3314,46 @@
             localStorage.removeItem('ddowl_sessionId');
             localStorage.removeItem('ddowl_sessionName');
             sessionId = null;
+
+            // Update queue item if this was a queue-initiated screening
+            if (currentQueueItemId) {
+              const greenCount = (stats.totalSearchResults || 0) - (stats.red || 0) - (stats.amber || 0);
+              QueueManager.update(currentQueueItemId, {
+                status: 'complete',
+                completedAt: Date.now(),
+                stats: { red: stats.red || 0, amber: stats.amber || 0, green: greenCount },
+                findings: currentFindings,
+                subjectName: currentSubjectName
+              });
+              currentQueueItemId = null;
+              localStorage.removeItem('ddowl_queueItemId');
+              renderQueue();
+
+              // Auto-run next in queue after short delay
+              setTimeout(() => {
+                const nextItem = QueueManager.getNext();
+                if (nextItem) {
+                  addLogEntry('info', `[Queue] Auto-continuing to: ${nextItem.subjectName}`);
+                  runNextInQueue();
+                } else {
+                  addLogEntry('info', '[Queue] All subjects completed!');
+                }
+              }, 2000);
+            }
           }
 
           if (data.type === 'error') {
             addLogEntry('error', `[ERROR] ${data.message}`);
             eventSource.close();
             resetUI();
+
+            // Mark queue item as error
+            if (currentQueueItemId) {
+              QueueManager.update(currentQueueItemId, { status: 'error' });
+              currentQueueItemId = null;
+              localStorage.removeItem('ddowl_queueItemId');
+              renderQueue();
+            }
           }
 
           // Broadcast to follower tabs
@@ -3122,6 +3373,14 @@
           } else {
             addLogEntry('error', 'Max retries exceeded. Please try again.');
             resetUI();
+
+            // Mark queue item as error on max retries
+            if (currentQueueItemId) {
+              QueueManager.update(currentQueueItemId, { status: 'error' });
+              currentQueueItemId = null;
+              localStorage.removeItem('ddowl_queueItemId');
+              renderQueue();
+            }
           }
         };
       }
@@ -3445,6 +3704,7 @@
             // Initialize multi-tab sync and become leader
             ScreeningSync.init(sessionId);
             ScreeningSync.becomeLeader();
+            ScreeningSync.screeningState = 'running';
           }
 
           // Handle reconnection status - show clear context about where we are
@@ -3873,15 +4133,22 @@
               QueueManager.update(currentQueueItemId, {
                 status: 'complete',
                 completedAt: Date.now(),
-                stats: { red: stats.red || 0, amber: stats.amber || 0, green: greenCount }
+                stats: { red: stats.red || 0, amber: stats.amber || 0, green: greenCount },
+                findings: currentFindings,
+                subjectName: currentSubjectName
               });
               currentQueueItemId = null;
+              localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
 
               // Auto-run next in queue after short delay
               setTimeout(() => {
-                if (QueueManager.getNext()) {
+                const nextItem = QueueManager.getNext();
+                if (nextItem) {
+                  addLogEntry('info', `[Queue] Auto-continuing to: ${nextItem.subjectName}`);
                   runNextInQueue();
+                } else {
+                  addLogEntry('info', '[Queue] All subjects completed!');
                 }
               }, 2000);
             }
@@ -3896,6 +4163,7 @@
             if (currentQueueItemId) {
               QueueManager.update(currentQueueItemId, { status: 'error' });
               currentQueueItemId = null;
+              localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
             }
           }
@@ -3922,6 +4190,7 @@
             if (currentQueueItemId) {
               QueueManager.update(currentQueueItemId, { status: 'error' });
               currentQueueItemId = null;
+              localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
             }
           }
@@ -4316,81 +4585,76 @@
       const content = document.getElementById('detailReportContent');
       const status = document.getElementById('detailReportStatus');
 
-      content.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Generating detailed report...</div>';
+      content.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Generating professional due diligence report...</div>';
       detailReportContent = '';
       status.classList.remove('complete');
-      status.querySelector('span').textContent = `Generating 0/${selected.length}...`;
+      status.querySelector('span').textContent = `Generating report for ${selected.length} finding(s)...`;
       document.getElementById('copyDetailReportBtn').disabled = true;
 
       modal.classList.add('active');
 
-      // Generate detailed report for each selected finding
-      let reportHtml = '';
-      let reportText = '';
+      try {
+        // Use new batch report generation endpoint
+        const response = await fetch(`/api/session/${sessionId || 'default'}/generate-report`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            findings: selected,
+            subjectName: currentSubjectName,
+          })
+        });
 
-      for (let i = 0; i < selected.length; i++) {
-        const finding = selected[i];
-        status.querySelector('span').textContent = `Generating ${i + 1}/${selected.length}...`;
+        const data = await response.json();
 
-        try {
-          const response = await fetch('/api/findings/detail', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              finding,
-              subjectName: currentSubjectName,
-            })
-          });
+        if (data.success && data.sections) {
+          let reportHtml = '';
+          let reportText = '';
 
-          const data = await response.json();
-
-          if (data.success) {
+          for (const section of data.sections) {
+            // HTML for display (with formatting)
             reportHtml += `
               <div class="detail-finding">
-                <div class="detail-finding-header">${escapeHtml(finding.headline)}</div>
+                <div class="detail-finding-header">${escapeHtml(section.headline)}</div>
                 <div class="detail-finding-section">
-                  <h4>Summary</h4>
-                  <p>${escapeHtml(data.summary)}</p>
-                </div>
-                <div class="detail-finding-section">
-                  <h4>Key Facts</h4>
-                  <p>${escapeHtml(data.keyFacts)}</p>
+                  <p style="line-height: 1.8; text-align: justify;">${escapeHtml(section.paragraph)}</p>
                 </div>
                 <div class="detail-finding-section">
                   <h4>Sources</h4>
-                  <p style="font-size: 12px; color: #888;">${finding.sources?.map(s => s.url).join('<br>') || 'N/A'}</p>
+                  <p style="font-size: 12px; color: #888;">${section.sources?.map(url => `<a href="${escapeHtml(url)}" target="_blank" style="color: #4a9eff;">${escapeHtml(url)}</a>`).join('<br>') || 'N/A'}</p>
                 </div>
               </div>
             `;
-            reportText += `## ${finding.headline}\n\n**Summary:** ${data.summary}\n\n**Key Facts:** ${data.keyFacts}\n\n**Sources:**\n${finding.sources?.map(s => '- ' + s.url).join('\n') || 'N/A'}\n\n---\n\n`;
-          } else {
-            reportHtml += `
-              <div class="detail-finding">
-                <div class="detail-finding-header">${escapeHtml(finding.headline)}</div>
-                <div class="detail-finding-section">
-                  <p style="color: #ff4757;">Failed to generate: ${escapeHtml(data.error || 'Unknown error')}</p>
-                </div>
-              </div>
-            `;
+
+            // Plain text for clipboard
+            reportText += `## ${section.headline}\n\n${section.paragraph}\n\nSources:\n${section.sources?.map(url => '- ' + url).join('\n') || 'N/A'}\n\n---\n\n`;
           }
-        } catch (err) {
-          reportHtml += `
+
+          content.innerHTML = reportHtml;
+          detailReportContent = reportText;
+          status.classList.add('complete');
+          status.querySelector('span').textContent = 'Complete';
+          document.getElementById('copyDetailReportBtn').disabled = false;
+        } else {
+          content.innerHTML = `
             <div class="detail-finding">
-              <div class="detail-finding-header">${escapeHtml(finding.headline)}</div>
+              <div class="detail-finding-header">Error</div>
               <div class="detail-finding-section">
-                <p style="color: #ff4757;">Error: ${escapeHtml(err.message)}</p>
+                <p style="color: #ff4757;">${escapeHtml(data.error || 'Failed to generate report')}</p>
               </div>
             </div>
           `;
         }
-
-        content.innerHTML = reportHtml;
+      } catch (err) {
+        content.innerHTML = `
+          <div class="detail-finding">
+            <div class="detail-finding-header">Error</div>
+            <div class="detail-finding-section">
+              <p style="color: #ff4757;">Error: ${escapeHtml(err.message)}</p>
+            </div>
+          </div>
+        `;
+        status.querySelector('span').textContent = 'Failed';
       }
-
-      detailReportContent = reportText;
-      status.classList.add('complete');
-      status.querySelector('span').textContent = 'Complete';
-      document.getElementById('copyDetailReportBtn').disabled = false;
     }
 
     async function furtherSearchSelected() {
