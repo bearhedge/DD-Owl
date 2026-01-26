@@ -961,11 +961,8 @@
     function renderActiveCell(row, col) {
       switch (col.id) {
         case 'company':
-          const docUrl = row.documentUrl || '';
+          // Note: HKEX URLs for OC announcements are currently broken, so no link
           const companyHtml = escapeHtml((row.company || '').replace(/Co\.,\s*Ltd\.?/gi, 'Co. Ltd.'));
-          if (docUrl) {
-            return `<td class="company-name"><a href="${docUrl}" target="_blank" title="View OC Announcement" style="color: inherit; text-decoration: none;">${companyHtml}</a></td>`;
-          }
           return `<td class="company-name">${companyHtml}</td>`;
         case 'ocDate':
           return `<td class="date-cell">${formatDate(row.ocDate)}</td>`;
