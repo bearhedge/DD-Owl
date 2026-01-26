@@ -250,7 +250,6 @@
       color: #666;
       font-size: 0.85em;
       font-weight: normal;
-      font-style: italic;
     }
     .export-btn {
       background: #1a1a1a;
@@ -914,7 +913,7 @@
         if (sizeLower.includes('introduction')) return '<span class="no-size-label">Introduction</span>';
         if (sizeLower.includes('transfer')) return '<span class="no-size-label">Transfer</span>';
         if (sizeLower.includes('spac')) return '<span class="no-size-label">SPAC</span>';
-        if (sizeLower.includes('n/a')) return '<span class="no-size-label">N/A</span>';
+        if (sizeLower.includes('n/a') || sizeLower.includes('unavailable')) return '<span class="no-size-label">Unavailable</span>';
         return '<span class="no-size-label">' + size + '</span>';
       }
       if (!size) {

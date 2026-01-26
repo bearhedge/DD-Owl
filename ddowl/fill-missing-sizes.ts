@@ -17,32 +17,34 @@ const EXCEL_PATH = '/Users/home/Desktop/DD Owl/Reference files/2. HKEX IPO Liste
 // PDF cache directory
 const PDF_CACHE_DIR = './pdf-cache';
 
-// Patterns to extract offer price
+// Patterns to extract offer price (avoid matching "Nominal value")
 const PRICE_PATTERNS = [
-  // "Offer Price: HK$X.XX" or "Offer Price HK$X.XX"
-  /(?:Final\s+)?Offer\s*Price[:\s]+HK\$\s*([\d.]+)/gi,
-  // "HK$X.XX per Share" or "HK$X.XX per Offer Share"
-  /HK\$\s*([\d.]+)\s*per\s*(?:Offer\s*)?Share/gi,
-  // "Maximum Offer Price: HK$X.XX" or "Maximum Public Offer Price"
+  // "Maximum Offer Price: HK$X.XX" - most reliable
   /Maximum\s*(?:Public\s*)?Offer\s*Price[:\s]+HK\$\s*([\d.]+)/gi,
+  // "Offer Price: HK$X.XX" or "Offer Price HK$X.XX" (but not "Nominal")
+  /(?:Final\s+)?Offer\s*Price[:\s]+(?:Not\s+more\s+than\s+)?HK\$\s*([\d.]+)/gi,
+  // "HK$X.XX per Offer Share" (must have "Offer" to avoid nominal value)
+  /HK\$\s*([\d.]+)\s*per\s+Offer\s*(?:Share|Unit)/gi,
+  // "not more than HK$X.XX" in offer context
+  /not\s+more\s+than\s+HK\$\s*([\d.]+)/gi,
   // Price range format "HK$X.XX to HK$Y.YY" - take the higher one
   /HK\$\s*[\d.]+\s*to\s*HK\$\s*([\d.]+)/gi,
 ];
 
-// Patterns to extract number of shares
+// Patterns to extract number of shares/units
 const SHARES_PATTERNS = [
-  // "Number of Offer Shares under the Global Offering : X,XXX,XXX" (with tabs/spaces/colons)
-  /Number\s+of\s+(?:Offer\s+)?Shares\s+under\s+(?:the\s+)?Global\s+Offering\s*[:\s]+\s*([\d,]+)/gi,
-  // "Number of Offer Shares: X,XXX,XXX" or "Number of H Shares: X,XXX,XXX"
-  /Number\s+of\s+(?:Offer\s+|H\s+)?Shares[:\s]+([\d,]+)/gi,
-  // "X,XXX,XXX Offer Shares" or "X,XXX,XXX H Shares"
-  /([\d,]+)\s*(?:Offer\s*|H\s*)?Shares\s*(?:\(subject to|under|in)/gi,
-  // "Total number of Shares: X,XXX,XXX"
-  /Total\s+(?:number\s+of\s+)?(?:Offer\s+|H\s+)?Shares[:\s]+([\d,]+)/gi,
-  // "Aggregate: X,XXX,XXX Shares"
-  /(?:Total|Aggregate)[:\s]*([\d,]+)\s*(?:Offer\s+|H\s+)?Shares/gi,
-  // "Global Offering: X,XXX,XXX Shares"
-  /Global\s+Offering[:\s]*([\d,]+)\s*(?:Offer\s+|H\s+)?Shares/gi,
+  // "Number of Offer Shares under the Global Offering : X,XXX,XXX"
+  /Number\s+of\s+(?:Offer\s+)?(?:Shares|Units)\s+under\s+(?:the\s+)?Global\s+Offering\s*[:\s]+\s*([\d,]+)/gi,
+  // "Number of Offer Shares: X,XXX,XXX" or "Number of Units: X,XXX,XXX"
+  /Number\s+of\s+(?:Offer\s+|H\s+)?(?:Shares|Units)[:\s]+([\d,]+)/gi,
+  // "X,XXX,XXX Offer Shares" or "X,XXX,XXX Units"
+  /([\d,]+)\s*(?:Offer\s*|H\s*)?(?:Shares|Units)\s*(?:\(subject to|under|in)/gi,
+  // "Total number of Shares/Units: X,XXX,XXX"
+  /Total\s+(?:number\s+of\s+)?(?:Offer\s+|H\s+)?(?:Shares|Units)[:\s]+([\d,]+)/gi,
+  // "Aggregate: X,XXX,XXX Shares/Units"
+  /(?:Total|Aggregate)[:\s]*([\d,]+)\s*(?:Offer\s+|H\s+)?(?:Shares|Units)/gi,
+  // "Global Offering: X,XXX,XXX Shares/Units"
+  /Global\s+Offering[:\s]*([\d,]+)\s*(?:Offer\s+|H\s+)?(?:Shares|Units)/gi,
 ];
 
 interface MissingDeal {
@@ -357,25 +359,25 @@ function getSizeLabel(result: ExtractedMetrics, dealType: string, company: strin
 
   // Partial extract - we found some data but not enough
   if (source.includes('PARTIAL_EXTRACT')) {
-    return 'N/A - Manual Review (partial data)';
+    return 'Unavailable (partial data)';
   }
 
   // No URL
   if (source.includes('NO_URL')) {
-    return 'N/A - No Prospectus URL';
+    return 'Unavailable - No Prospectus URL';
   }
 
   // Download failed
   if (source.includes('DOWNLOAD_FAILED')) {
-    return 'N/A - PDF Download Failed';
+    return 'Unavailable - PDF Download Failed';
   }
 
   // No match - patterns didn't work
   if (source.includes('NO_MATCH')) {
-    return 'N/A - Manual Review (format)';
+    return 'Unavailable (format)';
   }
 
-  return 'N/A - Unknown';
+  return 'Unavailable - Unknown';
 }
 
 /**
