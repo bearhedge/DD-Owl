@@ -41,6 +41,7 @@ interface EnrichedDeal {
   sizeHKDm: number | null;
   sponsors: string[];
   others: string[];
+  prospectusUrl: string | null;
 }
 
 async function main() {
@@ -801,6 +802,7 @@ function enrichData(
         sizeHKDm,
         sponsors: [],
         others: [],
+        prospectusUrl: pdfUrls.get(tickerNum) || null,
       };
       dealMap.set(ticker, deal);
     }
@@ -968,7 +970,7 @@ function isGarbageBank(name: string, companyName?: string): boolean {
 }
 
 function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
-  const headers = ['ticker', 'company', 'company_cn', 'type', 'date', 'shares', 'price_hkd', 'size_hkdm', 'sponsors', 'others'];
+  const headers = ['ticker', 'company', 'company_cn', 'type', 'date', 'shares', 'price_hkd', 'size_hkdm', 'sponsors', 'others', 'prospectus_url'];
 
   const rows = deals.map(d => [
     d.ticker,
@@ -981,6 +983,7 @@ function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
     d.sizeHKDm || '',
     d.sponsors.join('; '),
     d.others.join('; '),
+    d.prospectusUrl || '',
   ]);
 
   const csv = [

@@ -700,7 +700,8 @@
             price: parseFloat(row.price_hkd) || null,
             sizeHKDm: parseFloat(row.size_hkdm) || null,
             sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
-            others: row.others ? row.others.split('; ').filter(Boolean) : []
+            others: row.others ? row.others.split('; ').filter(Boolean) : [],
+            prospectusUrl: row.prospectus_url || ''
           });
         }
 
@@ -878,7 +879,11 @@
     function renderCell(row, col) {
       switch (col.id) {
         case 'ticker':
-          return `<td class="ticker"><a href="#" onclick="openProspectus('${row.ticker}'); return false;" title="Open prospectus PDF">${row.ticker}</a></td>`;
+          const pdfUrl = row.prospectusUrl || '';
+          if (pdfUrl) {
+            return `<td class="ticker"><a href="${pdfUrl}" target="_blank" title="Open prospectus PDF">${row.ticker}</a></td>`;
+          }
+          return `<td class="ticker">${row.ticker}</td>`;
         case 'company':
           const displayHtml = formatCompanyName(row.company, row.companyCn, true);
           const plainName = formatCompanyName(row.company, row.companyCn, false);
