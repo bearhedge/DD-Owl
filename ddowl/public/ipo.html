@@ -93,62 +93,82 @@
     }
     .toolbar {
       display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 24px;
+      margin-bottom: 24px;
       align-items: center;
-      background: #0f0f0f;
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid #1a1a1a;
+      padding: 0;
     }
     .search-wrapper {
       position: relative;
-      flex: 1;
-      max-width: 320px;
+      width: 360px;
     }
     .search-icon {
       position: absolute;
-      left: 12px;
+      left: 14px;
       top: 50%;
       transform: translateY(-50%);
-      color: #555;
+      color: #666;
       pointer-events: none;
     }
     .search-box {
       width: 100%;
-      padding: 10px 14px 10px 40px;
-      border: 1px solid #333;
-      border-radius: 6px;
+      padding: 12px 16px 12px 44px;
+      background: #141414;
+      border: 1px solid transparent;
+      border-radius: 8px;
       font-size: 0.9rem;
       font-family: inherit;
-      background: #111;
       color: #fff;
       outline: none;
-    }
-    .search-box:focus {
-      border-color: #4a9eff;
+      transition: all 0.2s;
     }
     .search-box::placeholder {
       color: #555;
     }
-    .filter-select {
-      padding: 10px 14px;
-      border: 1px solid #333;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-family: inherit;
-      background: #111;
-      color: #e0e0e0;
-      cursor: pointer;
+    .search-box:hover {
+      background: #1a1a1a;
     }
-    .filter-select:focus {
-      border-color: #4a9eff;
-      outline: none;
+    .search-box:focus {
+      background: #111;
+      border-color: #333;
+    }
+    /* Year Pills */
+    .year-pills {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      flex: 1;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .year-pills::-webkit-scrollbar {
+      display: none;
+    }
+    .year-pill {
+      padding: 8px 14px;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .year-pill:hover {
+      color: #999;
+      background: #1a1a1a;
+    }
+    .year-pill.active {
+      color: #fff;
+      background: #1a1a1a;
     }
     .count-badge {
       font-size: 0.85rem;
-      color: #666;
+      color: #555;
       margin-left: auto;
+      white-space: nowrap;
     }
     .table-container {
       background: #111;
@@ -288,88 +308,6 @@
     .section { display: none; }
     .section.active { display: block; }
 
-    /* Column resize handles */
-    th {
-      position: relative;
-    }
-    .resize-handle {
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 5px;
-      cursor: col-resize;
-      background: transparent;
-      z-index: 10;
-    }
-    .resize-handle:hover {
-      background: #4a9eff;
-    }
-    th.dragging {
-      opacity: 0.5;
-    }
-    th.drag-over {
-      background: #2a2a3a;
-      border-left: 2px solid #4a9eff;
-    }
-
-    /* Column selector dropdown */
-    .column-selector {
-      position: relative;
-      display: inline-block;
-    }
-    .column-btn {
-      width: 40px;
-      height: 40px;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #1a1a1a;
-      color: #888;
-      border: 1px solid #333;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .column-btn:hover {
-      background: #222;
-      color: #fff;
-      border-color: #444;
-    }
-    .column-menu {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      margin-top: 4px;
-      background: #1a1a1a;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 8px 0;
-      min-width: 160px;
-      z-index: 100;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-    .column-menu.hidden {
-      display: none;
-    }
-    .column-menu label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 14px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: #ccc;
-      transition: background 0.15s;
-    }
-    .column-menu label:hover {
-      background: #222;
-    }
-    .column-menu input[type="checkbox"] {
-      accent-color: #4a9eff;
-    }
-
     /* Pipeline placeholder */
     .pipeline-placeholder {
       background: #111;
@@ -455,24 +393,13 @@
     <div class="section" id="historical-section">
       <div class="toolbar">
         <div class="search-wrapper">
-          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
-          <input type="text" class="search-box" id="search" placeholder="Search company or bank...">
+          <input type="text" class="search-box" id="search" placeholder="Search companies, tickers, banks...">
         </div>
-        <select class="filter-select" id="year-filter">
-          <option value="">All Years</option>
-        </select>
-        <div class="column-selector">
-          <button class="column-btn" onclick="toggleColumnMenu(event)" title="Configure columns">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-          </button>
-          <div id="column-menu" class="column-menu hidden"></div>
-        </div>
+        <div class="year-pills" id="year-pills"></div>
         <span class="count-badge" id="count-badge">Loading...</span>
       </div>
       <div class="table-container">
@@ -493,6 +420,7 @@
     let sortDir = 'desc';
     let currentPage = 1;
     const pageSize = 50;
+    let currentYearFilter = '';
 
     // Column configuration - order can be changed by user
     let columns = [
@@ -515,179 +443,6 @@
         return `${name}\n${companyCn}`;  // For CSV export
       }
       return asHtml ? escapeHtml(name) : name;
-    }
-
-    // Column visibility toggle
-    function toggleColumnMenu(event) {
-      event.stopPropagation();
-      const menu = document.getElementById('column-menu');
-      menu.classList.toggle('hidden');
-    }
-
-    function renderColumnMenu() {
-      const menu = document.getElementById('column-menu');
-      menu.innerHTML = columns.map(col => `
-        <label>
-          <input type="checkbox" ${col.visible ? 'checked' : ''}
-                 onchange="toggleColumn('${col.id}')">
-          ${col.label}
-        </label>
-      `).join('');
-    }
-
-    function toggleColumn(colId) {
-      const col = columns.find(c => c.id === colId);
-      if (col) {
-        col.visible = !col.visible;
-        renderTableWithColumns();
-        saveColumnPreferences();
-      }
-    }
-
-    // Close column menu when clicking outside
-    document.addEventListener('click', (e) => {
-      const menu = document.getElementById('column-menu');
-      const selector = document.querySelector('.column-selector');
-      if (menu && selector && !selector.contains(e.target)) {
-        menu.classList.add('hidden');
-      }
-    });
-
-    // LocalStorage persistence
-    function saveColumnPreferences() {
-      localStorage.setItem('ipo-columns', JSON.stringify(columns));
-    }
-
-    function loadColumnPreferences() {
-      const saved = localStorage.getItem('ipo-columns');
-      if (saved) {
-        try {
-          const savedCols = JSON.parse(saved);
-          // Merge saved preferences with current columns (in case new columns are added)
-          columns = columns.map(col => {
-            const savedCol = savedCols.find(c => c.id === col.id);
-            if (savedCol) {
-              return { ...col, width: savedCol.width, visible: savedCol.visible };
-            }
-            return col;
-          });
-          // Reorder columns based on saved order
-          const orderedCols = [];
-          savedCols.forEach(sc => {
-            const col = columns.find(c => c.id === sc.id);
-            if (col) orderedCols.push(col);
-          });
-          // Add any new columns not in saved
-          columns.forEach(c => {
-            if (!orderedCols.find(oc => oc.id === c.id)) orderedCols.push(c);
-          });
-          columns = orderedCols;
-        } catch (e) {
-          console.error('Failed to load column preferences:', e);
-        }
-      }
-    }
-
-    // Draggable column headers
-    let draggedColIndex = null;
-
-    function initDraggableHeaders() {
-      const headers = document.querySelectorAll('#data-table thead th');
-      headers.forEach((th, index) => {
-        th.draggable = true;
-        th.style.cursor = 'grab';
-
-        th.addEventListener('dragstart', (e) => {
-          draggedColIndex = index;
-          th.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-
-        th.addEventListener('dragend', () => {
-          th.classList.remove('dragging');
-          document.querySelectorAll('#data-table th').forEach(h => h.classList.remove('drag-over'));
-        });
-
-        th.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
-        });
-
-        th.addEventListener('dragenter', (e) => {
-          e.preventDefault();
-          if (draggedColIndex !== index) {
-            th.classList.add('drag-over');
-          }
-        });
-
-        th.addEventListener('dragleave', () => {
-          th.classList.remove('drag-over');
-        });
-
-        th.addEventListener('drop', (e) => {
-          e.preventDefault();
-          th.classList.remove('drag-over');
-          if (draggedColIndex !== null && draggedColIndex !== index) {
-            // Map visual index to columns array index (only visible columns)
-            const visibleCols = columns.filter(c => c.visible);
-            const fromCol = visibleCols[draggedColIndex];
-            const toCol = visibleCols[index];
-            const fromIdx = columns.findIndex(c => c.id === fromCol.id);
-            const toIdx = columns.findIndex(c => c.id === toCol.id);
-
-            // Reorder columns array
-            const moved = columns.splice(fromIdx, 1)[0];
-            columns.splice(toIdx, 0, moved);
-
-            renderTableWithColumns();
-            saveColumnPreferences();
-          }
-          draggedColIndex = null;
-        });
-      });
-    }
-
-    // Resizable columns
-    function initResizableColumns() {
-      const headers = document.querySelectorAll('#data-table thead th');
-      headers.forEach((th, index) => {
-        // Remove existing handles
-        th.querySelectorAll('.resize-handle').forEach(h => h.remove());
-
-        const handle = document.createElement('div');
-        handle.className = 'resize-handle';
-        th.appendChild(handle);
-
-        let startX, startWidth;
-        const visibleCols = columns.filter(c => c.visible);
-
-        handle.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          startX = e.pageX;
-          startWidth = th.offsetWidth;
-
-          const resize = (e) => {
-            const newWidth = startWidth + (e.pageX - startX);
-            if (newWidth >= 50) {
-              // Find the column in the columns array
-              const col = visibleCols[index];
-              const colIdx = columns.findIndex(c => c.id === col.id);
-              columns[colIdx].width = newWidth;
-              th.style.width = newWidth + 'px';
-            }
-          };
-
-          const stopResize = () => {
-            document.removeEventListener('mousemove', resize);
-            document.removeEventListener('mouseup', stopResize);
-            saveColumnPreferences();
-          };
-
-          document.addEventListener('mousemove', resize);
-          document.addEventListener('mouseup', stopResize);
-        });
-      });
     }
 
     // Tab switching
@@ -788,15 +543,27 @@
         }
       });
 
-      const select = document.getElementById('year-filter');
       const sortedYears = Array.from(years).sort().reverse();
-      select.innerHTML = '<option value="">All Years</option>' +
-        sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+      const container = document.getElementById('year-pills');
+
+      container.innerHTML = `
+        <button class="year-pill active" data-year="">All</button>
+        ${sortedYears.map(y => `<button class="year-pill" data-year="${y}">${y}</button>`).join('')}
+      `;
+
+      // Add click handlers
+      container.querySelectorAll('.year-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          container.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          currentYearFilter = pill.dataset.year;
+          applyFilters();
+        });
+      });
     }
 
     function applyFilters() {
       const search = document.getElementById('search').value.toLowerCase();
-      const yearFilter = document.getElementById('year-filter').value;
 
       filteredData = allData.filter(row => {
         if (search) {
@@ -810,9 +577,9 @@
           if (!searchFields.includes(search)) return false;
         }
 
-        if (yearFilter) {
+        if (currentYearFilter) {
           const parts = (row.date || '').split('/');
-          if (parts.length !== 3 || parts[2] !== yearFilter) return false;
+          if (parts.length !== 3 || parts[2] !== currentYearFilter) return false;
         }
 
         return true;
@@ -840,11 +607,7 @@
         return `<th ${sortAttr} style="width: ${col.width}px;" class="${sortClass}">${col.label}</th>`;
       }).join('')}</tr>`;
 
-      // Re-init drag/resize after rendering headers
-      initDraggableHeaders();
-      initResizableColumns();
       initSortHandlers();
-      renderColumnMenu();
       renderTable();
     }
 
@@ -1018,7 +781,6 @@
 
     // Filter handlers
     document.getElementById('search').addEventListener('input', debounce(applyFilters, 300));
-    document.getElementById('year-filter').addEventListener('change', applyFilters);
 
     function debounce(fn, delay) {
       let timeout;
@@ -1060,8 +822,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // Initialize: load preferences first, then data
-    loadColumnPreferences();
+    // Initialize
     loadData();
   </script>
 </body>
