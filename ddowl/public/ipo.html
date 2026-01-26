@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IPO Tracker - DD Owl</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -44,15 +46,9 @@
     .header {
       background: #111;
       border-bottom: 1px solid #222;
-      padding: 16px 24px;
+      padding: 12px 24px;
       display: flex;
       align-items: center;
-      gap: 24px;
-    }
-    .logo {
-      font-weight: 700;
-      font-size: 1.25rem;
-      color: #fff;
     }
     .tabs {
       display: flex;
@@ -168,10 +164,12 @@
     .company-name {
       font-weight: 500;
       color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       max-width: 490px;
+      line-height: 1.3;
+    }
+    .company-cn {
+      color: #888;
+      font-weight: 400;
     }
     .ticker {
       color: #4a9eff;
@@ -277,6 +275,85 @@
     .section { display: none; }
     .section.active { display: block; }
 
+    /* Column resize handles */
+    th {
+      position: relative;
+    }
+    .resize-handle {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      cursor: col-resize;
+      background: transparent;
+      z-index: 10;
+    }
+    .resize-handle:hover {
+      background: #4a9eff;
+    }
+    th.dragging {
+      opacity: 0.5;
+    }
+    th.drag-over {
+      background: #2a2a3a;
+      border-left: 2px solid #4a9eff;
+    }
+
+    /* Column selector dropdown */
+    .column-selector {
+      position: relative;
+      display: inline-block;
+    }
+    .column-btn {
+      background: #1a1a1a;
+      color: #888;
+      border: 1px solid #333;
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .column-btn:hover {
+      background: #222;
+      color: #fff;
+      border-color: #444;
+    }
+    .column-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 8px 0;
+      min-width: 160px;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .column-menu.hidden {
+      display: none;
+    }
+    .column-menu label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #ccc;
+      transition: background 0.15s;
+    }
+    .column-menu label:hover {
+      background: #222;
+    }
+    .column-menu input[type="checkbox"] {
+      accent-color: #4a9eff;
+    }
+
     /* Pipeline placeholder */
     .pipeline-placeholder {
       background: #111;
@@ -340,7 +417,6 @@
     </div>
   </nav>
   <div class="header">
-    <div class="logo">IPO Tracker</div>
     <div class="tabs">
       <button class="tab active" data-section="pipeline">Pipeline</button>
       <button class="tab" data-section="historical">Historical</button>
@@ -364,21 +440,16 @@
         <select class="filter-select" id="year-filter">
           <option value="">All Years</option>
         </select>
+        <div class="column-selector">
+          <button class="column-btn" onclick="toggleColumnMenu(event)">Columns ▼</button>
+          <div id="column-menu" class="column-menu hidden"></div>
+        </div>
         <button class="export-btn" onclick="exportExcel()">Download Excel</button>
         <span class="count-badge" id="count-badge">Loading...</span>
       </div>
       <div class="table-container">
         <table id="data-table">
-          <thead>
-            <tr>
-              <th data-sort="ticker" style="width: 70px;">Ticker</th>
-              <th data-sort="company" style="width: 500px;">Company</th>
-              <th data-sort="date" style="width: 80px;">Date</th>
-              <th data-sort="sizeHKDm" style="width: 100px;">Size (HKDm)</th>
-              <th>Sponsors</th>
-              <th>Others</th>
-            </tr>
-          </thead>
+          <thead><tr></tr></thead>
           <tbody id="table-body"></tbody>
         </table>
       </div>
@@ -395,6 +466,202 @@
     let currentPage = 1;
     const pageSize = 50;
 
+    // Column configuration - order can be changed by user
+    let columns = [
+      { id: 'ticker', label: 'Ticker', width: 70, visible: true, sortable: true },
+      { id: 'company', label: 'Company', width: 400, visible: true, sortable: true },
+      { id: 'date', label: 'Date', width: 90, visible: true, sortable: true },
+      { id: 'sizeHKDm', label: 'Size (HKDm)', width: 100, visible: true, sortable: true },
+      { id: 'sponsors', label: 'Sponsors', width: 250, visible: true, sortable: false },
+      { id: 'others', label: 'Others', width: 300, visible: true, sortable: false },
+    ];
+
+    // Format company name with Chinese below English, and remove comma from Co., Ltd.
+    function formatCompanyName(company, companyCn, asHtml = false) {
+      // Remove comma from "Co., Ltd." → "Co. Ltd."
+      let name = (company || '').replace(/Co\.,\s*Ltd\.?/gi, 'Co. Ltd.');
+      if (companyCn && asHtml) {
+        return `${escapeHtml(name)}<br><span class="company-cn">${escapeHtml(companyCn)}</span>`;
+      }
+      if (companyCn) {
+        return `${name}\n${companyCn}`;  // For CSV export
+      }
+      return asHtml ? escapeHtml(name) : name;
+    }
+
+    // Column visibility toggle
+    function toggleColumnMenu(event) {
+      event.stopPropagation();
+      const menu = document.getElementById('column-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    function renderColumnMenu() {
+      const menu = document.getElementById('column-menu');
+      menu.innerHTML = columns.map(col => `
+        <label>
+          <input type="checkbox" ${col.visible ? 'checked' : ''}
+                 onchange="toggleColumn('${col.id}')">
+          ${col.label}
+        </label>
+      `).join('');
+    }
+
+    function toggleColumn(colId) {
+      const col = columns.find(c => c.id === colId);
+      if (col) {
+        col.visible = !col.visible;
+        renderTableWithColumns();
+        saveColumnPreferences();
+      }
+    }
+
+    // Close column menu when clicking outside
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('column-menu');
+      const selector = document.querySelector('.column-selector');
+      if (menu && selector && !selector.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+
+    // LocalStorage persistence
+    function saveColumnPreferences() {
+      localStorage.setItem('ipo-columns', JSON.stringify(columns));
+    }
+
+    function loadColumnPreferences() {
+      const saved = localStorage.getItem('ipo-columns');
+      if (saved) {
+        try {
+          const savedCols = JSON.parse(saved);
+          // Merge saved preferences with current columns (in case new columns are added)
+          columns = columns.map(col => {
+            const savedCol = savedCols.find(c => c.id === col.id);
+            if (savedCol) {
+              return { ...col, width: savedCol.width, visible: savedCol.visible };
+            }
+            return col;
+          });
+          // Reorder columns based on saved order
+          const orderedCols = [];
+          savedCols.forEach(sc => {
+            const col = columns.find(c => c.id === sc.id);
+            if (col) orderedCols.push(col);
+          });
+          // Add any new columns not in saved
+          columns.forEach(c => {
+            if (!orderedCols.find(oc => oc.id === c.id)) orderedCols.push(c);
+          });
+          columns = orderedCols;
+        } catch (e) {
+          console.error('Failed to load column preferences:', e);
+        }
+      }
+    }
+
+    // Draggable column headers
+    let draggedColIndex = null;
+
+    function initDraggableHeaders() {
+      const headers = document.querySelectorAll('#data-table thead th');
+      headers.forEach((th, index) => {
+        th.draggable = true;
+        th.style.cursor = 'grab';
+
+        th.addEventListener('dragstart', (e) => {
+          draggedColIndex = index;
+          th.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        th.addEventListener('dragend', () => {
+          th.classList.remove('dragging');
+          document.querySelectorAll('#data-table th').forEach(h => h.classList.remove('drag-over'));
+        });
+
+        th.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+
+        th.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          if (draggedColIndex !== index) {
+            th.classList.add('drag-over');
+          }
+        });
+
+        th.addEventListener('dragleave', () => {
+          th.classList.remove('drag-over');
+        });
+
+        th.addEventListener('drop', (e) => {
+          e.preventDefault();
+          th.classList.remove('drag-over');
+          if (draggedColIndex !== null && draggedColIndex !== index) {
+            // Map visual index to columns array index (only visible columns)
+            const visibleCols = columns.filter(c => c.visible);
+            const fromCol = visibleCols[draggedColIndex];
+            const toCol = visibleCols[index];
+            const fromIdx = columns.findIndex(c => c.id === fromCol.id);
+            const toIdx = columns.findIndex(c => c.id === toCol.id);
+
+            // Reorder columns array
+            const moved = columns.splice(fromIdx, 1)[0];
+            columns.splice(toIdx, 0, moved);
+
+            renderTableWithColumns();
+            saveColumnPreferences();
+          }
+          draggedColIndex = null;
+        });
+      });
+    }
+
+    // Resizable columns
+    function initResizableColumns() {
+      const headers = document.querySelectorAll('#data-table thead th');
+      headers.forEach((th, index) => {
+        // Remove existing handles
+        th.querySelectorAll('.resize-handle').forEach(h => h.remove());
+
+        const handle = document.createElement('div');
+        handle.className = 'resize-handle';
+        th.appendChild(handle);
+
+        let startX, startWidth;
+        const visibleCols = columns.filter(c => c.visible);
+
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startX = e.pageX;
+          startWidth = th.offsetWidth;
+
+          const resize = (e) => {
+            const newWidth = startWidth + (e.pageX - startX);
+            if (newWidth >= 50) {
+              // Find the column in the columns array
+              const col = visibleCols[index];
+              const colIdx = columns.findIndex(c => c.id === col.id);
+              columns[colIdx].width = newWidth;
+              th.style.width = newWidth + 'px';
+            }
+          };
+
+          const stopResize = () => {
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+            saveColumnPreferences();
+          };
+
+          document.addEventListener('mousemove', resize);
+          document.addEventListener('mouseup', stopResize);
+        });
+      });
+    }
+
     // Tab switching
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -410,7 +677,7 @@
       try {
         const response = await fetch('/baseline-enriched.csv');
         const text = await response.text();
-        const lines = text.split('\n');
+        const lines = text.replace(/^\uFEFF/, '').replace(/\r/g, '').split('\n');
         const headers = parseCSVLine(lines[0]);
 
         allData = [];
@@ -441,8 +708,9 @@
         applyFilters();
       } catch (err) {
         console.error('Failed to load data:', err);
+        const visibleCols = columns.filter(c => c.visible);
         document.getElementById('table-body').innerHTML =
-          '<tr><td colspan="6" class="empty-state">Failed to load data</td></tr>';
+          `<tr><td colspan="${visibleCols.length}" class="empty-state">Failed to load data</td></tr>`;
       }
     }
 
@@ -494,6 +762,7 @@
         if (search) {
           const searchFields = [
             row.company,
+            row.companyCn,
             row.ticker,
             ...row.sponsors,
             ...row.others
@@ -515,8 +784,50 @@
       document.getElementById('count-badge').textContent =
         filteredData.length.toLocaleString() + ' deals';
 
-      renderTable();
+      renderTableWithColumns();
       renderPagination();
+    }
+
+    // Render table headers and body using column config
+    function renderTableWithColumns() {
+      const visibleCols = columns.filter(c => c.visible);
+      const thead = document.querySelector('#data-table thead');
+
+      // Build header row
+      thead.innerHTML = `<tr>${visibleCols.map(col => {
+        const sortClass = sortColumn === col.id ? (sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
+        const sortAttr = col.sortable ? `data-sort="${col.id}"` : '';
+        return `<th ${sortAttr} style="width: ${col.width}px;" class="${sortClass}">${col.label}</th>`;
+      }).join('')}</tr>`;
+
+      // Re-init drag/resize after rendering headers
+      initDraggableHeaders();
+      initResizableColumns();
+      initSortHandlers();
+      renderColumnMenu();
+      renderTable();
+    }
+
+    // Initialize sort click handlers on headers
+    function initSortHandlers() {
+      document.querySelectorAll('#data-table th[data-sort]').forEach(th => {
+        th.addEventListener('click', (e) => {
+          // Ignore if clicking resize handle
+          if (e.target.classList.contains('resize-handle')) return;
+
+          const col = th.dataset.sort;
+          if (sortColumn === col) {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            sortColumn = col;
+            sortDir = 'asc';
+          }
+          document.querySelectorAll('#data-table th').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+          th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+          sortData();
+          renderTable();
+        });
+      });
     }
 
     function sortData() {
@@ -547,25 +858,42 @@
     }
 
     function renderTable() {
+      const visibleCols = columns.filter(c => c.visible);
       const start = (currentPage - 1) * pageSize;
       const pageData = filteredData.slice(start, start + pageSize);
       const tbody = document.getElementById('table-body');
 
       if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No results found</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty-state">No results found</td></tr>`;
         return;
       }
 
       tbody.innerHTML = pageData.map(row => `
         <tr>
-          <td class="ticker"><a href="#" onclick="openProspectus('${row.ticker}'); return false;" title="Open prospectus PDF">${row.ticker}</a></td>
-          <td class="company-name" title="${escapeHtml(row.companyCn ? row.company + ' (' + row.companyCn + ')' : row.company)}">${escapeHtml(row.companyCn ? row.company + ' (' + row.companyCn + ')' : row.company)}</td>
-          <td class="date-cell">${formatDate(row.date)}</td>
-          <td class="size-cell">${formatSize(row.sizeHKDm)}</td>
-          <td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>
-          <td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>
+          ${visibleCols.map(col => renderCell(row, col)).join('')}
         </tr>
       `).join('');
+    }
+
+    function renderCell(row, col) {
+      switch (col.id) {
+        case 'ticker':
+          return `<td class="ticker"><a href="#" onclick="openProspectus('${row.ticker}'); return false;" title="Open prospectus PDF">${row.ticker}</a></td>`;
+        case 'company':
+          const displayHtml = formatCompanyName(row.company, row.companyCn, true);
+          const plainName = formatCompanyName(row.company, row.companyCn, false);
+          return `<td class="company-name" title="${escapeHtml(plainName)}">${displayHtml}</td>`;
+        case 'date':
+          return `<td class="date-cell">${formatDate(row.date)}</td>`;
+        case 'sizeHKDm':
+          return `<td class="size-cell">${formatSize(row.sizeHKDm)}</td>`;
+        case 'sponsors':
+          return `<td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
+        case 'others':
+          return `<td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
+        default:
+          return `<td>-</td>`;
+      }
     }
 
     function formatSize(size) {
@@ -628,23 +956,6 @@
       }
     }
 
-    // Sorting
-    document.querySelectorAll('th[data-sort]').forEach(th => {
-      th.addEventListener('click', () => {
-        const col = th.dataset.sort;
-        if (sortColumn === col) {
-          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortColumn = col;
-          sortDir = 'asc';
-        }
-        document.querySelectorAll('th').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
-        th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-        sortData();
-        renderTable();
-      });
-    });
-
     // Filter handlers
     document.getElementById('search').addEventListener('input', debounce(applyFilters, 300));
     document.getElementById('year-filter').addEventListener('change', applyFilters);
@@ -660,14 +971,25 @@
     // Export to Excel
     function exportExcel() {
       const BOM = '\uFEFF';
-      const headers = ['Ticker', 'Company', 'Date', 'Sponsors', 'Others'];
+      const visibleCols = columns.filter(c => c.visible);
+      const headers = visibleCols.map(c => c.label);
 
       const csv = BOM + headers.join(',') + '\n' +
-        filteredData.map(row =>
-          [row.ticker, row.company, row.date, row.sponsors.join('; '), row.others.join('; ')]
-            .map(v => `"${String(v || '').replace(/"/g, '""')}"`)
-            .join(',')
-        ).join('\n');
+        filteredData.map(row => {
+          return visibleCols.map(col => {
+            let value;
+            switch(col.id) {
+              case 'ticker': value = row.ticker; break;
+              case 'company': value = formatCompanyName(row.company, row.companyCn); break;
+              case 'date': value = row.date; break;
+              case 'sizeHKDm': value = row.sizeHKDm || ''; break;
+              case 'sponsors': value = row.sponsors.join('; '); break;
+              case 'others': value = row.others.join('; '); break;
+              default: value = '';
+            }
+            return `"${String(value || '').replace(/"/g, '""')}"`;
+          }).join(',');
+        }).join('\n');
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -678,6 +1000,8 @@
       URL.revokeObjectURL(url);
     }
 
+    // Initialize: load preferences first, then data
+    loadColumnPreferences();
     loadData();
   </script>
 </body>
