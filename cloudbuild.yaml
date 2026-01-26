@@ -14,8 +14,8 @@ steps:
       - -t
       - asia-east1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
       - -f
-      - Dockerfile
-      - .
+      - ddowl/Dockerfile
+      - ddowl
 
   - id: 'Docker push'
     name: 'gcr.io/cloud-builders/docker'
