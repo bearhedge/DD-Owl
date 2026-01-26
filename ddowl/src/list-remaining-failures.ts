@@ -10,7 +10,7 @@ import xlsx from 'xlsx';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const RESULTS_FILE = path.join(__dirname, '../.historical-import-results.json');
+const RESULTS_FILE = path.join(__dirname, '../.listed-import-results-mainBoard.json');
 
 interface ImportResult {
   ticker: number;
@@ -24,7 +24,7 @@ async function listFailures() {
   const results: ImportResult[] = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
 
   // Read Excel for more details
-  const wb = xlsx.readFile(path.join(__dirname, '../../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx'));
+  const wb = xlsx.readFile(path.join(__dirname, '../../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx'));
 
   // Index sheet for URLs
   const indexSheet = wb.Sheets['Index'];

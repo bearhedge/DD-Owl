@@ -11,7 +11,7 @@ import { extractBanksFromProspectus } from './prospectus-parser.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const RESULTS_FILE = path.join(__dirname, '../.historical-import-results.json');
+const RESULTS_FILE = path.join(__dirname, '../.listed-import-results-mainBoard.json');
 
 interface ImportResult {
   ticker: number;
@@ -124,7 +124,7 @@ async function fixNoBanksFound() {
 
   // Save updated results
   fs.writeFileSync(RESULTS_FILE, JSON.stringify(results, null, 2));
-  console.log('\nSaved updated results to .historical-import-results.json');
+  console.log('\nSaved updated results to .listed-import-results-mainBoard.json');
 }
 
 fixNoBanksFound().catch(console.error);

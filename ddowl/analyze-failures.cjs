@@ -1,5 +1,5 @@
 const fs = require('fs');
-const results = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
 // Categorize failures
 const failures = results.filter(r => r.success === false);

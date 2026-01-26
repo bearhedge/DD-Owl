@@ -6,7 +6,7 @@ async function main() {
   const result = await extractBanksFromProspectus(buffer);
   
   // Read results file
-  const resultsFile = '.historical-import-results.json';
+  const resultsFile = '.listed-import-results-mainBoard.json';
   let results = JSON.parse(fs.readFileSync(resultsFile, 'utf8'));
   
   // Find ALL indices for ticker 2540 and update them all

@@ -5,7 +5,7 @@ import fs from 'fs';
 import axios from 'axios';
 import { extractBanksFromProspectus } from './src/prospectus-parser.js';
 
-const RESULTS_FILE = '.historical-import-results.json';
+const RESULTS_FILE = '.listed-import-results-mainBoard.json';
 const URL_OVERRIDES_FILE = 'url-overrides.json';
 
 interface ImportResult {

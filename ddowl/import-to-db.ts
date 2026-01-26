@@ -35,14 +35,14 @@ db.exec('DELETE FROM url_overrides');
 
 // Load Excel data
 console.log('Loading Excel data...');
-const excelPath = path.join(__dirname, '../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+const excelPath = path.join(__dirname, '../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
 const workbook = xlsx.readFile(excelPath);
 const indexSheet = workbook.Sheets['Index'];
 const rows = xlsx.utils.sheet_to_json(indexSheet, { header: 1 }) as any[][];
 
 // Load JSON results - prefer successful results over failed ones
 console.log('Loading bank extraction results...');
-const results = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 const resultsMap = new Map<number, any>();
 for (const r of results) {
   const existing = resultsMap.get(r.ticker);

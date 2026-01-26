@@ -36,7 +36,7 @@ interface ExcelDeal {
 
 // Read Excel to get URLs and dates
 function readExcel(): Map<number, ExcelDeal> {
-  const excelPath = path.join(__dirname, '../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+  const excelPath = path.join(__dirname, '../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
   const workbook = xlsx.readFile(excelPath);
   const indexSheet = workbook.Sheets['Index'];
   const rows = xlsx.utils.sheet_to_json(indexSheet, { header: 1 }) as any[][];
@@ -470,7 +470,7 @@ function generateHtml(results: ImportResult[], excelData: Map<number, ExcelDeal>
 
 async function main() {
   console.log('Loading results...');
-  const results: ImportResult[] = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+  const results: ImportResult[] = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
   console.log('Loading Excel data...');
   const excelData = readExcel();

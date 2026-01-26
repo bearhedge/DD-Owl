@@ -3,3 +3,7 @@ node_modules
 *.log
 test-e2e.ts
 .env
+pdf-cache
+runs
+*.backup.csv
+.historical-*

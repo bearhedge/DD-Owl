@@ -1,5 +1,5 @@
 const fs = require('fs');
-const results = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
 // Add notes to failures
 const updated = results.map(r => {
@@ -19,7 +19,7 @@ const updated = results.map(r => {
   return r;
 });
 
-fs.writeFileSync('.historical-import-results.json', JSON.stringify(updated, null, 2));
+fs.writeFileSync('.listed-import-results-mainBoard.json', JSON.stringify(updated, null, 2));
 
 // Summary
 const failures = updated.filter(r => r.success === false);

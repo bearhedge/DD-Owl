@@ -16,7 +16,7 @@ interface ImportResult {
   banks?: Bank[];
 }
 
-const results: ImportResult[] = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results: ImportResult[] = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
 // Check specific tickers mentioned
 const tickers = [2146, 9608, 9999, 6623, 2191];

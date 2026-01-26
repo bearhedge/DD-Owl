@@ -82,7 +82,7 @@ async function main() {
 }
 
 function loadExcelMetrics(): Map<number, DealMetrics> {
-  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
   const ws = wb.Sheets['Deals'];
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
@@ -121,7 +121,7 @@ function loadExcelMetrics(): Map<number, DealMetrics> {
 }
 
 function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map<number, string> } {
-  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
   const ws = wb.Sheets['Index'];
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 

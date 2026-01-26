@@ -9,7 +9,7 @@ interface ImportResult {
   banks?: Array<{ name: string; roles: string[] }>;
 }
 
-const results: ImportResult[] = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results: ImportResult[] = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
 console.log('=== Historical Import Results ===');
 console.log('Total deals processed:', results.length);

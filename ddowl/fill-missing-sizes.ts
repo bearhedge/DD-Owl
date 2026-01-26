@@ -12,7 +12,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Excel file path
-const EXCEL_PATH = '/Users/home/Desktop/DD Owl/Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx';
+const EXCEL_PATH = '/Users/home/Desktop/DD Owl/Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx';
 
 // PDF cache directory
 const PDF_CACHE_DIR = './pdf-cache';
@@ -32,19 +32,29 @@ const PRICE_PATTERNS = [
 ];
 
 // Patterns to extract number of shares/units
+// IMPORTANT: Order matters! Total-specific patterns should come FIRST to avoid
+// matching subset categories (Public, Placing) before the aggregate total.
 const SHARES_PATTERNS = [
-  // "Number of Offer Shares under the Global Offering : X,XXX,XXX"
-  /Number\s+of\s+(?:Offer\s+)?(?:Shares|Units)\s+under\s+(?:the\s+)?Global\s+Offering\s*[:\s]+\s*([\d,]+)/gi,
-  // "Number of Offer Shares: X,XXX,XXX" or "Number of Units: X,XXX,XXX"
-  /Number\s+of\s+(?:Offer\s+|H\s+)?(?:Shares|Units)[:\s]+([\d,]+)/gi,
-  // "X,XXX,XXX Offer Shares" or "X,XXX,XXX Units"
-  /([\d,]+)\s*(?:Offer\s*|H\s*)?(?:Shares|Units)\s*(?:\(subject to|under|in)/gi,
+  // PRIORITY 1: Explicit total/aggregate patterns (most reliable)
   // "Total number of Shares/Units: X,XXX,XXX"
   /Total\s+(?:number\s+of\s+)?(?:Offer\s+|H\s+)?(?:Shares|Units)[:\s]+([\d,]+)/gi,
   // "Aggregate: X,XXX,XXX Shares/Units"
   /(?:Total|Aggregate)[:\s]*([\d,]+)\s*(?:Offer\s+|H\s+)?(?:Shares|Units)/gi,
+
+  // PRIORITY 2: "(comprising" indicates aggregate total (e.g., "259,200,000 Shares (comprising...")
+  // This pattern catches total shares when followed by breakdown of subcategories
+  /([\d,]+)\s*(?:Offer\s*)?(?:Shares|Units)\s*\(comprising/gi,
+
+  // PRIORITY 3: "Number of Offer Shares under the Global/Share Offering"
+  /Number\s+of\s+(?:Offer\s+)?(?:Shares|Units)\s+under\s+(?:the\s+)?(?:Share|Global)\s+Offering\s*[:\s]+\s*([\d,]+)/gi,
   // "Global Offering: X,XXX,XXX Shares/Units"
   /Global\s+Offering[:\s]*([\d,]+)\s*(?:Offer\s+|H\s+)?(?:Shares|Units)/gi,
+
+  // PRIORITY 4: Generic patterns (may match subsets - use as fallback)
+  // "Number of Offer Shares: X,XXX,XXX" or "Number of Units: X,XXX,XXX"
+  /Number\s+of\s+(?:Offer\s+|H\s+)?(?:Shares|Units)[:\s]+([\d,]+)/gi,
+  // "X,XXX,XXX Offer Shares (subject to/under/in...)"
+  /([\d,]+)\s*(?:Offer\s*|H\s*)?(?:Shares|Units)\s*(?:\(subject to|under|in)/gi,
 ];
 
 interface MissingDeal {

@@ -24,7 +24,7 @@ const fixedDeals = [
 
 async function main() {
   // Load existing results
-  const results: ImportResult[] = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+  const results: ImportResult[] = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
   console.log('Re-processing 7 fixed deals...\n');
 
@@ -66,7 +66,7 @@ async function main() {
   }
 
   // Save updated results
-  fs.writeFileSync('.historical-import-results.json', JSON.stringify(results, null, 2));
+  fs.writeFileSync('.listed-import-results-mainBoard.json', JSON.stringify(results, null, 2));
 
   // Print final stats
   const successful = results.filter(r => r.success);

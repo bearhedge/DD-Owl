@@ -15,7 +15,7 @@ import axios from 'axios';
 import { PDFParse } from 'pdf-parse';
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, '../..');
-const EXCEL_PATH = path.join(PROJECT_ROOT, 'Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+const EXCEL_PATH = path.join(PROJECT_ROOT, 'Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
 const CSV_PATH = path.join(PROJECT_ROOT, 'ddowl/public/baseline-enriched.csv');
 const PROGRESS_FILE = path.join(PROJECT_ROOT, 'ddowl/chinese-names-progress.json');
 const PDF_CACHE_DIR = path.join(PROJECT_ROOT, 'ddowl/pdf-cache');

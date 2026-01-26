@@ -12,7 +12,7 @@ import { PDFParse } from 'pdf-parse';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const RESULTS_FILE = path.join(__dirname, '../.historical-import-results.json');
+const RESULTS_FILE = path.join(__dirname, '../.listed-import-results-mainBoard.json');
 
 async function downloadPdf(url: string): Promise<Buffer | null> {
   try {
@@ -43,7 +43,7 @@ async function investigate() {
   console.log(`Investigating ${noBanks.length} "No banks found" cases\n`);
 
   // Read Excel for URLs
-  const wb = xlsx.readFile(path.join(__dirname, '../../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx'));
+  const wb = xlsx.readFile(path.join(__dirname, '../../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx'));
   const sheet = wb.Sheets['Index'];
   const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 

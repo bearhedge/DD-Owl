@@ -45,7 +45,7 @@ function loadUrlOverrides(): Record<string, { correctUrl: string | null; reason?
 
 // Read all deals from Excel
 function readExcel(): ExcelDeal[] {
-  const excelPath = path.join(__dirname, '../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+  const excelPath = path.join(__dirname, '../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
   const workbook = xlsx.readFile(excelPath);
   const indexSheet = workbook.Sheets['Index'];
   const rows = xlsx.utils.sheet_to_json(indexSheet, { header: 1 }) as any[][];
@@ -234,7 +234,7 @@ async function main() {
   // Load existing results to preserve any manual fixes
   let existingResults: ImportResult[] = [];
   try {
-    existingResults = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+    existingResults = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
     console.log(`Loaded ${existingResults.length} existing results`);
   } catch {
     console.log('No existing results found, starting fresh');
@@ -303,7 +303,7 @@ async function main() {
 
     // Save progress after each batch (unless dry-run)
     if (!dryRun) {
-      fs.writeFileSync('.historical-import-results.json', JSON.stringify(finalResults, null, 2));
+      fs.writeFileSync('.listed-import-results-mainBoard.json', JSON.stringify(finalResults, null, 2));
     }
 
     // Progress update
@@ -339,7 +339,7 @@ async function main() {
     }
   }
 
-  console.log('\nResults saved to .historical-import-results.json');
+  console.log('\nResults saved to .listed-import-results-mainBoard.json');
   console.log('Run: npx tsx generate-review-page.ts to regenerate the review page');
 }
 

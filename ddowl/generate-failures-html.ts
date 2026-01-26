@@ -7,10 +7,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Read results
-const results = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
 // Read Excel for URLs
-const wb = xlsx.readFile(path.join(__dirname, '../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx'));
+const wb = xlsx.readFile(path.join(__dirname, '../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx'));
 const indexSheet = wb.Sheets['Index'];
 const indexRows = xlsx.utils.sheet_to_json(indexSheet, { header: 1 }) as any[][];
 const dealsSheet = wb.Sheets['Deals'];

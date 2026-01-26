@@ -1,11 +1,11 @@
 const fs = require('fs');
 const xlsx = require('xlsx');
 
-const results = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 const downloadFailed = results.filter(r => r.error === 'Download failed');
 
 // Read Excel to get URLs
-const wb = xlsx.readFile('../Reference files/2. HKEX IPO Listed (Historical)/HKEX_IPO_Listed.xlsx');
+const wb = xlsx.readFile('../Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
 const sheet = wb.Sheets['Index'];
 const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 

@@ -2626,7 +2626,7 @@ import xlsx from 'xlsx';
 import fs from 'fs';
 
 app.get('/api/import-results', (req: Request, res: Response) => {
-  const resultsPath = path.join(__dirname, '../.historical-import-results.json');
+  const resultsPath = path.join(__dirname, '../.listed-import-results-mainBoard.json');
   try {
     if (fs.existsSync(resultsPath)) {
       const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));

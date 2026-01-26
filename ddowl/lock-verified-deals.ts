@@ -7,7 +7,7 @@
 
 import fs from 'fs';
 
-const RESULTS_FILE = '.historical-import-results.json';
+const RESULTS_FILE = '.listed-import-results-mainBoard.json';
 
 function main() {
   const tickers = process.argv.slice(2).map(t => parseInt(t));

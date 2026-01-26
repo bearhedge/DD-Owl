@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-const results = JSON.parse(fs.readFileSync('.historical-import-results.json', 'utf8'));
+const results = JSON.parse(fs.readFileSync('.listed-import-results-mainBoard.json', 'utf8'));
 
 // Find first working deal and first undefined deal
 const working = results.find((r: any) => r.success && r.banks?.[0]?.normalized && r.banks[0].normalized !== 'undefined');
