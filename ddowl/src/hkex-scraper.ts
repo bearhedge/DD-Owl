@@ -38,7 +38,14 @@ export async function extractBankDataFromPdf(pdfBuffer: Buffer): Promise<{
   banks: BankAppointment[];
 }> {
   const uint8Array = new Uint8Array(pdfBuffer);
-  const parser = new PDFParse(uint8Array);
+
+  // Configure CMap for Chinese font support
+  const cMapUrl = path.join(process.cwd(), 'node_modules/pdfjs-dist/cmaps/');
+  const parser = new PDFParse({
+    data: uint8Array,
+    cMapUrl: cMapUrl,
+    cMapPacked: true,
+  });
   const result = await parser.getText();
 
   const banks: BankAppointment[] = [];
@@ -76,7 +83,14 @@ export async function extractBankDataFromPdf(pdfBuffer: Buffer): Promise<{
 
   // Extract Chinese company name from FRONT PAGES ONLY
   // Look for Chinese text near English company name on cover page
-  const chineseMatches = frontPages.match(/[\u4e00-\u9fa5]{4,}/g) || [];
+  // First, normalize spaces between Chinese characters (PDFs often have "北 京" instead of "北京")
+  const normalizedFrontPages = frontPages.replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
+  // Apply normalization multiple times to handle "北 京 極" -> "北京 極" -> "北京極"
+  const fullyNormalized = normalizedFrontPages
+    .replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2')
+    .replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2')
+    .replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/g, '$1$2');
+  const chineseMatches = fullyNormalized.match(/[\u4e00-\u9fa5]{4,}/g) || [];
 
   // First try: Find Chinese text that ends with company suffixes
   for (const match of chineseMatches) {

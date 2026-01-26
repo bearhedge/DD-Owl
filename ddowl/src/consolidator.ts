@@ -151,11 +151,15 @@ export function extractFingerprint(headline: string, summary: string): FindingFi
   // Extract identity signals
   const identity = extractIdentitySignals(text);
 
+  // Extract content words for Jaccard similarity matching
+  const contentWords = extractContentWords(text);
+
   return {
     eventType,
     entities: uniqueEntities,
     years,
     keywords,
+    contentWords,  // For Jaccard similarity
     // Add identity fields (extend the interface)
     ...identity,
   };
@@ -176,6 +180,113 @@ function extractKeywords(text: string): string[] {
 
   const textLower = text.toLowerCase();
   return importantTerms.filter(term => textLower.includes(term));
+}
+
+/**
+ * Extract specific dates from text (more granular than just years)
+ * Returns array of date strings in YYYY-MM-DD or YYYY-MM format
+ */
+function extractDates(text: string): { dates: string[]; years: number[] } {
+  const dates: string[] = [];
+  const years: number[] = [];
+
+  // Full dates: YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY, Month DD, YYYY
+  const fullDatePatterns = [
+    /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/g,  // YYYY-MM-DD or YYYY/MM/DD
+    /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/g,  // DD/MM/YYYY or MM/DD/YYYY
+    /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})/gi,
+    /(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December),?\s+(\d{4})/gi,
+    /(\d{4})年(\d{1,2})月(\d{1,2})日/g,  // Chinese: YYYY年MM月DD日
+    /(\d{4})年(\d{1,2})月/g,  // Chinese: YYYY年MM月
+  ];
+
+  for (const pattern of fullDatePatterns) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      // Normalize to YYYY-MM or YYYY-MM-DD
+      const year = match[1].length === 4 ? parseInt(match[1]) : parseInt(match[3]);
+      if (year >= 1990 && year <= 2030) {
+        years.push(year);
+        dates.push(match[0]);
+      }
+    }
+  }
+
+  // Year-only extraction (fallback)
+  const yearMatches = text.match(/\b(19|20)\d{2}\b/g) || [];
+  for (const y of yearMatches) {
+    const year = parseInt(y);
+    if (!years.includes(year)) {
+      years.push(year);
+    }
+  }
+
+  return { dates: [...new Set(dates)], years: [...new Set(years)].sort() };
+}
+
+/**
+ * Calculate Jaccard similarity between two sets of strings
+ * Returns value between 0 and 1
+ */
+function jaccardSimilarity(set1: string[], set2: string[]): number {
+  if (set1.length === 0 && set2.length === 0) return 0;
+  const s1 = new Set(set1.map(s => s.toLowerCase()));
+  const s2 = new Set(set2.map(s => s.toLowerCase()));
+  const intersection = [...s1].filter(x => s2.has(x)).length;
+  const union = new Set([...s1, ...s2]).size;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * Extract significant content words from allegation/summary for Jaccard comparison
+ * Filters out common words and keeps meaningful nouns/verbs
+ */
+function extractContentWords(text: string): string[] {
+  // Stopwords to exclude
+  const stopwords = new Set([
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should',
+    'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought', 'used',
+    'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into',
+    'about', 'like', 'after', 'before', 'between', 'under', 'over', 'above',
+    'and', 'or', 'but', 'if', 'then', 'else', 'when', 'where', 'why', 'how',
+    'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some', 'such',
+    'no', 'not', 'only', 'same', 'so', 'than', 'too', 'very', 'just', 'also',
+    'he', 'she', 'it', 'they', 'them', 'his', 'her', 'its', 'their', 'this', 'that',
+    '的', '是', '在', '了', '和', '与', '或', '但', '而', '也', '被', '将', '对', '等',
+  ]);
+
+  // Extract words (English and Chinese)
+  const words: string[] = [];
+
+  // English words (3+ chars)
+  const englishWords = text.toLowerCase().match(/[a-z]{3,}/g) || [];
+  words.push(...englishWords.filter(w => !stopwords.has(w)));
+
+  // Chinese words/characters (2+ chars)
+  const chineseWords = text.match(/[\u4e00-\u9fff]{2,}/g) || [];
+  words.push(...chineseWords.filter(w => !stopwords.has(w)));
+
+  return [...new Set(words)];
+}
+
+/**
+ * Check if two date ranges are within N days of each other
+ * Uses years as approximation when full dates not available
+ */
+function datesWithinRange(years1: number[], years2: number[], maxDaysDiff: number = 30): boolean {
+  if (years1.length === 0 || years2.length === 0) return false;
+
+  // Check for exact year overlap
+  const yearOverlap = years1.some(y => years2.includes(y));
+  if (yearOverlap) return true;
+
+  // Check if years are within 1 year of each other (approximate for month-level events)
+  const minDiff = Math.min(
+    ...years1.flatMap(y1 => years2.map(y2 => Math.abs(y1 - y2)))
+  );
+  // 30 days ~ 0.08 years, but for year-only comparison, allow 1 year overlap
+  return minDiff <= 1;
 }
 
 /**
@@ -269,15 +380,43 @@ export function calculateSimilarity(fp1: FindingFingerprint, fp2: FindingFingerp
     if (companyMatch) score += 0.2;
   }
 
+  // === NEW: Date-based matching boost (+0.2) ===
+  // If dates within 30 days (or same year for year-only), boost similarity
+  if (datesWithinRange(fp1.years, fp2.years, 30)) {
+    score += 0.2;
+  }
+
+  // === NEW: Event description Jaccard similarity boost (+0.15) ===
+  // If >50% content word overlap, boost similarity
+  const contentWords1 = (fp1 as any).contentWords || [];
+  const contentWords2 = (fp2 as any).contentWords || [];
+  const jaccard = jaccardSimilarity(contentWords1, contentWords2);
+  if (jaccard > 0.5) {
+    score += 0.15;
+  } else if (jaccard > 0.3) {
+    // Partial boost for moderate overlap
+    score += 0.08;
+  }
+
   return Math.min(score, 1);
 }
 
 /**
+ * Check if two fingerprints have entity overlap (same person/organization mentioned)
+ */
+function hasEntityOverlap(fp1: FindingFingerprint, fp2: FindingFingerprint): boolean {
+  if (fp1.entities.length === 0 || fp2.entities.length === 0) return false;
+  return fp1.entities.some(e => fp2.entities.includes(e));
+}
+
+/**
  * Group findings by similarity
+ * Uses adaptive threshold: 0.3 for same-person findings, 0.4 for others
  */
 export function groupFindingsBySimilarity(
   findings: RawFinding[],
-  threshold: number = 0.5
+  threshold: number = 0.4,
+  samePersonThreshold: number = 0.3
 ): RawFinding[][] {
   if (findings.length === 0) return [];
   if (findings.length === 1) return [[findings[0]]];
@@ -301,12 +440,15 @@ export function groupFindingsBySimilarity(
     for (let j = i + 1; j < findingsWithFp.length; j++) {
       if (assigned.has(j)) continue;
 
-      const similarity = calculateSimilarity(
-        findingsWithFp[i].fingerprint,
-        findingsWithFp[j].fingerprint
-      );
+      const fp1 = findingsWithFp[i].fingerprint;
+      const fp2 = findingsWithFp[j].fingerprint;
 
-      if (similarity >= threshold) {
+      const similarity = calculateSimilarity(fp1, fp2);
+
+      // Use lower threshold when entities (person name) overlap
+      const effectiveThreshold = hasEntityOverlap(fp1, fp2) ? samePersonThreshold : threshold;
+
+      if (similarity >= effectiveThreshold) {
         group.push(findingsWithFp[j].finding);
         assigned.add(j);
       }
@@ -358,7 +500,7 @@ Return JSON only:
 
   // Try LLM providers in order
   const providers = [
-    { name: 'Kimi', url: 'https://api.moonshot.ai/v1/chat/completions', key: KIMI_API_KEY, model: 'moonshot-v1-8k' },
+    { name: 'Kimi K2', url: 'https://api.moonshot.ai/v1/chat/completions', key: KIMI_API_KEY, model: 'kimi-k2' },
     { name: 'DeepSeek', url: 'https://api.deepseek.com/v1/chat/completions', key: DEEPSEEK_API_KEY, model: 'deepseek-chat' },
   ].filter(p => p.key);
 
@@ -420,14 +562,28 @@ Return JSON only:
 /**
  * Main consolidation function
  * Uses clusterId from Phase 2.5 for grouping when available, falls back to fingerprint matching
+ * Also includes parked articles (duplicates) as additional sources for corroboration
  */
 export async function consolidateFindings(
   findings: RawFinding[],
-  subjectName: string
+  subjectName: string,
+  parkedArticles: { url: string; title: string; clusterId?: string; clusterLabel?: string }[] = []
 ): Promise<ConsolidatedFinding[]> {
   if (findings.length === 0) return [];
 
-  console.log(`[CONSOLIDATE] Processing ${findings.length} findings...`);
+  console.log(`[CONSOLIDATE] Processing ${findings.length} findings, ${parkedArticles.length} parked articles...`);
+
+  // Group parked articles by clusterId for later merging
+  const parkedByCluster = new Map<string, { url: string; title: string }[]>();
+  for (const article of parkedArticles) {
+    if (article.clusterId) {
+      if (!parkedByCluster.has(article.clusterId)) {
+        parkedByCluster.set(article.clusterId, []);
+      }
+      parkedByCluster.get(article.clusterId)!.push({ url: article.url, title: article.title });
+    }
+  }
+  console.log(`[CONSOLIDATE] Parked articles grouped into ${parkedByCluster.size} clusters`);
 
   // Check how many have cluster info from Phase 2.5
   const withCluster = findings.filter(f => f.clusterId);
@@ -471,17 +627,25 @@ export async function consolidateFindings(
       fingerprint: f.fingerprint || extractFingerprint(f.headline, f.summary)
     }));
 
+    // Get parked articles for this cluster (if any)
+    const clusterId = groupWithFp[0]?.clusterId;
+    const parkedSources = clusterId ? (parkedByCluster.get(clusterId) || []) : [];
+
     if (groupWithFp.length === 1) {
-      // Single finding - no consolidation needed
+      // Single finding - no LLM consolidation needed, but add parked sources
       const f = groupWithFp[0];
+      const allSources = [
+        { url: f.url, title: f.title },
+        ...parkedSources
+      ];
       consolidated.push({
         headline: f.headline,
         summary: f.summary,
         severity: f.severity,
         eventType: f.fingerprint?.eventType || 'other',
         dateRange: f.fingerprint?.years.join('-') || '',
-        sourceCount: 1,
-        sources: [{ url: f.url, title: f.title }],
+        sourceCount: allSources.length,
+        sources: allSources,
         clusterId: f.clusterId,
         clusterLabel: f.clusterLabel,
       });
@@ -490,6 +654,9 @@ export async function consolidateFindings(
       const label = groupWithFp[0].clusterLabel || 'same incident';
       console.log(`[CONSOLIDATE] Merging ${groupWithFp.length} findings about "${label}"`);
       const merged = await consolidateGroupWithLLM(groupWithFp, subjectName);
+      // Add parked sources to merged finding
+      merged.sources = [...merged.sources, ...parkedSources];
+      merged.sourceCount = merged.sources.length;
       // Preserve cluster info in consolidated result
       merged.clusterId = groupWithFp[0].clusterId;
       merged.clusterLabel = groupWithFp[0].clusterLabel;
@@ -505,5 +672,6 @@ export async function consolidateFindings(
     return b.sourceCount - a.sourceCount;
   });
 
+  console.log(`[CONSOLIDATE] Final: ${consolidated.length} findings, avg ${(consolidated.reduce((sum, f) => sum + f.sourceCount, 0) / consolidated.length).toFixed(1)} sources/finding`);
   return consolidated;
 }

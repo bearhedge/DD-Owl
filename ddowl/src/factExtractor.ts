@@ -3,7 +3,7 @@ import { ExtractedFacts, getIssueTypes, getAuthorities } from './db.js';
 
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 const KIMI_URL = 'https://api.moonshot.ai/v1/chat/completions';
-const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k'; // Use larger context for detailed extraction
+const KIMI_MODEL = process.env.KIMI_MODEL || 'kimi-k2'; // Use K2 for detailed extraction
 
 // Cache for reference data
 let issueTypesCache: Array<{code: string, name_en: string, name_zh: string}> | null = null;

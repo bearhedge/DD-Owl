@@ -53,6 +53,9 @@ const NOISE_DOMAINS = [
   'qichacha.com', 'tianyancha.com', 'qixin.com', 'aiqicha.com',
   // Problematic sites (hang, block, or return garbage)
   'xueqiu.com', 'douyin.com',
+  // Wikipedia/Encyclopedia sites (general reference, not adverse media sources)
+  'wikipedia.org', 'baike.baidu.com', 'baike.com', 'zh.wikipedia.org',
+  'en.wikipedia.org', 'hudong.com', 'sogou.com/lemma',
 ];
 
 // Noise title patterns - job posting keywords
@@ -248,4 +251,215 @@ export function getEliminationBreakdown(
     missing_dirty_word: eliminated.filter(e => e.reason === 'missing_dirty_word').length,
     part_of_longer_name: eliminated.filter(e => e.reason === 'part_of_longer_name').length,
   };
+}
+
+// ============================================================
+// LLM-BASED TITLE DEDUPLICATION (Phase 1.75)
+// Batch process titles to identify duplicates before clustering
+// ============================================================
+
+import axios from 'axios';
+
+const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+
+export interface TitleDedupeResult {
+  unique: BatchSearchResult[];
+  duplicates: BatchSearchResult[];
+  groups: number[][]; // Groups of duplicate indices
+}
+
+export interface TitleDedupeProgress {
+  batchNumber: number;
+  totalBatches: number;
+  processedSoFar: number;
+  totalItems: number;
+  duplicatesFound: number;
+}
+
+/**
+ * LLM-based batch title deduplication
+ * Groups articles with semantically similar titles (same event/story)
+ * Keeps the first (usually highest-ranked) article from each group
+ */
+export async function llmBatchTitleDedupe(
+  results: BatchSearchResult[],
+  onProgress?: (progress: TitleDedupeProgress) => void | Promise<void>
+): Promise<TitleDedupeResult> {
+  if (results.length === 0) {
+    return { unique: [], duplicates: [], groups: [] };
+  }
+
+  // Skip if no API keys configured
+  if (!KIMI_API_KEY && !DEEPSEEK_API_KEY) {
+    console.log('[TITLE_DEDUPE] No API keys configured, skipping LLM dedupe');
+    return { unique: results, duplicates: [], groups: [] };
+  }
+
+  const BATCH_SIZE = 100; // Process 100 titles per LLM call
+  const allGroups: number[][] = [];
+  const globalDuplicateIndices = new Set<number>();
+  let totalDuplicatesFound = 0;
+
+  const totalBatches = Math.ceil(results.length / BATCH_SIZE);
+
+  for (let batchStart = 0; batchStart < results.length; batchStart += BATCH_SIZE) {
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, results.length);
+    const batch = results.slice(batchStart, batchEnd);
+    const batchNumber = Math.floor(batchStart / BATCH_SIZE) + 1;
+
+    console.log(`[TITLE_DEDUPE] Processing batch ${batchNumber}/${totalBatches} (${batch.length} titles)`);
+
+    try {
+      const groups = await findDuplicateTitlesLLM(batch, batchStart);
+
+      // Track duplicates (all but first in each group)
+      for (const group of groups) {
+        if (group.length > 1) {
+          allGroups.push(group);
+          // Mark all but first as duplicates
+          for (let i = 1; i < group.length; i++) {
+            globalDuplicateIndices.add(group[i]);
+            totalDuplicatesFound++;
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error(`[TITLE_DEDUPE] Batch ${batchNumber} failed:`, error.message);
+      // Continue with other batches on failure
+    }
+
+    // Progress callback
+    if (onProgress) {
+      await onProgress({
+        batchNumber,
+        totalBatches,
+        processedSoFar: batchEnd,
+        totalItems: results.length,
+        duplicatesFound: totalDuplicatesFound,
+      });
+    }
+  }
+
+  // Split into unique and duplicates
+  const unique: BatchSearchResult[] = [];
+  const duplicates: BatchSearchResult[] = [];
+
+  for (let i = 0; i < results.length; i++) {
+    if (globalDuplicateIndices.has(i)) {
+      duplicates.push(results[i]);
+    } else {
+      unique.push(results[i]);
+    }
+  }
+
+  console.log(`[TITLE_DEDUPE] Complete: ${unique.length} unique, ${duplicates.length} duplicates removed`);
+  return { unique, duplicates, groups: allGroups };
+}
+
+/**
+ * Call LLM to find duplicate titles in a batch
+ * Returns groups of indices that refer to the same article/event
+ */
+async function findDuplicateTitlesLLM(
+  batch: BatchSearchResult[],
+  globalOffset: number
+): Promise<number[][]> {
+  // Format titles as numbered list
+  const titlesText = batch.map((r, i) => `${i + 1}. ${r.title}`).join('\n');
+
+  const prompt = `Identify DUPLICATE articles from these search result titles. Articles are duplicates if they report the SAME specific news event (same incident, same companies/people, same actions).
+
+TITLES:
+${titlesText}
+
+Rules:
+- Group titles that report the EXACT SAME event (just different sources/wording)
+- Different events about the same person/company are NOT duplicates
+- If unsure, do NOT group them
+
+Return JSON only:
+{"groups": [[1,5,8], [3,12], [4,9,15]]}
+
+Where each array contains indices of duplicate titles. Only include groups with 2+ items.
+If no duplicates found, return: {"groups": []}`;
+
+  // Try Kimi K2 first (better for Chinese), then DeepSeek
+  const providers = [];
+  if (KIMI_API_KEY) {
+    providers.push({
+      name: 'Kimi K2',
+      url: 'https://api.moonshot.ai/v1/chat/completions',
+      model: 'kimi-k2',
+      apiKey: KIMI_API_KEY,
+    });
+  }
+  if (DEEPSEEK_API_KEY) {
+    providers.push({
+      name: 'DeepSeek',
+      url: 'https://api.deepseek.com/v1/chat/completions',
+      model: 'deepseek-chat',
+      apiKey: DEEPSEEK_API_KEY,
+    });
+  }
+
+  let rawText = '';
+  for (const provider of providers) {
+    try {
+      const response = await axios.post(
+        provider.url,
+        {
+          model: provider.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+          max_tokens: 1000,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${provider.apiKey}`,
+          },
+          timeout: 60000,
+        }
+      );
+      rawText = response.data.choices?.[0]?.message?.content || '';
+      console.log(`[TITLE_DEDUPE] ${provider.name} succeeded`);
+      break;
+    } catch (error: any) {
+      console.error(`[TITLE_DEDUPE] ${provider.name} failed:`, error.message);
+      continue;
+    }
+  }
+
+  if (!rawText) {
+    return [];
+  }
+
+  // Parse JSON response
+  try {
+    const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return [];
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!parsed.groups || !Array.isArray(parsed.groups)) return [];
+
+    // Convert local indices to global indices
+    const globalGroups: number[][] = [];
+    for (const group of parsed.groups) {
+      if (Array.isArray(group) && group.length > 1) {
+        const globalGroup = group
+          .filter((idx: number) => idx >= 1 && idx <= batch.length)
+          .map((idx: number) => globalOffset + idx - 1); // Convert 1-indexed to 0-indexed global
+        if (globalGroup.length > 1) {
+          globalGroups.push(globalGroup);
+        }
+      }
+    }
+
+    return globalGroups;
+  } catch (error) {
+    console.error('[TITLE_DEDUPE] Failed to parse LLM response:', error);
+    return [];
+  }
 }

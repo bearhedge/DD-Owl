@@ -10,7 +10,7 @@ import axios from 'axios';
 
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
 const KIMI_URL = 'https://api.moonshot.ai/v1/chat/completions';
-const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'kimi-k2';
 
 export interface Finding {
   isRelevant: boolean;
@@ -48,7 +48,7 @@ REASON: Article discusses Chen Yuxing's conviction for insider trading in 2008`;
     const response = await axios.post(
       KIMI_URL,
       {
-        model: 'moonshot-v1-8k', // Smaller model for quick check
+        model: 'kimi-k2', // K2 for quick check
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
         max_tokens: 200,

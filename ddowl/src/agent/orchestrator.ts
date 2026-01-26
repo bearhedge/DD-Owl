@@ -22,7 +22,7 @@ import { getDDAgentSystemPrompt } from './prompts.js';
 import { ChromeBrowserBridge, getBrowserBridge } from './browser-bridge.js';
 
 const KIMI_API_URL = 'https://api.moonshot.ai/v1/chat/completions';
-const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'kimi-k2';
 const MAX_ITERATIONS = 50;
 
 interface KimiResponse {
@@ -295,7 +295,7 @@ export class DDOwlAgent {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'moonshot-v1-8k', // Use smaller model for simple tasks
+        model: 'kimi-k2', // Use K2 for simple tasks
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.1,
       }),

@@ -21,9 +21,9 @@ function getProviders(): LLMProvider[] {
 
   if (KIMI_API_KEY) {
     providers.push({
-      name: 'Kimi',
+      name: 'Kimi K2',
       url: 'https://api.moonshot.ai/v1/chat/completions',
-      model: 'moonshot-v1-8k',
+      model: 'kimi-k2',
       apiKey: KIMI_API_KEY,
     });
   }

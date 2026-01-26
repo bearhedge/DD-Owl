@@ -63,6 +63,7 @@ export interface FindingFingerprint {
   entities: string[];       // e.g., ["ICAC", "Hong Kong"]
   years: number[];          // e.g., [2015, 2017]
   keywords: string[];       // key terms for matching
+  contentWords?: string[];  // extracted content words for Jaccard similarity
 }
 
 // Raw finding before consolidation

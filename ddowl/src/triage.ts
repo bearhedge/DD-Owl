@@ -19,12 +19,12 @@ interface LLMProvider {
 function getProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
 
-  // 1. Kimi (PRIMARY - no content moderation blocks on Chinese adverse media)
+  // 1. Kimi K2 (PRIMARY - no content moderation blocks on Chinese adverse media)
   if (KIMI_API_KEY) {
     providers.push({
-      name: 'Kimi',
+      name: 'Kimi K2',
       url: 'https://api.moonshot.ai/v1/chat/completions',
-      model: 'moonshot-v1-8k',
+      model: 'kimi-k2',
       apiKey: KIMI_API_KEY,
       timeout: 120000,
     });

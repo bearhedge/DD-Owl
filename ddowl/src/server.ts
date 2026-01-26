@@ -2479,6 +2479,148 @@ app.post('/api/session/:sessionId/resume', async (req: Request, res: Response) =
   }
 });
 
+// ============================================================
+// GENERATE REPORT API ENDPOINT
+// Generates LLM-powered paragraph summaries for selected findings
+// ============================================================
+
+app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const { findings, subjectName } = req.body;
+
+  if (!findings || !Array.isArray(findings) || findings.length === 0) {
+    res.status(400).json({ error: 'findings array required' });
+    return;
+  }
+
+  if (!subjectName) {
+    res.status(400).json({ error: 'subjectName required' });
+    return;
+  }
+
+  console.log(`[REPORT] Generating report for ${subjectName} with ${findings.length} findings (session: ${sessionId})`);
+
+  // Check LLM configuration
+  const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+  const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
+
+  if (!DEEPSEEK_API_KEY && !KIMI_API_KEY) {
+    res.status(500).json({ error: 'No LLM API configured' });
+    return;
+  }
+
+  try {
+    const sections: { findingId: string; headline: string; paragraph: string; sources: string[] }[] = [];
+
+    for (let i = 0; i < findings.length; i++) {
+      const finding = findings[i];
+      const findingId = finding.id || `finding-${i}`;
+
+      console.log(`[REPORT] Processing finding ${i + 1}/${findings.length}: ${finding.headline?.slice(0, 50)}...`);
+
+      // Build source list
+      const sources = finding.sources || [];
+      const primarySource = sources[0];
+      const otherSources = sources.slice(1);
+
+      // Generate professional due diligence paragraph
+      const prompt = `Write a due diligence report paragraph for this finding:
+
+Subject being screened: ${subjectName}
+Source: ${primarySource?.title || 'Unknown source'}
+Source URL: ${primarySource?.url || 'N/A'}
+Publication date: ${finding.dateRange || 'Unknown'}
+Allegation/Event: ${finding.headline || 'N/A'}
+Key details: ${finding.summary || 'N/A'}
+Additional sources: ${otherSources.map((s: any) => s.title || s.url).join(', ') || 'None'}
+Source count: ${finding.sourceCount || 1}
+
+IMPORTANT FORMAT INSTRUCTIONS:
+1. Start with "According to an article published by [Source] on [Date]..." or "According to [Source]..." if date unknown
+2. Write a topic sentence summarizing the allegation
+3. Write 5+ sentences with key facts:
+   - What happened and when
+   - How this relates to ${subjectName}
+   - Specific details: amounts, dates, parties involved
+   - Outcome or current status if known
+4. If multiple sources (sourceCount > 1), end with: "This was corroborated by [N] additional sources."
+
+Write in professional, factual due diligence tone. Be specific with dates, amounts, and names when available.
+Do NOT use bullet points. Write flowing paragraphs.
+Return ONLY the paragraph text, no JSON or markdown.`;
+
+      // Try LLM providers in order (Kimi K2 preferred for better writing quality)
+      const providers = [
+        { name: 'Kimi K2', url: 'https://api.moonshot.ai/v1/chat/completions', key: KIMI_API_KEY, model: 'kimi-k2' },
+        { name: 'DeepSeek', url: 'https://api.deepseek.com/v1/chat/completions', key: DEEPSEEK_API_KEY, model: 'deepseek-chat' },
+      ].filter(p => p.key);
+
+      let paragraph = '';
+
+      for (const provider of providers) {
+        try {
+          const response = await axios.post(
+            provider.url,
+            {
+              model: provider.model,
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0.3,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${provider.key}`,
+              },
+              timeout: 60000,
+            }
+          );
+
+          paragraph = response.data.choices?.[0]?.message?.content?.trim() || '';
+          if (paragraph) {
+            console.log(`[REPORT] ✓ ${provider.name} generated ${paragraph.length} chars`);
+            break;
+          }
+        } catch (err: any) {
+          console.log(`[REPORT] ✗ ${provider.name} failed: ${err.message}`);
+          continue;
+        }
+      }
+
+      // Fallback if no LLM succeeded
+      if (!paragraph) {
+        paragraph = `According to ${primarySource?.title || 'news reports'}, ${finding.headline || 'an adverse finding was identified'}. ${finding.summary || ''}`;
+        if (finding.sourceCount > 1) {
+          paragraph += ` This information was corroborated by ${finding.sourceCount - 1} additional source(s).`;
+        }
+      }
+
+      sections.push({
+        findingId,
+        headline: finding.headline || 'Finding',
+        paragraph,
+        sources: sources.map((s: any) => s.url),
+      });
+    }
+
+    // Combine into full report
+    const fullReport = sections.map((s, i) => {
+      return `**Finding ${i + 1}: ${s.headline}**\n\n${s.paragraph}\n\nSources:\n${s.sources.map(url => `- ${url}`).join('\n')}`;
+    }).join('\n\n---\n\n');
+
+    console.log(`[REPORT] Generated ${sections.length} sections, ${fullReport.length} total chars`);
+
+    res.json({
+      success: true,
+      report: fullReport,
+      sections,
+    });
+
+  } catch (error: any) {
+    console.error('[REPORT] Error generating report:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate report' });
+  }
+});
+
 // Historical import verification API
 import xlsx from 'xlsx';
 import fs from 'fs';
@@ -3423,3 +3565,4 @@ process.on('SIGINT', async () => {
   await closeBrowser();
   process.exit(0);
 });
+// Cache bust: 1768961515

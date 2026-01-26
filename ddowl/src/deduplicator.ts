@@ -72,7 +72,7 @@ ${articleList}
 Rules:
 - Articles about the same event (even from different angles/sources) = same cluster
 - Articles about different events (even if same person) = different clusters
-- If unsure, keep articles separate (don't over-merge)
+- Different sources reporting the same event should be in the same cluster
 - Label each cluster with a short incident description (e.g., "AC Milan破产案", "证监会调查")
 
 Output ONLY valid JSON (no markdown, no explanation):
@@ -108,12 +108,12 @@ async function callLLMForClustering(prompt: string): Promise<BatchClusterRespons
 
   if (KIMI_API_KEY) {
     providers.push({
-      name: 'Kimi',
+      name: 'Kimi K2',
       call: async () => {
         const response = await axios.post(
-          'https://api.moonshot.cn/v1/chat/completions',
+          'https://api.moonshot.ai/v1/chat/completions',
           {
-            model: 'moonshot-v1-8k',
+            model: 'kimi-k2',
             messages: [{ role: 'user', content: prompt }],
             temperature: 0.1,
             max_tokens: 4096,
@@ -222,7 +222,7 @@ function mergeSimilarClusters(allClusters: IncidentCluster[]): IncidentCluster[]
       const other = allClusters[j];
       const similarity = calculateLabelSimilarity(cluster.label, other.label);
 
-      if (similarity > 0.6) {
+      if (similarity > 0.4) {
         // Merge clusters
         cluster.articles.push(...other.articles);
         cluster.sourceTiers.push(...other.sourceTiers);
