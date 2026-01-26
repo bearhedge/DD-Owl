@@ -19,6 +19,9 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+
 # Fix permissions for pptruser
 RUN chown -R pptruser:pptruser /app
 
