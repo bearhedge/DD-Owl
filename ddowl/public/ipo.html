@@ -382,11 +382,24 @@
   <div class="container">
     <!-- ACTIVE SECTION -->
     <div class="section active" id="active-section">
-      <div class="pipeline-placeholder">
-        <h2>Active Deals</h2>
-        <p>Active HKEX listing applications will appear here.</p>
-        <p style="margin-top: 16px; color: #444;">Coming soon: Real-time tracking of IPO applications</p>
+      <div class="toolbar">
+        <div class="search-wrapper">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input type="text" class="search-box" id="active-search" placeholder="Search companies, banks...">
+        </div>
+        <div class="year-pills" id="active-year-pills"></div>
+        <span class="count-badge" id="active-count-badge">Loading...</span>
       </div>
+      <div class="table-container">
+        <table id="active-table">
+          <thead><tr></tr></thead>
+          <tbody id="active-table-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="active-pagination"></div>
     </div>
 
     <!-- HISTORICAL SECTION -->
@@ -421,6 +434,22 @@
     let currentPage = 1;
     const pageSize = 50;
     let currentYearFilter = '';
+
+    // Active deals state
+    let activeData = [];
+    let activeFilteredData = [];
+    let activeSortColumn = 'ocDate';
+    let activeSortDir = 'desc';
+    let activeCurrentPage = 1;
+    let activeYearFilter = '';
+
+    // Active columns (no ticker, no size)
+    const activeColumns = [
+      { id: 'company', label: 'Company', width: 500, visible: true, sortable: true },
+      { id: 'ocDate', label: 'OC Date', width: 100, visible: true, sortable: true },
+      { id: 'sponsors', label: 'Sponsors', width: 250, visible: true, sortable: false },
+      { id: 'others', label: 'Others', width: 300, visible: true, sortable: false },
+    ];
 
     // Column configuration - order can be changed by user
     let columns = [
@@ -499,6 +528,42 @@
       }
     }
 
+    // Load active deals CSV
+    async function loadActiveData() {
+      try {
+        const response = await fetch('/active-deals.csv');
+        const text = await response.text();
+        const lines = text.replace(/^\uFEFF/, '').replace(/\r/g, '').split('\n');
+        const headers = parseCSVLine(lines[0]);
+
+        activeData = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = parseCSVLine(lines[i]);
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = values[idx] || '';
+          });
+
+          activeData.push({
+            company: row.company,
+            ocDate: row.oc_date,
+            sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
+            others: row.others ? row.others.split('; ').filter(Boolean) : [],
+            documentUrl: row.document_url || ''
+          });
+        }
+
+        populateActiveYearFilter();
+        updateTabCounts();
+        applyActiveFilters();
+      } catch (err) {
+        console.error('Failed to load active data:', err);
+        document.getElementById('active-table-body').innerHTML =
+          `<tr><td colspan="${activeColumns.length}" class="empty-state">Failed to load active deals</td></tr>`;
+      }
+    }
+
     function parseCSVLine(line) {
       const result = [];
       let current = '';
@@ -525,8 +590,8 @@
     }
 
     function updateTabCounts() {
-      // Active count = items where status indicates active/pending (placeholder for now)
-      const activeCount = 0;
+      // Active count = total active deals
+      const activeCount = activeData.length;
       document.getElementById('active-count').textContent = `(${activeCount})`;
 
       // Historical count = total items
@@ -757,6 +822,184 @@
       window.scrollTo(0, 0);
     }
 
+    // ========== ACTIVE DEALS FUNCTIONS ==========
+
+    function populateActiveYearFilter() {
+      const years = new Set();
+      activeData.forEach(row => {
+        if (row.ocDate) {
+          const parts = row.ocDate.split('/');
+          if (parts.length === 3) years.add(parts[2]);
+        }
+      });
+
+      const sortedYears = Array.from(years).sort().reverse();
+      const container = document.getElementById('active-year-pills');
+
+      container.innerHTML = `
+        <button class="year-pill active" data-year="">All</button>
+        ${sortedYears.map(y => `<button class="year-pill" data-year="${y}">${y}</button>`).join('')}
+      `;
+
+      container.querySelectorAll('.year-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          container.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          activeYearFilter = pill.dataset.year;
+          applyActiveFilters();
+        });
+      });
+    }
+
+    function applyActiveFilters() {
+      const search = document.getElementById('active-search').value.toLowerCase();
+
+      activeFilteredData = activeData.filter(row => {
+        if (search) {
+          const searchFields = [
+            row.company,
+            ...row.sponsors,
+            ...row.others
+          ].join(' ').toLowerCase();
+          if (!searchFields.includes(search)) return false;
+        }
+
+        if (activeYearFilter) {
+          const parts = (row.ocDate || '').split('/');
+          if (parts.length !== 3 || parts[2] !== activeYearFilter) return false;
+        }
+
+        return true;
+      });
+
+      sortActiveData();
+      activeCurrentPage = 1;
+
+      document.getElementById('active-count-badge').textContent =
+        activeFilteredData.length.toLocaleString() + ' deals';
+
+      renderActiveTableWithColumns();
+      renderActivePagination();
+    }
+
+    function sortActiveData() {
+      activeFilteredData.sort((a, b) => {
+        let aVal = a[activeSortColumn] || '';
+        let bVal = b[activeSortColumn] || '';
+
+        if (activeSortColumn === 'ocDate') {
+          const parseDate = (d) => {
+            const parts = d.split('/');
+            if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+            return 0;
+          };
+          aVal = parseDate(aVal);
+          bVal = parseDate(bVal);
+        } else {
+          aVal = String(aVal).toLowerCase();
+          bVal = String(bVal).toLowerCase();
+        }
+
+        if (aVal < bVal) return activeSortDir === 'asc' ? -1 : 1;
+        if (aVal > bVal) return activeSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function renderActiveTableWithColumns() {
+      const visibleCols = activeColumns.filter(c => c.visible);
+      const thead = document.querySelector('#active-table thead');
+
+      thead.innerHTML = `<tr>${visibleCols.map(col => {
+        const sortClass = activeSortColumn === col.id ? (activeSortDir === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
+        const sortAttr = col.sortable ? `data-sort="${col.id}"` : '';
+        return `<th ${sortAttr} style="width: ${col.width}px;" class="${sortClass}">${col.label}</th>`;
+      }).join('')}</tr>`;
+
+      initActiveSortHandlers();
+      renderActiveTable();
+    }
+
+    function initActiveSortHandlers() {
+      document.querySelectorAll('#active-table th[data-sort]').forEach(th => {
+        th.addEventListener('click', (e) => {
+          if (e.target.classList.contains('resize-handle')) return;
+
+          const col = th.dataset.sort;
+          if (activeSortColumn === col) {
+            activeSortDir = activeSortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            activeSortColumn = col;
+            activeSortDir = 'asc';
+          }
+          document.querySelectorAll('#active-table th').forEach(h => h.classList.remove('sorted-asc', 'sorted-desc'));
+          th.classList.add(activeSortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+          sortActiveData();
+          renderActiveTable();
+        });
+      });
+    }
+
+    function renderActiveTable() {
+      const visibleCols = activeColumns.filter(c => c.visible);
+      const start = (activeCurrentPage - 1) * pageSize;
+      const pageData = activeFilteredData.slice(start, start + pageSize);
+      const tbody = document.getElementById('active-table-body');
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty-state">No active deals found</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pageData.map(row => `
+        <tr>
+          ${visibleCols.map(col => renderActiveCell(row, col)).join('')}
+        </tr>
+      `).join('');
+    }
+
+    function renderActiveCell(row, col) {
+      switch (col.id) {
+        case 'company':
+          const docUrl = row.documentUrl || '';
+          const companyHtml = escapeHtml((row.company || '').replace(/Co\.,\s*Ltd\.?/gi, 'Co. Ltd.'));
+          if (docUrl) {
+            return `<td class="company-name"><a href="${docUrl}" target="_blank" title="View OC Announcement" style="color: inherit; text-decoration: none;">${companyHtml}</a></td>`;
+          }
+          return `<td class="company-name">${companyHtml}</td>`;
+        case 'ocDate':
+          return `<td class="date-cell">${formatDate(row.ocDate)}</td>`;
+        case 'sponsors':
+          return `<td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
+        case 'others':
+          return `<td class="banks-cell">${row.others.map(b => `<span class="bank-tag">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
+        default:
+          return `<td>-</td>`;
+      }
+    }
+
+    function renderActivePagination() {
+      const totalPages = Math.ceil(activeFilteredData.length / pageSize);
+      const container = document.getElementById('active-pagination');
+
+      if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+      container.innerHTML = `
+        <button class="page-btn" onclick="goToActivePage(1)" ${activeCurrentPage === 1 ? 'disabled' : ''}>First</button>
+        <button class="page-btn" onclick="goToActivePage(${activeCurrentPage - 1})" ${activeCurrentPage === 1 ? 'disabled' : ''}>Prev</button>
+        <span class="page-info">Page ${activeCurrentPage} of ${totalPages}</span>
+        <button class="page-btn" onclick="goToActivePage(${activeCurrentPage + 1})" ${activeCurrentPage === totalPages ? 'disabled' : ''}>Next</button>
+        <button class="page-btn" onclick="goToActivePage(${totalPages})" ${activeCurrentPage === totalPages ? 'disabled' : ''}>Last</button>
+      `;
+    }
+
+    function goToActivePage(page) {
+      activeCurrentPage = page;
+      renderActiveTable();
+      renderActivePagination();
+      window.scrollTo(0, 0);
+    }
+
     function escapeHtml(text) {
       const div = document.createElement('div');
       div.textContent = text;
@@ -781,6 +1024,7 @@
 
     // Filter handlers
     document.getElementById('search').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('active-search').addEventListener('input', debounce(applyActiveFilters, 300));
 
     function debounce(fn, delay) {
       let timeout;
@@ -823,6 +1067,7 @@
     }
 
     // Initialize
+    loadActiveData();
     loadData();
   </script>
 </body>
