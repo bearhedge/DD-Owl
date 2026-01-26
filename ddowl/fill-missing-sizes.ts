@@ -252,22 +252,29 @@ function extractShares(text: string): number | null {
 }
 
 /**
- * Check if this is a listing by introduction (no deal size)
+ * Check if this is a non-IPO listing (no deal size)
+ * Returns the type: 'TRANSFER', 'INTRODUCTION', or null if it's a regular IPO
  */
-function isListingByIntroduction(text: string, dealType: string): boolean {
+function getNonIpoType(text: string, dealType: string): 'TRANSFER' | 'INTRODUCTION' | null {
   const typeUpper = dealType.toUpperCase();
-  if (typeUpper.includes('INTRODUCTION') || typeUpper.includes('TRANSFER')) {
-    return true;
+  const textUpper = text.toUpperCase();
+
+  // Check for Transfer of Listing first (more specific)
+  if (typeUpper.includes('TRANSFER') || /TRANSFER\s+OF\s+LISTING/i.test(text)) {
+    return 'TRANSFER';
   }
 
-  // Check text patterns
-  const introPatterns = [
-    /listing\s+by\s+(?:way\s+of\s+)?introduction/i,
-    /no\s+(?:new\s+)?shares\s+(?:will\s+be|are\s+being)\s+issued/i,
-    /transfer\s+of\s+listing/i,
-  ];
+  // Check for Listing by Introduction
+  if (typeUpper.includes('INTRODUCTION') || /LISTING\s+BY\s+(?:WAY\s+OF\s+)?INTRODUCTION/i.test(text)) {
+    return 'INTRODUCTION';
+  }
 
-  return introPatterns.some(p => p.test(text));
+  // Check for "no new shares" pattern (usually introduction)
+  if (/no\s+(?:new\s+)?shares\s+(?:will\s+be|are\s+being)\s+issued/i.test(text)) {
+    return 'INTRODUCTION';
+  }
+
+  return null;
 }
 
 /**
@@ -280,14 +287,24 @@ async function extractDealMetrics(
 ): Promise<ExtractedMetrics> {
   const text = await extractPdfText(pdfBuffer, 5);
 
-  // Check for listing by introduction
-  if (isListingByIntroduction(text, dealType)) {
+  // Check for non-IPO listing types (Transfer or Introduction)
+  const nonIpoType = getNonIpoType(text, dealType);
+  if (nonIpoType === 'TRANSFER') {
     return {
       ticker,
       price: null,
       shares: null,
       sizeHKDm: null,
-      source: `LISTING_BY_INTRO: Deal type is "${dealType}" - no new shares offered`,
+      source: `TRANSFER: Transfer of Listing - no IPO size`,
+    };
+  }
+  if (nonIpoType === 'INTRODUCTION') {
+    return {
+      ticker,
+      price: null,
+      shares: null,
+      sizeHKDm: null,
+      source: `INTRODUCTION: Listing by Introduction - no IPO size`,
     };
   }
 
@@ -328,14 +345,14 @@ function getSizeLabel(result: ExtractedMetrics, dealType: string, company: strin
     return 'SPAC';
   }
 
-  // Check for listing by introduction
-  if (source.includes('LISTING_BY_INTRO') || dealType.toLowerCase().includes('introduction')) {
-    return 'Listing by Introduction';
+  // Check for Transfer of Listing (check source first, then dealType)
+  if (source.startsWith('TRANSFER:') || dealType.toLowerCase().includes('transfer')) {
+    return 'Transfer of Listing';
   }
 
-  // Check for transfer
-  if (dealType.toLowerCase().includes('transfer')) {
-    return 'Transfer of Listing';
+  // Check for Listing by Introduction
+  if (source.startsWith('INTRODUCTION:') || source.includes('LISTING_BY_INTRO') || dealType.toLowerCase().includes('introduction')) {
+    return 'Listing by Introduction';
   }
 
   // Partial extract - we found some data but not enough
