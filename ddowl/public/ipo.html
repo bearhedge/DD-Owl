@@ -43,36 +43,48 @@
       color: #fff;
       background: #222;
     }
-    .header {
-      background: #111;
-      border-bottom: 1px solid #222;
-      padding: 12px 24px;
+    /* Tab container - centered underline style */
+    .tab-container {
       display: flex;
-      align-items: center;
-    }
-    .tabs {
-      display: flex;
-      gap: 4px;
+      justify-content: center;
+      gap: 48px;
+      padding: 24px 0;
+      border-bottom: 1px solid #1a1a1a;
     }
     .tab {
-      padding: 8px 16px;
       background: transparent;
-      border: 1px solid #333;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9rem;
+      border: none;
+      color: #666;
+      font-size: 1rem;
       font-family: inherit;
-      color: #888;
-      transition: all 0.2s;
+      padding: 12px 4px;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s;
     }
     .tab:hover {
-      background: #1a1a1a;
-      color: #fff;
+      color: #999;
     }
     .tab.active {
-      background: #fff;
-      color: #000;
-      border-color: #fff;
+      color: #fff;
+    }
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #4a9eff;
+      border-radius: 3px 3px 0 0;
+    }
+    .tab-count {
+      color: #555;
+      font-weight: 400;
+      margin-left: 6px;
+    }
+    .tab.active .tab-count {
+      color: #888;
     }
     .container {
       padding: 24px;
@@ -82,17 +94,33 @@
     .toolbar {
       display: flex;
       gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
+      margin-bottom: 20px;
       align-items: center;
+      background: #0f0f0f;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #1a1a1a;
+    }
+    .search-wrapper {
+      position: relative;
+      flex: 1;
+      max-width: 320px;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #555;
+      pointer-events: none;
     }
     .search-box {
-      padding: 10px 14px;
+      width: 100%;
+      padding: 10px 14px 10px 40px;
       border: 1px solid #333;
       border-radius: 6px;
       font-size: 0.9rem;
       font-family: inherit;
-      width: 280px;
       background: #111;
       color: #fff;
       outline: none;
@@ -118,12 +146,8 @@
       outline: none;
     }
     .count-badge {
-      background: #1a1a1a;
-      border: 1px solid #333;
-      padding: 8px 14px;
-      border-radius: 20px;
       font-size: 0.85rem;
-      color: #888;
+      color: #666;
       margin-left: auto;
     }
     .table-container {
@@ -251,22 +275,6 @@
       font-size: 0.85em;
       font-weight: normal;
     }
-    .export-btn {
-      background: #1a1a1a;
-      color: #888;
-      border: 1px solid #333;
-      padding: 10px 18px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-family: inherit;
-      transition: all 0.2s;
-    }
-    .export-btn:hover {
-      background: #222;
-      color: #fff;
-      border-color: #444;
-    }
     .empty-state {
       text-align: center;
       padding: 80px 20px;
@@ -311,14 +319,17 @@
       display: inline-block;
     }
     .column-btn {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: #1a1a1a;
       color: #888;
       border: 1px solid #333;
-      padding: 10px 14px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.85rem;
-      font-family: inherit;
       transition: all 0.2s;
     }
     .column-btn:hover {
@@ -421,18 +432,20 @@
       <a href="/ipo" class="nav-link active">IPO Tracker</a>
     </div>
   </nav>
-  <div class="header">
-    <div class="tabs">
-      <button class="tab active" data-section="pipeline">Pipeline</button>
-      <button class="tab" data-section="historical">Historical</button>
-    </div>
+  <div class="tab-container">
+    <button class="tab active" data-section="active">
+      Active <span class="tab-count" id="active-count">(0)</span>
+    </button>
+    <button class="tab" data-section="historical">
+      Historical <span class="tab-count" id="historical-count">(0)</span>
+    </button>
   </div>
 
   <div class="container">
-    <!-- PIPELINE SECTION -->
-    <div class="section active" id="pipeline-section">
+    <!-- ACTIVE SECTION -->
+    <div class="section active" id="active-section">
       <div class="pipeline-placeholder">
-        <h2>Deal Pipeline</h2>
+        <h2>Active Deals</h2>
         <p>Active HKEX listing applications will appear here.</p>
         <p style="margin-top: 16px; color: #444;">Coming soon: Real-time tracking of IPO applications</p>
       </div>
@@ -441,15 +454,25 @@
     <!-- HISTORICAL SECTION -->
     <div class="section" id="historical-section">
       <div class="toolbar">
-        <input type="text" class="search-box" id="search" placeholder="Search company or bank...">
+        <div class="search-wrapper">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input type="text" class="search-box" id="search" placeholder="Search company or bank...">
+        </div>
         <select class="filter-select" id="year-filter">
           <option value="">All Years</option>
         </select>
         <div class="column-selector">
-          <button class="column-btn" onclick="toggleColumnMenu(event)">Columns ▼</button>
+          <button class="column-btn" onclick="toggleColumnMenu(event)" title="Configure columns">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
           <div id="column-menu" class="column-menu hidden"></div>
         </div>
-        <button class="export-btn" onclick="exportExcel()">Download Excel</button>
         <span class="count-badge" id="count-badge">Loading...</span>
       </div>
       <div class="table-container">
@@ -711,6 +734,7 @@
         }
 
         populateYearFilter();
+        updateTabCounts();
         applyFilters();
       } catch (err) {
         console.error('Failed to load data:', err);
@@ -743,6 +767,16 @@
       }
       result.push(current);
       return result;
+    }
+
+    function updateTabCounts() {
+      // Active count = items where status indicates active/pending (placeholder for now)
+      const activeCount = 0;
+      document.getElementById('active-count').textContent = `(${activeCount})`;
+
+      // Historical count = total items
+      const historicalCount = allData.length;
+      document.getElementById('historical-count').textContent = `(${historicalCount.toLocaleString()})`;
     }
 
     function populateYearFilter() {
