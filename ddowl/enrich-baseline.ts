@@ -14,7 +14,7 @@ interface DealMetrics {
   hkShares: number | null;
   intlShares: number | null;
   price: number | null;
-  sizeHKDm: number | null;
+  sizeHKDm: number | string | null;
 }
 
 // Minimum deal size threshold - show "-" for anything below
@@ -38,7 +38,7 @@ interface EnrichedDeal {
   date: string;
   shares: number | null;
   price: number | null;
-  sizeHKDm: number | null;
+  sizeHKDm: number | string | null;
   sponsors: string[];
   others: string[];
   prospectusUrl: string | null;
@@ -94,13 +94,26 @@ function loadExcelMetrics(): Map<number, DealMetrics> {
     const ticker = row[0];
     if (!ticker || typeof ticker !== 'number') continue;
 
+    // Parse size - could be a number or a string label (e.g., "Listing by Introduction")
+    const rawSize = row[9];
+    let sizeValue: number | string | null = null;
+    if (rawSize !== undefined && rawSize !== null && rawSize !== '' && rawSize !== '-') {
+      const num = parseNumber(rawSize);
+      if (num !== null) {
+        sizeValue = num;
+      } else if (typeof rawSize === 'string') {
+        // It's a label like "Listing by Introduction", "Transfer", "SPAC", etc.
+        sizeValue = rawSize;
+      }
+    }
+
     metrics.set(ticker, {
       ticker,
       shares: parseNumber(row[3]),
       hkShares: parseNumber(row[4]),
       intlShares: parseNumber(row[5]),
       price: parseNumber(row[8]),
-      sizeHKDm: parseNumber(row[9]),
+      sizeHKDm: sizeValue,
     });
   }
 
@@ -777,9 +790,9 @@ function enrichData(
       // Fix date formatting (e.g., "26/1/2021" -> "26/01/2021")
       date = fixDateFormat(date);
 
-      // Apply deal size threshold - show null for sizes below minimum
-      let sizeHKDm = m.sizeHKDm;
-      if (sizeHKDm !== null && sizeHKDm < MIN_DEAL_SIZE_HKDM) {
+      // Apply deal size threshold - show null for sizes below minimum (only for numeric values)
+      let sizeHKDm: number | string | null = m.sizeHKDm;
+      if (typeof sizeHKDm === 'number' && sizeHKDm < MIN_DEAL_SIZE_HKDM) {
         // Size is suspiciously low - likely placeholder value
         sizeHKDm = null;
       }

@@ -246,6 +246,12 @@
       font-weight: 600;
       text-align: right;
     }
+    .no-size-label {
+      color: #666;
+      font-size: 0.85em;
+      font-weight: normal;
+      font-style: italic;
+    }
     .export-btn {
       background: #1a1a1a;
       color: #888;
@@ -698,7 +704,7 @@
             date: row.date,
             shares: parseFloat(row.shares) || null,
             price: parseFloat(row.price_hkd) || null,
-            sizeHKDm: parseFloat(row.size_hkdm) || null,
+            sizeHKDm: isNaN(parseFloat(row.size_hkdm)) ? (row.size_hkdm || null) : parseFloat(row.size_hkdm),
             sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
             others: row.others ? row.others.split('; ').filter(Boolean) : [],
             prospectusUrl: row.prospectus_url || ''
@@ -891,7 +897,7 @@
         case 'date':
           return `<td class="date-cell">${formatDate(row.date)}</td>`;
         case 'sizeHKDm':
-          return `<td class="size-cell">${formatSize(row.sizeHKDm)}</td>`;
+          return `<td class="size-cell">${formatSize(row.sizeHKDm, row.type)}</td>`;
         case 'sponsors':
           return `<td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
         case 'others':
@@ -901,8 +907,24 @@
       }
     }
 
-    function formatSize(size) {
-      if (!size) return '-';
+    function formatSize(size, type) {
+      // Handle string labels (e.g., "Listing by Introduction", "SPAC", etc.)
+      if (typeof size === 'string') {
+        const sizeLower = size.toLowerCase();
+        if (sizeLower.includes('introduction')) return '<span class="no-size-label">Introduction</span>';
+        if (sizeLower.includes('transfer')) return '<span class="no-size-label">Transfer</span>';
+        if (sizeLower.includes('spac')) return '<span class="no-size-label">SPAC</span>';
+        if (sizeLower.includes('n/a')) return '<span class="no-size-label">N/A</span>';
+        return '<span class="no-size-label">' + size + '</span>';
+      }
+      if (!size) {
+        // Fallback: check type for unlabeled deals
+        const typeLower = (type || '').toLowerCase();
+        if (typeLower.includes('transfer')) return '<span class="no-size-label">Transfer</span>';
+        if (typeLower.includes('introduction')) return '<span class="no-size-label">Introduction</span>';
+        if (typeLower.includes('spac')) return '<span class="no-size-label">SPAC</span>';
+        return '-';
+      }
       if (size >= 1000) {
         return (size / 1000).toFixed(1) + 'B';
       }
