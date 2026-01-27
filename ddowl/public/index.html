@@ -72,155 +72,6 @@
       margin-bottom: 24px;
     }
 
-    .queue-panel {
-      background: #111;
-      border: 1px solid #222;
-      border-radius: 8px;
-      margin-bottom: 24px;
-      overflow: hidden;
-    }
-
-    .queue-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      background: #0d0d0d;
-      border-bottom: 1px solid #222;
-    }
-
-    .queue-title {
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-    }
-
-    .queue-toggle {
-      background: none;
-      border: none;
-      color: #666;
-      cursor: pointer;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-
-    .queue-body {
-      padding: 12px 16px;
-    }
-
-    .queue-list {
-      margin-bottom: 12px;
-    }
-
-    .queue-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      background: #0a0a0a;
-      border: 1px solid #1a1a1a;
-      border-radius: 6px;
-      margin-bottom: 8px;
-    }
-
-    .queue-item.running {
-      border-left: 3px solid #4a9eff;
-    }
-
-    .queue-item.complete {
-      border-left: 3px solid #2ed573;
-    }
-
-    .queue-item.error {
-      border-left: 3px solid #ff4757;
-    }
-
-    .queue-item-name {
-      font-weight: 500;
-      color: #fff;
-    }
-
-    .queue-item-status {
-      font-size: 11px;
-      text-transform: uppercase;
-      color: #666;
-    }
-
-    .queue-item-status.running { color: #4a9eff; }
-    .queue-item-status.complete { color: #2ed573; }
-    .queue-item-status.error { color: #ff4757; }
-
-    .queue-item.complete.clickable {
-      cursor: pointer;
-    }
-
-    .queue-item.complete.clickable:hover {
-      background: #151515;
-    }
-
-    .queue-item-main {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .queue-item-stats {
-      font-size: 11px;
-      color: #888;
-      margin-left: 8px;
-    }
-
-    .queue-item-stats .red-count {
-      color: #ff4757;
-      font-weight: 600;
-    }
-
-    .queue-item-stats .amber-count {
-      color: #ffa502;
-      font-weight: 600;
-    }
-
-    .queue-item-actions {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      margin-left: 12px;
-    }
-
-    .queue-item-actions button {
-      padding: 4px 8px;
-      font-size: 10px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-    }
-
-    .queue-item-actions .btn-view {
-      background: #1a3a5c;
-      color: #4a9eff;
-    }
-
-    .queue-item-actions .btn-view:hover {
-      background: #234b73;
-    }
-
-    .queue-item-actions .btn-remove {
-      background: transparent;
-      color: #666;
-      padding: 4px 6px;
-    }
-
-    .queue-item-actions .btn-remove:hover {
-      color: #ff4757;
-    }
-
-    .queue-actions {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-
     .btn-sm {
       padding: 8px 14px;
       font-size: 11px;
@@ -1645,7 +1496,6 @@
           <button class="btn-primary" id="searchBtn" onclick="startScreening()">
             Screen
           </button>
-          <button class="btn-secondary" id="addToQueueBtn" onclick="addToQueue()" title="Add to queue">+</button>
         </div>
 
         <!-- Name Variations Section -->
@@ -1663,22 +1513,6 @@
             </div>
           </div>
           <button type="button" onclick="addVariation()" style="padding: 10px 16px; background: transparent; border: 1px dashed #333; border-radius: 6px; color: #666; cursor: pointer; font-size: 13px; width: 100%; transition: all 0.2s;" onmouseover="this.style.borderColor='#555'; this.style.color='#999'" onmouseout="this.style.borderColor='#333'; this.style.color='#666'">+ Add variation</button>
-        </div>
-      </div>
-
-      <!-- Queue Panel -->
-      <div class="queue-panel" id="queuePanel" style="display: none;">
-        <div class="queue-header">
-          <span class="queue-title">Queue (<span id="queueCount">0</span>)</span>
-          <button class="queue-toggle" onclick="toggleQueuePanel()">▼</button>
-        </div>
-        <div class="queue-body" id="queueBody">
-          <div class="queue-list" id="queueList"></div>
-          <div class="queue-actions">
-            <button class="btn-secondary btn-sm" onclick="clearQueue()">Clear Queued</button>
-            <button class="btn-secondary btn-sm" onclick="clearCompletedQueue()">Clear Done</button>
-            <button class="btn-primary btn-sm" onclick="runNextInQueue()">Run Next</button>
-          </div>
         </div>
       </div>
 
@@ -2309,47 +2143,10 @@
     }
 
     // ============================================================
-    // QUEUE PANEL RENDERING - Display and manage queue UI
+    // QUEUE PANEL RENDERING - No-op (queue panel removed, trackers handle display)
     // ============================================================
     function renderQueue() {
-      const queue = QueueManager.getAll();
-      const panel = document.getElementById('queuePanel');
-      const list = document.getElementById('queueList');
-      const count = document.getElementById('queueCount');
-
-      // Show/hide panel based on queue length
-      if (queue.length === 0) {
-        panel.style.display = 'none';
-        return;
-      }
-
-      panel.style.display = 'block';
-      count.textContent = queue.length;
-
-      list.innerHTML = queue.map(item => {
-        const isComplete = item.status === 'complete';
-        const hasFindings = isComplete && item.findings?.length > 0;
-        const statsHtml = item.stats
-          ? `<span class="queue-item-stats"><span class="red-count">${item.stats.red}R</span> <span class="amber-count">${item.stats.amber}A</span></span>`
-          : '';
-
-        return `
-          <div class="queue-item ${item.status}${hasFindings ? ' clickable' : ''}"${hasFindings ? ` onclick="viewQueueResults('${item.id}')"` : ''}>
-            <div class="queue-item-main">
-              <span class="queue-item-name">${escapeHtml(item.subjectName)}</span>
-              ${item.variants?.length ? `<span style="color:#666;font-size:11px;margin-left:8px;">(+${item.variants.length} variants)</span>` : ''}
-              ${isComplete ? statsHtml : ''}
-            </div>
-            <div class="queue-item-actions">
-              ${item.status === 'running' ? `<span class="queue-item-status running">${item.progress || 0}%</span>` : ''}
-              ${item.status === 'queued' ? `<span class="queue-item-status">queued</span>` : ''}
-              ${item.status === 'error' ? `<span class="queue-item-status error">error</span>` : ''}
-              ${hasFindings ? `<button class="btn-view" onclick="event.stopPropagation(); viewQueueResults('${item.id}')">View</button>` : ''}
-              <button class="btn-remove" onclick="event.stopPropagation(); removeQueueItem('${item.id}')" title="Remove">×</button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      // No-op - queue panel removed, ScreeningTrackers handles display
     }
 
     // View results from a completed queue item
@@ -2399,34 +2196,6 @@
       QueueManager.remove(itemId);
       renderQueue();
       ScreeningTrackers.render();
-    }
-
-    function toggleQueuePanel() {
-      const body = document.getElementById('queueBody');
-      const toggle = document.querySelector('.queue-toggle');
-      if (body.style.display === 'none') {
-        body.style.display = 'block';
-        toggle.textContent = '▼';
-      } else {
-        body.style.display = 'none';
-        toggle.textContent = '▶';
-      }
-    }
-
-    function clearQueue() {
-      if (confirm('Clear all queued (pending) subjects?')) {
-        QueueManager.clearQueued();
-        renderQueue();
-        ScreeningTrackers.render();
-      }
-    }
-
-    function clearCompletedQueue() {
-      if (confirm('Clear all completed screenings?')) {
-        QueueManager.clearCompleted();
-        renderQueue();
-        ScreeningTrackers.render();
-      }
     }
 
     // Restore queue state on page load - check if running items are still alive on server
@@ -3852,33 +3621,6 @@
         }
       });
       return variations;
-    }
-
-    function addToQueue() {
-      const name = document.getElementById('nameInput').value.trim();
-      const variations = getVariations();
-      const language = selectedLanguage;
-
-      if (name.length < 2) {
-        alert('Please enter a valid name (2+ characters)');
-        return;
-      }
-
-      QueueManager.add({
-        name: name,
-        variants: variations,
-        language: language
-      });
-
-      // Clear input
-      document.getElementById('nameInput').value = '';
-      // Clear all variation inputs
-      document.querySelectorAll('.variation-input').forEach(input => {
-        input.value = '';
-      });
-
-      // Re-render queue
-      renderQueue();
     }
 
     // Start a NEW screening - always fresh, always clears old session
