@@ -42,6 +42,9 @@ interface EnrichedDeal {
   sponsors: string[];
   others: string[];
   prospectusUrl: string | null;
+  sector: string | null;
+  isAHListing: boolean;
+  aShareTicker: string | null;
 }
 
 async function main() {
@@ -816,6 +819,9 @@ function enrichData(
         sponsors: [],
         others: [],
         prospectusUrl: pdfUrls.get(tickerNum) || null,
+        sector: null,  // Will be populated during PDF extraction
+        isAHListing: false,  // Will be populated during PDF extraction
+        aShareTicker: null,  // Will be populated during PDF extraction
       };
       dealMap.set(ticker, deal);
     }
@@ -983,7 +989,7 @@ function isGarbageBank(name: string, companyName?: string): boolean {
 }
 
 function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
-  const headers = ['ticker', 'company', 'company_cn', 'type', 'date', 'shares', 'price_hkd', 'size_hkdm', 'sponsors', 'others', 'prospectus_url'];
+  const headers = ['ticker', 'company', 'company_cn', 'type', 'date', 'shares', 'price_hkd', 'size_hkdm', 'sponsors', 'others', 'prospectus_url', 'board', 'sector', 'is_ah_listing', 'a_share_ticker'];
 
   const rows = deals.map(d => [
     d.ticker,
@@ -997,6 +1003,10 @@ function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
     d.sponsors.join('; '),
     d.others.join('; '),
     d.prospectusUrl || '',
+    'mainBoard',  // All deals from this script are Main Board
+    d.sector || '',
+    d.isAHListing ? 'true' : '',
+    d.aShareTicker || '',
   ]);
 
   const csv = [

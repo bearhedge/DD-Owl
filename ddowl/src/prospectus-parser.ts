@@ -8,6 +8,202 @@
 import { PDFParse } from 'pdf-parse';
 import { isLikelyBank, normalizeBankName, NormalizedRole } from './bank-normalizer.js';
 
+// ============================================================
+// SECTOR EXTRACTION
+// ============================================================
+
+const SECTOR_KEYWORDS: Record<string, string> = {
+  // Technology
+  'software': 'Technology',
+  'artificial intelligence': 'Technology',
+  'cloud computing': 'Technology',
+  'cloud services': 'Technology',
+  'saas': 'Technology',
+  'semiconductor': 'Technology',
+  'fintech': 'Technology',
+  'information technology': 'Technology',
+  'internet': 'Technology',
+  'e-commerce': 'Technology',
+  'online platform': 'Technology',
+
+  // Healthcare
+  'pharmaceutical': 'Healthcare',
+  'biotech': 'Healthcare',
+  'biopharmaceutical': 'Healthcare',
+  'drug discovery': 'Healthcare',
+  'drug development': 'Healthcare',
+  'medical device': 'Healthcare',
+  'hospital': 'Healthcare',
+  'healthcare': 'Healthcare',
+  'clinical': 'Healthcare',
+  'therapeutics': 'Healthcare',
+
+  // Financial Services
+  'banking': 'Financial Services',
+  'commercial bank': 'Financial Services',
+  'insurance': 'Financial Services',
+  'asset management': 'Financial Services',
+  'securities': 'Financial Services',
+  'brokerage': 'Financial Services',
+  'wealth management': 'Financial Services',
+  'financial services': 'Financial Services',
+
+  // Real Estate
+  'property development': 'Real Estate',
+  'real estate': 'Real Estate',
+  'property management': 'Real Estate',
+  'residential properties': 'Real Estate',
+  'commercial properties': 'Real Estate',
+
+  // Consumer
+  'food and beverage': 'Consumer',
+  'food products': 'Consumer',
+  'beverage': 'Consumer',
+  'retail': 'Consumer',
+  'restaurant': 'Consumer',
+  'consumer goods': 'Consumer',
+  'consumer products': 'Consumer',
+  'apparel': 'Consumer',
+  'fashion': 'Consumer',
+
+  // Industrial
+  'manufacturing': 'Industrial',
+  'machinery': 'Industrial',
+  'construction': 'Industrial',
+  'engineering': 'Industrial',
+  'industrial': 'Industrial',
+  'equipment': 'Industrial',
+
+  // Energy
+  'oil and gas': 'Energy',
+  'petroleum': 'Energy',
+  'renewable energy': 'Energy',
+  'solar energy': 'Energy',
+  'wind energy': 'Energy',
+  'clean energy': 'Energy',
+  'power generation': 'Energy',
+
+  // Other categories
+  'education': 'Education',
+  'logistics': 'Transportation',
+  'shipping': 'Transportation',
+  'transportation': 'Transportation',
+  'media': 'Media',
+  'entertainment': 'Media',
+  'gaming': 'Media',
+  'telecommunications': 'Telecom',
+  'telecom': 'Telecom',
+  'mining': 'Materials',
+  'materials': 'Materials',
+  'chemicals': 'Materials',
+  'agriculture': 'Agriculture',
+  'automotive': 'Automotive',
+  'electric vehicle': 'Automotive',
+};
+
+/**
+ * Extract sector/industry from prospectus text
+ * Looks in first ~50,000 chars (Summary + Business sections)
+ */
+export function extractSector(pdfText: string): string | null {
+  // Look in first 50,000 chars (Summary + Business sections)
+  const searchText = pdfText.slice(0, 50000).toLowerCase();
+
+  // Count matches for each sector to find the dominant one
+  const sectorCounts: Record<string, number> = {};
+
+  for (const [keyword, sector] of Object.entries(SECTOR_KEYWORDS)) {
+    // Count occurrences of keyword
+    const regex = new RegExp(keyword, 'gi');
+    const matches = searchText.match(regex);
+    if (matches) {
+      sectorCounts[sector] = (sectorCounts[sector] || 0) + matches.length;
+    }
+  }
+
+  // Return sector with highest count
+  let maxSector: string | null = null;
+  let maxCount = 0;
+
+  for (const [sector, count] of Object.entries(sectorCounts)) {
+    if (count > maxCount) {
+      maxCount = count;
+      maxSector = sector;
+    }
+  }
+
+  return maxSector;
+}
+
+// ============================================================
+// A+H DUAL LISTING DETECTION
+// ============================================================
+
+export interface AHListingResult {
+  isAH: boolean;
+  ticker: string | null;
+}
+
+/**
+ * Detect if company is A+H dual-listed (also listed on Shanghai/Shenzhen)
+ * A-share tickers:
+ *   Shanghai (SSE): 600xxx, 601xxx, 603xxx, 605xxx
+ *   Shenzhen (SZSE): 000xxx, 001xxx, 002xxx, 003xxx, 300xxx (ChiNext)
+ */
+export function detectAHListing(pdfText: string): AHListingResult {
+  // Pattern 1: Explicit A-share ticker mention
+  const tickerPatterns = [
+    /A[- ]?shares?[^.]{0,50}(?:stock\s*code|ticker)[:\s]*[（\(]?(\d{6})[）\)]?/i,
+    /(?:Shanghai|上海|SSE|Shenzhen|深圳|SZSE)[^.]{0,50}(?:stock\s*code|ticker)[:\s]*[（\(]?(\d{6})[）\)]?/i,
+    /(?:stock\s*code|ticker)[:\s]*[（\(]?(\d{6})[）\)]?[^.]{0,50}(?:Shanghai|上海|SSE|Shenzhen|深圳|SZSE)/i,
+    /A[- ]?share\s+stock\s+code[:\s]*(\d{6})/i,
+    /our\s+A[- ]?shares[^.]*(\d{6})/i,
+  ];
+
+  for (const pattern of tickerPatterns) {
+    const match = pdfText.match(pattern);
+    if (match?.[1]) {
+      const ticker = match[1];
+      // Validate it's a valid A-share ticker
+      if (isValidAShareTicker(ticker)) {
+        return { isAH: true, ticker };
+      }
+    }
+  }
+
+  // Pattern 2: Look for explicit dual listing mentions (without ticker)
+  const dualListingPatterns = [
+    /A\s*\+\s*H/i,
+    /A\s+and\s+H\s+shares/i,
+    /dual[- ]?list/i,
+    /listed\s+on\s+(?:the\s+)?(?:Shanghai|Shenzhen)\s+Stock\s+Exchange/i,
+    /上海证券交易所/,
+    /深圳证券交易所/,
+    /A股上市/,
+    /H股及A股/,
+    /A股及H股/,
+  ];
+
+  for (const pattern of dualListingPatterns) {
+    if (pattern.test(pdfText)) {
+      return { isAH: true, ticker: null };
+    }
+  }
+
+  return { isAH: false, ticker: null };
+}
+
+/**
+ * Validate that a ticker is a valid A-share ticker
+ */
+function isValidAShareTicker(ticker: string): boolean {
+  // Shanghai: 600xxx, 601xxx, 603xxx, 605xxx
+  // Shenzhen: 000xxx, 001xxx, 002xxx, 003xxx, 300xxx
+  const validPrefixes = ['600', '601', '603', '605', '000', '001', '002', '003', '300'];
+  const prefix = ticker.substring(0, 3);
+  return validPrefixes.includes(prefix);
+}
+
 /**
  * Validate that a bank name looks legitimate (not garbage/typo/artifact)
  * Must either match a known bank OR have proper financial institution keywords
