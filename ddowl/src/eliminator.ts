@@ -15,6 +15,7 @@ import { hasDirtyWordMatch } from './constants/dirtyWordEquivalents.js';
 export type EliminationReason =
   | 'gov_domain_bypass'      // Not eliminated - .gov.cn protected
   | 'noise_domain'           // Rule 1: job sites, corporate aggregators
+  | 'trash_domain'           // Rule 1b: SEO spam, broken sites, parked domains
   | 'noise_title_pattern'    // Rule 2: job posting keywords
   | 'name_char_separation'   // Rule 3: "张,三" instead of "张三"
   | 'missing_dirty_word'     // Rule 4: no dirty word present
@@ -33,6 +34,7 @@ export interface EliminationResult {
 export interface EliminationBreakdown {
   gov_domain_bypass: number;
   noise_domain: number;
+  trash_domain: number;
   noise_title_pattern: number;
   name_char_separation: number;
   missing_dirty_word: number;
@@ -58,6 +60,31 @@ const NOISE_DOMAINS = [
   'en.wikipedia.org', 'hudong.com', 'sogou.com/lemma',
 ];
 
+// ============================================================
+// TRASH DOMAIN FILTERING (Quality Layer 1)
+// Known SEO spam, broken sites, parked domains
+// ============================================================
+
+// Exact trash domains - known spam/broken sites
+const TRASH_DOMAINS = new Set([
+  'ikcij.com',        // Fake ICIJ impersonator, broken links
+  'icij-data.com',    // Another ICIJ impersonator
+  'offshoreleaks.cc', // Fake offshore leaks mirror
+  // Add more as discovered
+]);
+
+// Regex patterns for trash domain detection
+const TRASH_DOMAIN_PATTERNS: RegExp[] = [
+  // Random character domains (e.g., ab123.com, xyz99.net)
+  /^[a-z]{2,4}\d{2,4}\.(com|cn|net|org)$/,
+  // SEO/spam indicators in domain
+  /seo[-_]?site|spam[-_]?site|click[-_]?track|redirect[-_]?link/i,
+  // Parked/expired domain indicators
+  /buy[-_]?domain|domain[-_]?sale|expired[-_]?domain|parked[-_]?domain/i,
+  // Fake news/data leak impersonators
+  /fake[-_]?news|leak[-_]?data|hack[-_]?data/i,
+];
+
 // Noise title patterns - job posting keywords
 const NOISE_TITLE_PATTERNS = [
   '招聘', '职位', '求职', '简历', '应聘', '急招', '招人',
@@ -74,6 +101,34 @@ const NOISE_TITLE_PATTERNS = [
 function isNoiseDomain(url: string): boolean {
   if (!url) return false;
   return NOISE_DOMAINS.some(d => url.includes(d));
+}
+
+/**
+ * Rule 1b: Check if URL is a trash/spam domain (SEO spam, broken sites, parked)
+ */
+function isTrashDomain(url: string): boolean {
+  if (!url) return false;
+
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+
+    // Check exact match in trash domains set
+    if (TRASH_DOMAINS.has(hostname)) return true;
+
+    // Check without www. prefix
+    const hostnameNoWww = hostname.replace(/^www\./, '');
+    if (TRASH_DOMAINS.has(hostnameNoWww)) return true;
+
+    // Check against regex patterns
+    for (const pattern of TRASH_DOMAIN_PATTERNS) {
+      if (pattern.test(hostnameNoWww)) return true;
+    }
+
+    return false;
+  } catch {
+    // Invalid URL - don't eliminate (let other checks handle it)
+    return false;
+  }
 }
 
 /**
@@ -202,6 +257,12 @@ export function eliminateObviousNoise(
       continue;
     }
 
+    // Rule 1b: Trash domains (SEO spam, broken sites, parked domains)
+    if (isTrashDomain(result.url)) {
+      eliminated.push({ ...result, reason: 'trash_domain' });
+      continue;
+    }
+
     // Rule 2: Noise title patterns
     if (hasNoiseTitlePattern(result.title)) {
       eliminated.push({ ...result, reason: 'noise_title_pattern' });
@@ -246,6 +307,7 @@ export function getEliminationBreakdown(
   return {
     gov_domain_bypass: bypassed.length,
     noise_domain: eliminated.filter(e => e.reason === 'noise_domain').length,
+    trash_domain: eliminated.filter(e => e.reason === 'trash_domain').length,
     noise_title_pattern: eliminated.filter(e => e.reason === 'noise_title_pattern').length,
     name_char_separation: eliminated.filter(e => e.reason === 'name_char_separation').length,
     missing_dirty_word: eliminated.filter(e => e.reason === 'missing_dirty_word').length,

@@ -1584,7 +1584,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     if (skipElimination && restoredPassed) {
       // Skip elimination phase - use restored results from session
       passed = restoredPassed;
-      breakdown = { gov_domain_bypass: 0, noise_domain: 0, noise_title_pattern: 0, name_char_separation: 0, missing_dirty_word: 0, part_of_longer_name: 0 };
+      breakdown = { gov_domain_bypass: 0, noise_domain: 0, trash_domain: 0, noise_title_pattern: 0, name_char_separation: 0, missing_dirty_word: 0, part_of_longer_name: 0 };
       console.log(`[V4] Skipped elimination phase, using ${passed.length} restored passed results`);
     } else {
       sendEvent({ type: 'phase', phase: 2, name: 'PROGRAMMATIC_ELIMINATION', message: `Running programmatic filters on ${allResults.length} results...` });
@@ -1599,6 +1599,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // Track programmatic elimination results AND send per-item events for auditing
     const ruleNames: Record<string, string> = {
       'noise_domain': 'Rule 1: Noise domain (job site/aggregator)',
+      'trash_domain': 'Rule 1b: Trash domain (SEO spam/broken site)',
       'noise_title_pattern': 'Rule 2: Job posting keyword in title',
       'name_char_separation': 'Rule 3: Name characters separated',
       'missing_dirty_word': 'Rule 4: Missing dirty word',

@@ -1,10 +1,97 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import * as cheerio from 'cheerio';
 import iconv from 'iconv-lite';
 import puppeteer, { Browser } from 'puppeteer';
 import { SearchResult, AnalyzedResult } from './types.js';
 import { detectCategory } from './searchStrings.js';
 import { validateClaims, buildNarrativeFromClaims, ValidatedClaim } from './quoteValidator.js';
+
+// ============================================================
+// URL VALIDATION TYPES (Quality Layer 2)
+// ============================================================
+
+export interface FetchValidationResult {
+  valid: boolean;
+  content?: string;
+  reason?: 'http_error' | 'cross_domain_redirect' | 'parking_page' | 'low_quality_content';
+  statusCode?: number;
+  finalUrl?: string;
+}
+
+// ============================================================
+// PARKING PAGE DETECTION (Quality Layer 3)
+// ============================================================
+
+// Indicators that a page is a parked/spam domain
+const PARKING_PAGE_INDICATORS = [
+  // English parking indicators
+  'domain is for sale',
+  'buy this domain',
+  'this domain has expired',
+  'parked free',
+  'domain parking',
+  'this domain is available',
+  'purchase this domain',
+  'domain may be for sale',
+  // Registrar parking pages
+  'godaddy',
+  'namecheap parking',
+  'sedo domain parking',
+  'dan.com',
+  'afternic',
+  'hugedomains',
+  // Chinese parking indicators
+  '域名出售',
+  '域名转让',
+  '购买此域名',
+  '域名已过期',
+  '此域名可出售',
+];
+
+/**
+ * Detect if HTML content is a parked/spam page
+ */
+function isParkingPage(html: string): boolean {
+  if (!html || html.length < 50) return false;
+
+  const lowerHtml = html.toLowerCase();
+
+  // Check for parking indicators
+  for (const indicator of PARKING_PAGE_INDICATORS) {
+    if (lowerHtml.includes(indicator.toLowerCase())) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ============================================================
+// CONTENT QUALITY CHECKS (Quality Layer 4)
+// ============================================================
+
+const MIN_CONTENT_LENGTH = 300;  // Up from 100 - require substantial content
+const MIN_PARAGRAPH_COUNT = 2;   // Require at least 2 meaningful paragraphs
+
+/**
+ * Check if content has sufficient quality (not just boilerplate)
+ */
+function hasQualityContent(text: string): boolean {
+  if (!text) return false;
+
+  // Check minimum length
+  if (text.length < MIN_CONTENT_LENGTH) return false;
+
+  // Split into paragraphs (sequences of text separated by double newlines or significant whitespace)
+  const paragraphs = text
+    .split(/\n\s*\n|\r\n\s*\r\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 50); // Only count paragraphs with 50+ chars
+
+  if (paragraphs.length < MIN_PARAGRAPH_COUNT) return false;
+
+  return true;
+}
 
 // LLM Configuration - supports DeepSeek (preferred) or Kimi fallback
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
@@ -96,18 +183,57 @@ function normalizeEncoding(encoding: string): string {
   return map[encoding.toLowerCase()] || 'utf-8';
 }
 
-// Fast fetch with axios (with proper encoding handling)
-async function fetchWithAxios(url: string): Promise<string> {
-  const response = await axios.get(url, {
-    timeout: 15000,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    },
-    maxRedirects: 5,
-    responseType: 'arraybuffer', // Get raw bytes
-  });
+// Fast fetch with axios (with proper encoding handling and validation)
+async function fetchWithAxios(url: string): Promise<FetchValidationResult> {
+  let response: AxiosResponse;
+  try {
+    response = await axios.get(url, {
+      timeout: 15000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      maxRedirects: 5,
+      responseType: 'arraybuffer', // Get raw bytes
+      validateStatus: (status) => status < 500, // Accept redirects and client errors for logging
+    });
+  } catch (error: any) {
+    // Network errors, timeouts, etc.
+    return {
+      valid: false,
+      reason: 'http_error',
+      statusCode: error.response?.status || 0,
+    };
+  }
+
+  // Check for HTTP errors (4xx, 5xx)
+  if (response.status >= 400) {
+    console.log(`[FETCH_VALIDATION] HTTP ${response.status} for ${url}`);
+    return {
+      valid: false,
+      reason: 'http_error',
+      statusCode: response.status,
+    };
+  }
+
+  // Check for cross-domain redirect (spam indicator)
+  const finalUrl = response.request?.res?.responseUrl || response.config?.url || url;
+  try {
+    const originalHost = new URL(url).hostname.replace(/^www\./, '');
+    const finalHost = new URL(finalUrl).hostname.replace(/^www\./, '');
+
+    if (originalHost !== finalHost) {
+      console.log(`[FETCH_VALIDATION] Cross-domain redirect: ${originalHost} → ${finalHost}`);
+      return {
+        valid: false,
+        reason: 'cross_domain_redirect',
+        finalUrl: finalUrl,
+      };
+    }
+  } catch {
+    // URL parsing error - continue with content
+  }
 
   const buffer = Buffer.from(response.data);
   const contentType = response.headers['content-type'];
@@ -124,9 +250,41 @@ async function fetchWithAxios(url: string): Promise<string> {
     html = buffer.toString('utf-8');
   }
 
+  // Check for parking page
+  if (isParkingPage(html)) {
+    console.log(`[FETCH_VALIDATION] Parking page detected: ${url}`);
+    return {
+      valid: false,
+      reason: 'parking_page',
+    };
+  }
+
   const $ = cheerio.load(html);
   $('script, style, nav, footer, header, aside, .ad, .advertisement').remove();
-  return $('body').text().replace(/\s+/g, ' ').trim().slice(0, 8000);
+  const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 8000);
+
+  // Check content quality
+  if (!hasQualityContent(text)) {
+    console.log(`[FETCH_VALIDATION] Low quality content (${text.length} chars): ${url}`);
+    return {
+      valid: false,
+      reason: 'low_quality_content',
+      content: text, // Still return content for logging purposes
+    };
+  }
+
+  return {
+    valid: true,
+    content: text,
+    statusCode: response.status,
+    finalUrl: finalUrl,
+  };
+}
+
+// Legacy wrapper for backward compatibility
+async function fetchWithAxiosLegacy(url: string): Promise<string> {
+  const result = await fetchWithAxios(url);
+  return result.content || '';
 }
 
 // Fallback fetch with Puppeteer for JS-rendered pages
@@ -187,21 +345,39 @@ async function fetchWithPuppeteer(url: string): Promise<string> {
   }
 }
 
-// Hybrid fetch: axios first, Puppeteer fallback
+// Hybrid fetch: axios first with validation, Puppeteer fallback
 export async function fetchPageContent(url: string): Promise<string> {
-  // Try axios first (faster, 90% success rate)
-  try {
-    const text = await fetchWithAxios(url);
-    if (text.length > 100) {
-      return text;
-    }
-  } catch (error) {
-    // axios failed, will try Puppeteer
+  // Try axios first (faster, 90% success rate) with quality validation
+  const axiosResult = await fetchWithAxios(url);
+
+  if (axiosResult.valid && axiosResult.content && axiosResult.content.length > 100) {
+    return axiosResult.content;
+  }
+
+  // If validation failed for quality reasons (not just empty), skip Puppeteer fallback
+  // These are unlikely to improve with JS rendering
+  if (axiosResult.reason === 'http_error' ||
+      axiosResult.reason === 'cross_domain_redirect' ||
+      axiosResult.reason === 'parking_page') {
+    console.log(`[FETCH] Skipping Puppeteer fallback due to: ${axiosResult.reason}`);
+    return '';
   }
 
   // Fallback to Puppeteer for JS-rendered or protected pages
   try {
     const text = await fetchWithPuppeteer(url);
+
+    // Also validate Puppeteer content for parking pages
+    if (isParkingPage(text)) {
+      console.log(`[FETCH_VALIDATION] Parking page detected (Puppeteer): ${url}`);
+      return '';
+    }
+
+    if (!hasQualityContent(text)) {
+      console.log(`[FETCH_VALIDATION] Low quality content (Puppeteer, ${text.length} chars): ${url}`);
+      return '';
+    }
+
     return text;
   } catch (error) {
     console.error(`Both methods failed for ${url}`);
