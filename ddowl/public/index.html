@@ -1363,6 +1363,123 @@
       color: #ff4757;
       border-color: #ff4757;
     }
+
+    /* Multi-Screening Trackers - shows multiple running/complete sessions */
+    .screening-trackers {
+      max-width: 900px;
+      margin: 0 auto 24px auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tracker-card {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .tracker-card.running { border-left: 3px solid #4a9eff; }
+    .tracker-card.complete { border-left: 3px solid #2ed573; }
+    .tracker-card.error { border-left: 3px solid #ff4757; }
+
+    .tracker-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tracker-name {
+      font-weight: 600;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tracker-status {
+      font-size: 11px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tracker-status.running { color: #4a9eff; }
+    .tracker-status.complete { color: #2ed573; }
+    .tracker-status.error { color: #ff4757; }
+
+    .tracker-progress-bar {
+      flex: 0 0 120px;
+      background: #222;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    .tracker-progress-fill {
+      background: linear-gradient(90deg, #4a9eff, #2ed573);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .tracker-card.complete .tracker-progress-fill {
+      width: 100%;
+      background: #2ed573;
+    }
+
+    .tracker-stats {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tracker-stats .red-count { color: #ff4757; }
+    .tracker-stats .amber-count { color: #ffa502; }
+
+    .tracker-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tracker-actions button {
+      padding: 6px 12px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .tracker-actions .btn-view {
+      background: #1a3a5c;
+      color: #4a9eff;
+    }
+
+    .tracker-actions .btn-view:hover {
+      background: #234b73;
+    }
+
+    .tracker-actions .btn-dismiss {
+      background: transparent;
+      color: #666;
+      padding: 6px 8px;
+    }
+
+    .tracker-actions .btn-dismiss:hover {
+      color: #ff4757;
+    }
+
     .btn-report {
       background: #2ed573;
       color: black;
@@ -1477,7 +1594,12 @@
         <p class="subtitle">Red Flag Detector</p>
       </header>
 
-      <!-- Progress Card - shows running/paused/complete states -->
+      <!-- Multi-Screening Trackers - shows all running and recent screenings -->
+      <div id="screeningTrackers" class="screening-trackers">
+        <!-- Tracker cards rendered dynamically by ScreeningTrackers.render() -->
+      </div>
+
+      <!-- Legacy Progress Card - hidden, replaced by trackers -->
       <div id="progressCard" class="progress-card" style="display: none;">
         <div class="progress-header">
           <div class="progress-title">
@@ -2032,8 +2154,159 @@
       clearCompleted() {
         const queue = this.getAll().filter(q => q.status !== 'complete');
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(queue));
+      },
+
+      // Cleanup old items (>24 hours) and keep max 10
+      cleanOldItems() {
+        const queue = this.getAll();
+        const now = Date.now();
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        const maxItems = 10;
+
+        // Filter out items older than 24 hours (except running)
+        let filtered = queue.filter(q =>
+          q.status === 'running' || (now - (q.completedAt || q.createdAt)) < maxAge
+        );
+
+        // Sort by most recent first, keep max items
+        filtered.sort((a, b) => {
+          // Running items first
+          if (a.status === 'running' && b.status !== 'running') return -1;
+          if (b.status === 'running' && a.status !== 'running') return 1;
+          // Then by completedAt/createdAt
+          return (b.completedAt || b.createdAt) - (a.completedAt || a.createdAt);
+        });
+
+        if (filtered.length > maxItems) {
+          filtered = filtered.slice(0, maxItems);
+        }
+
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filtered));
       }
     };
+
+    // ============================================================
+    // SCREENING TRACKERS - Multi-session tracker UI
+    // ============================================================
+    const ScreeningTrackers = {
+      MAX_VISIBLE: 6,
+
+      render() {
+        const container = document.getElementById('screeningTrackers');
+        const items = QueueManager.getAll();
+
+        // Filter to running, complete, error (not queued - those show in queue panel)
+        const running = items.filter(i => i.status === 'running');
+        const completed = items.filter(i => i.status === 'complete')
+          .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+        const errors = items.filter(i => i.status === 'error');
+
+        // Show running first, then completed (most recent), then errors, limit to MAX_VISIBLE
+        const visible = [...running, ...completed, ...errors].slice(0, this.MAX_VISIBLE);
+
+        if (visible.length === 0) {
+          container.innerHTML = '';
+          return;
+        }
+
+        container.innerHTML = visible.map(item => this.renderCard(item)).join('');
+      },
+
+      renderCard(item) {
+        const isRunning = item.status === 'running';
+        const isComplete = item.status === 'complete';
+        const isError = item.status === 'error';
+        const hasFindings = isComplete && item.findings?.length > 0;
+
+        const progress = item.progress || 0;
+        const stats = item.stats || { red: 0, amber: 0 };
+
+        // Status text
+        let statusText = '';
+        if (isRunning) {
+          statusText = `Screening... ${progress}%`;
+        } else if (isComplete) {
+          statusText = 'Complete';
+        } else if (isError) {
+          statusText = 'Error';
+        }
+
+        // Progress bar (only for running)
+        const progressBarHtml = isRunning
+          ? `<div class="tracker-progress-bar">
+               <div class="tracker-progress-fill" style="width: ${progress}%"></div>
+             </div>`
+          : '';
+
+        // Stats (for complete or running with findings)
+        const statsHtml = (isComplete || isRunning)
+          ? `<div class="tracker-stats">
+               <span class="red-count">${stats.red || 0} RED</span>
+               <span class="amber-count">${stats.amber || 0} AMB</span>
+             </div>`
+          : '';
+
+        // Actions
+        let actionsHtml = '';
+        if (hasFindings) {
+          actionsHtml = `
+            <button class="btn-view" onclick="viewQueueResults('${item.id}')">View</button>
+            <button class="btn-dismiss" onclick="dismissTracker('${item.id}')" title="Dismiss">&times;</button>
+          `;
+        } else if (isComplete || isError) {
+          actionsHtml = `
+            <button class="btn-dismiss" onclick="dismissTracker('${item.id}')" title="Dismiss">&times;</button>
+          `;
+        }
+
+        return `
+          <div class="tracker-card ${item.status}" data-tracker-id="${item.id}">
+            <div class="tracker-main">
+              <div class="tracker-name">${escapeHtml(item.subjectName)}</div>
+              <div class="tracker-status ${item.status}">${statusText}</div>
+            </div>
+            ${progressBarHtml}
+            ${statsHtml}
+            <div class="tracker-actions">
+              ${actionsHtml}
+            </div>
+          </div>
+        `;
+      },
+
+      updateProgress(itemId, progress, stats) {
+        // Update specific tracker card during SSE streaming (without full re-render)
+        const card = document.querySelector(`.tracker-card[data-tracker-id="${itemId}"]`);
+        if (!card) return;
+
+        // Update progress bar
+        const progressFill = card.querySelector('.tracker-progress-fill');
+        if (progressFill) {
+          progressFill.style.width = `${progress}%`;
+        }
+
+        // Update status text
+        const statusEl = card.querySelector('.tracker-status');
+        if (statusEl) {
+          statusEl.textContent = `Screening... ${progress}%`;
+        }
+
+        // Update stats if provided
+        if (stats) {
+          const redEl = card.querySelector('.red-count');
+          const amberEl = card.querySelector('.amber-count');
+          if (redEl) redEl.textContent = `${stats.red || 0} RED`;
+          if (amberEl) amberEl.textContent = `${stats.amber || 0} AMB`;
+        }
+      }
+    };
+
+    // Dismiss a tracker card
+    function dismissTracker(itemId) {
+      QueueManager.remove(itemId);
+      ScreeningTrackers.render();
+      renderQueue(); // Also update queue panel if needed
+    }
 
     // ============================================================
     // QUEUE PANEL RENDERING - Display and manage queue UI
@@ -2125,6 +2398,7 @@
     function removeQueueItem(itemId) {
       QueueManager.remove(itemId);
       renderQueue();
+      ScreeningTrackers.render();
     }
 
     function toggleQueuePanel() {
@@ -2143,6 +2417,7 @@
       if (confirm('Clear all queued (pending) subjects?')) {
         QueueManager.clearQueued();
         renderQueue();
+        ScreeningTrackers.render();
       }
     }
 
@@ -2150,6 +2425,7 @@
       if (confirm('Clear all completed screenings?')) {
         QueueManager.clearCompleted();
         renderQueue();
+        ScreeningTrackers.render();
       }
     }
 
@@ -2185,6 +2461,7 @@
       }
 
       renderQueue();
+      ScreeningTrackers.render();
     }
 
     // ============================================================
@@ -2204,6 +2481,7 @@
             console.log('[Queue] Found stuck running item, marking as error:', running.id);
             QueueManager.update(running.id, { status: 'error' });
             renderQueue();
+            ScreeningTrackers.render();
             // Now try again
             runNextInQueue();
             return;
@@ -2242,6 +2520,7 @@
       localStorage.setItem('ddowl_queueItemId', next.id);
       QueueManager.update(next.id, { status: 'running' });
       renderQueue();
+      ScreeningTrackers.render();
 
       // Set up the input as if user typed it (for existing startScreening logic)
       document.getElementById('nameInput').value = next.subjectName;
@@ -2549,6 +2828,13 @@
     // Initialize language list on page load + check for existing session + render recent sessions
     document.addEventListener('DOMContentLoaded', async () => {
       renderLanguageList();
+
+      // Clean up old items (>24 hours, max 10 items)
+      QueueManager.cleanOldItems();
+
+      // Render trackers immediately (before async restore completes)
+      ScreeningTrackers.render();
+
       await restoreQueueState(); // Restore queue state and render (checks server for running items)
 
       // Check if we're resuming from a URL with session ID
@@ -2628,7 +2914,23 @@
       // Update state
       progressState = { percentage, redCount, amberCount, subjectName, state };
 
-      // Show card
+      // Update tracker card in ScreeningTrackers (multi-session view)
+      if (currentQueueItemId && state === 'running') {
+        QueueManager.update(currentQueueItemId, {
+          progress: Math.round(percentage),
+          stats: { red: redCount, amber: amberCount }
+        });
+        ScreeningTrackers.updateProgress(currentQueueItemId, Math.round(percentage), { red: redCount, amber: amberCount });
+      }
+
+      // Hide legacy card for running/complete states (tracker handles these)
+      // Only show legacy card for paused state (needs Resume/Discard buttons)
+      if (state === 'running' || state === 'complete') {
+        card.style.display = 'none';
+        return; // Early return - trackers handle the display
+      }
+
+      // Show card only for paused state
       card.style.display = 'block';
       card.className = 'progress-card ' + state;
 
@@ -3085,6 +3387,10 @@
       if (savedQueueItemId && !currentQueueItemId) {
         currentQueueItemId = savedQueueItemId;
         console.log('[RESUME] Restored queue item ID:', savedQueueItemId);
+        // Update queue item to running and render trackers
+        QueueManager.update(savedQueueItemId, { status: 'running' });
+        ScreeningTrackers.render();
+        renderQueue();
       }
 
       // Clear pause flag on server FIRST
@@ -3330,6 +3636,7 @@
               currentQueueItemId = null;
               localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
+              ScreeningTrackers.render();
 
               // Auto-run next in queue after short delay
               setTimeout(() => {
@@ -3355,6 +3662,7 @@
               currentQueueItemId = null;
               localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
+              ScreeningTrackers.render();
             }
           }
 
@@ -3592,7 +3900,31 @@
         }
       });
 
-      // ALWAYS start fresh - clear any old session
+      // Create queue item if not already set (direct Screen button click, not from queue)
+      if (!currentQueueItemId) {
+        const newItem = QueueManager.add({
+          name: name,
+          variants: additionalVariations,
+          language: language
+        });
+        currentQueueItemId = newItem.id;
+        localStorage.setItem('ddowl_queueItemId', newItem.id);
+      }
+
+      // Mark queue item as running
+      QueueManager.update(currentQueueItemId, { status: 'running', progress: 0 });
+
+      // Clear input field (keep old results in queue, but clear input for next use)
+      document.getElementById('nameInput').value = '';
+      document.querySelectorAll('.variation-input').forEach(input => {
+        input.value = '';
+      });
+
+      // Render trackers (shows this new running item alongside completed ones)
+      ScreeningTrackers.render();
+      renderQueue();
+
+      // Start fresh session for THIS screening
       sessionId = null;
       localStorage.removeItem('ddowl_sessionId');
       localStorage.removeItem('ddowl_sessionName');
@@ -4142,6 +4474,7 @@
               currentQueueItemId = null;
               localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
+              ScreeningTrackers.render();
 
               // Auto-run next in queue after short delay
               setTimeout(() => {
@@ -4167,6 +4500,7 @@
               currentQueueItemId = null;
               localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
+              ScreeningTrackers.render();
             }
           }
 
@@ -4194,6 +4528,7 @@
               currentQueueItemId = null;
               localStorage.removeItem('ddowl_queueItemId');
               renderQueue();
+              ScreeningTrackers.render();
             }
           }
         };
