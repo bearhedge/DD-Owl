@@ -644,31 +644,7 @@
     }
 
     function populateYearFilter() {
-      const years = new Set();
-      allData.forEach(row => {
-        if (row.date) {
-          const parts = row.date.split('/');
-          if (parts.length === 3) years.add(parts[2]);
-        }
-      });
-
-      const sortedYears = Array.from(years).sort().reverse();
-      const container = document.getElementById('year-pills');
-
-      container.innerHTML = `
-        <button class="year-pill active" data-year="">All</button>
-        ${sortedYears.map(y => `<button class="year-pill" data-year="${y}">${y}</button>`).join('')}
-      `;
-
-      // Add click handlers
-      container.querySelectorAll('.year-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-          container.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
-          pill.classList.add('active');
-          currentYearFilter = pill.dataset.year;
-          applyFilters();
-        });
-      });
+      // Year filter removed - using search bar instead
     }
 
     function applyFilters() {
@@ -873,30 +849,7 @@
     // ========== ACTIVE DEALS FUNCTIONS ==========
 
     function populateActiveYearFilter() {
-      const years = new Set();
-      activeData.forEach(row => {
-        if (row.ocDate) {
-          const parts = row.ocDate.split('/');
-          if (parts.length === 3) years.add(parts[2]);
-        }
-      });
-
-      const sortedYears = Array.from(years).sort().reverse();
-      const container = document.getElementById('active-year-pills');
-
-      container.innerHTML = `
-        <button class="year-pill active" data-year="">All</button>
-        ${sortedYears.map(y => `<button class="year-pill" data-year="${y}">${y}</button>`).join('')}
-      `;
-
-      container.querySelectorAll('.year-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-          container.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
-          pill.classList.add('active');
-          activeYearFilter = pill.dataset.year;
-          applyActiveFilters();
-        });
-      });
+      // Year filter removed - using search bar instead
     }
 
     function applyActiveFilters() {
