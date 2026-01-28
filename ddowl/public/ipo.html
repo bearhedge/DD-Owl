@@ -290,6 +290,25 @@
       font-weight: 600;
       text-align: right;
     }
+    .sector-cell {
+      color: #888;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 130px;
+    }
+    .dual-listing-cell {
+      text-align: center;
+    }
+    .ah-badge {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ffc107 100%);
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
     .no-size-label {
       color: #666;
       font-size: 0.85em;
@@ -454,11 +473,13 @@
     // Column configuration - order can be changed by user
     let columns = [
       { id: 'ticker', label: 'Ticker', width: 70, visible: true, sortable: true },
-      { id: 'company', label: 'Company', width: 400, visible: true, sortable: true },
+      { id: 'company', label: 'Company', width: 350, visible: true, sortable: true },
       { id: 'date', label: 'Date', width: 90, visible: true, sortable: true },
       { id: 'sizeHKDm', label: 'Size (HKDm)', width: 100, visible: true, sortable: true },
-      { id: 'sponsors', label: 'Sponsors', width: 250, visible: true, sortable: false },
-      { id: 'others', label: 'Others', width: 300, visible: true, sortable: false },
+      { id: 'sector', label: 'Sector', width: 130, visible: true, sortable: true },
+      { id: 'isDualListing', label: 'A+H', width: 50, visible: true, sortable: true },
+      { id: 'sponsors', label: 'Sponsors', width: 200, visible: true, sortable: false },
+      { id: 'others', label: 'Others', width: 250, visible: true, sortable: false },
     ];
 
     // Format company name with Chinese below English, and remove comma from Co., Ltd.
@@ -511,6 +532,8 @@
             shares: parseFloat(row.shares) || null,
             price: parseFloat(row.price_hkd) || null,
             sizeHKDm: isNaN(parseFloat(row.size_hkdm)) ? (row.size_hkdm || null) : parseFloat(row.size_hkdm),
+            sector: row.sector || '',
+            isDualListing: row.is_dual_listing === 'Y',
             sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
             others: row.others ? row.others.split('; ').filter(Boolean) : [],
             prospectusUrl: row.prospectus_url || ''
@@ -759,6 +782,10 @@
           return `<td class="date-cell">${formatDate(row.date)}</td>`;
         case 'sizeHKDm':
           return `<td class="size-cell">${formatSize(row.sizeHKDm, row.type)}</td>`;
+        case 'sector':
+          return `<td class="sector-cell">${row.sector ? escapeHtml(row.sector) : '-'}</td>`;
+        case 'isDualListing':
+          return `<td class="dual-listing-cell">${row.isDualListing ? '<span class="ah-badge">A+H</span>' : ''}</td>`;
         case 'sponsors':
           return `<td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
         case 'others':
