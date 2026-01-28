@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IPO Tracker - DD Owl</title>
+  <title>DDL</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <style>
@@ -132,19 +132,16 @@
       background: #111;
       border-color: #333;
     }
-    /* Year Pills */
-    .year-pills {
-      display: flex;
-      gap: 4px;
-      overflow-x: auto;
+    /* Spacer for toolbar */
+    .toolbar-spacer {
       flex: 1;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
     }
-    .year-pills::-webkit-scrollbar {
+    /* Year Pills - REMOVED, using search instead */
+    .year-pills {
       display: none;
     }
     .year-pill {
+      display: none;
       padding: 8px 14px;
       background: transparent;
       border: none;
@@ -187,6 +184,28 @@
       text-align: left;
       font-weight: 600;
       color: #888;
+      position: relative;
+      user-select: none;
+    }
+    th.dragging {
+      opacity: 0.5;
+      background: #2a2a3a;
+    }
+    th.drag-over {
+      border-left: 2px solid #4a9eff;
+    }
+    th .resize-handle {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 6px;
+      cursor: col-resize;
+      background: transparent;
+    }
+    th .resize-handle:hover,
+    th .resize-handle.resizing {
+      background: #4a9eff;
       border-bottom: 1px solid #222;
       cursor: pointer;
       user-select: none;
@@ -407,9 +426,9 @@
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
-          <input type="text" class="search-box" id="active-search" placeholder="Search companies, banks...">
+          <input type="text" class="search-box" id="active-search" placeholder="Search companies, banks, year (e.g. 2024)...">
         </div>
-        <div class="year-pills" id="active-year-pills"></div>
+        <div class="toolbar-spacer"></div>
         <span class="count-badge" id="active-count-badge">Loading...</span>
       </div>
       <div class="table-container">
@@ -429,9 +448,9 @@
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
-          <input type="text" class="search-box" id="search" placeholder="Search companies, tickers, banks...">
+          <input type="text" class="search-box" id="search" placeholder="Search companies, tickers, banks, year (e.g. 2024)...">
         </div>
-        <div class="year-pills" id="year-pills"></div>
+        <div class="toolbar-spacer"></div>
         <span class="count-badge" id="count-badge">Loading...</span>
       </div>
       <div class="table-container">
@@ -655,19 +674,17 @@
 
       filteredData = allData.filter(row => {
         if (search) {
+          // Include date/year in searchable fields
           const searchFields = [
             row.company,
             row.companyCn,
             row.ticker,
+            row.date,
+            row.sector,
             ...row.sponsors,
             ...row.others
           ].join(' ').toLowerCase();
           if (!searchFields.includes(search)) return false;
-        }
-
-        if (currentYearFilter) {
-          const parts = (row.date || '').split('/');
-          if (parts.length !== 3 || parts[2] !== currentYearFilter) return false;
         }
 
         return true;
@@ -688,14 +705,16 @@
       const visibleCols = columns.filter(c => c.visible);
       const thead = document.querySelector('#data-table thead');
 
-      // Build header row
-      thead.innerHTML = `<tr>${visibleCols.map(col => {
+      // Build header row with resize handles and drag support
+      thead.innerHTML = `<tr>${visibleCols.map((col, idx) => {
         const sortClass = sortColumn === col.id ? (sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
         const sortAttr = col.sortable ? `data-sort="${col.id}"` : '';
-        return `<th ${sortAttr} style="width: ${col.width}px;" class="${sortClass}">${col.label}</th>`;
+        return `<th ${sortAttr} data-col-id="${col.id}" data-col-idx="${idx}" draggable="true" style="width: ${col.width}px;" class="${sortClass}">${col.label}<span class="resize-handle" data-col-idx="${idx}"></span></th>`;
       }).join('')}</tr>`;
 
       initSortHandlers();
+      initColumnResize('#data-table', columns);
+      initColumnDrag('#data-table', columns, () => { renderTableWithColumns(); renderTable(); });
       renderTable();
     }
 
@@ -883,17 +902,14 @@
 
       activeFilteredData = activeData.filter(row => {
         if (search) {
+          // Include date/year in searchable fields
           const searchFields = [
             row.company,
+            row.ocDate,
             ...row.sponsors,
             ...row.others
           ].join(' ').toLowerCase();
           if (!searchFields.includes(search)) return false;
-        }
-
-        if (activeYearFilter) {
-          const parts = (row.ocDate || '').split('/');
-          if (parts.length !== 3 || parts[2] !== activeYearFilter) return false;
         }
 
         return true;
@@ -937,13 +953,15 @@
       const visibleCols = activeColumns.filter(c => c.visible);
       const thead = document.querySelector('#active-table thead');
 
-      thead.innerHTML = `<tr>${visibleCols.map(col => {
+      thead.innerHTML = `<tr>${visibleCols.map((col, idx) => {
         const sortClass = activeSortColumn === col.id ? (activeSortDir === 'asc' ? 'sorted-asc' : 'sorted-desc') : '';
         const sortAttr = col.sortable ? `data-sort="${col.id}"` : '';
-        return `<th ${sortAttr} style="width: ${col.width}px;" class="${sortClass}">${col.label}</th>`;
+        return `<th ${sortAttr} data-col-id="${col.id}" data-col-idx="${idx}" draggable="true" style="width: ${col.width}px;" class="${sortClass}">${col.label}<span class="resize-handle" data-col-idx="${idx}"></span></th>`;
       }).join('')}</tr>`;
 
       initActiveSortHandlers();
+      initColumnResize('#active-table', activeColumns);
+      initColumnDrag('#active-table', activeColumns, () => { renderActiveTableWithColumns(); renderActiveTable(); });
       renderActiveTable();
     }
 
@@ -1028,6 +1046,101 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Column resize functionality
+    function initColumnResize(tableSelector, columnsArr) {
+      const table = document.querySelector(tableSelector);
+      const handles = table.querySelectorAll('.resize-handle');
+
+      handles.forEach(handle => {
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const colIdx = parseInt(handle.dataset.colIdx);
+          const th = handle.parentElement;
+          const startX = e.pageX;
+          const startWidth = th.offsetWidth;
+
+          handle.classList.add('resizing');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          function onMouseMove(e) {
+            const diff = e.pageX - startX;
+            const newWidth = Math.max(50, startWidth + diff);
+            th.style.width = newWidth + 'px';
+            columnsArr[colIdx].width = newWidth;
+          }
+
+          function onMouseUp() {
+            handle.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          }
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+      });
+    }
+
+    // Column drag-to-reorder functionality
+    function initColumnDrag(tableSelector, columnsArr, rerenderFn) {
+      const table = document.querySelector(tableSelector);
+      const ths = table.querySelectorAll('th[draggable="true"]');
+      let draggedIdx = null;
+
+      ths.forEach(th => {
+        th.addEventListener('dragstart', (e) => {
+          // Don't drag if clicking resize handle
+          if (e.target.classList.contains('resize-handle')) {
+            e.preventDefault();
+            return;
+          }
+          draggedIdx = parseInt(th.dataset.colIdx);
+          th.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+
+        th.addEventListener('dragend', () => {
+          th.classList.remove('dragging');
+          table.querySelectorAll('th').forEach(h => h.classList.remove('drag-over'));
+          draggedIdx = null;
+        });
+
+        th.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+        });
+
+        th.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          if (draggedIdx !== null && parseInt(th.dataset.colIdx) !== draggedIdx) {
+            th.classList.add('drag-over');
+          }
+        });
+
+        th.addEventListener('dragleave', () => {
+          th.classList.remove('drag-over');
+        });
+
+        th.addEventListener('drop', (e) => {
+          e.preventDefault();
+          th.classList.remove('drag-over');
+          const dropIdx = parseInt(th.dataset.colIdx);
+
+          if (draggedIdx !== null && draggedIdx !== dropIdx) {
+            // Reorder columns array
+            const [removed] = columnsArr.splice(draggedIdx, 1);
+            columnsArr.splice(dropIdx, 0, removed);
+            rerenderFn();
+          }
+        });
+      });
     }
 
     // Open prospectus PDF
