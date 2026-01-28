@@ -780,7 +780,13 @@
         case 'sizeHKDm':
           return `<td class="size-cell">${formatSize(row.sizeHKDm, row.type)}</td>`;
         case 'sector':
-          return `<td class="sector-cell">${row.sector ? escapeHtml(row.sector) : '-'}</td>`;
+          const shortSector = (row.sector || '')
+            .replace('Information Technology', 'IT')
+            .replace('Health Care', 'Healthcare')
+            .replace('Consumer Discretionary', 'Consumer Disc.')
+            .replace('Consumer Staples', 'Consumer Stpls.')
+            .replace('Communication Services', 'Comms');
+          return `<td class="sector-cell">${shortSector ? escapeHtml(shortSector) : '-'}</td>`;
         case 'isDualListing':
           return `<td class="dual-listing-cell">${row.isDualListing ? '<span class="ah-badge">A+H</span>' : ''}</td>`;
         case 'sponsors':
