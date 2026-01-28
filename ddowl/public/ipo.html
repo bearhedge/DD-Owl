@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DD Owl</title>
+  <title>IPO Tracker - DD Owl</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <style>
@@ -308,26 +308,6 @@
     .section { display: none; }
     .section.active { display: block; }
 
-    /* Sector tag styling */
-    .sector-tag {
-      background: #1a1a2a;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      color: #88a;
-    }
-
-    /* A+H badge styling */
-    .ah-badge {
-      background: #2a1a1a;
-      border: 1px solid #c44;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      color: #e66;
-      font-weight: 600;
-    }
-
     /* Pipeline placeholder */
     .pipeline-placeholder {
       background: #111;
@@ -432,7 +412,6 @@
           </svg>
           <input type="text" class="search-box" id="search" placeholder="Search companies, tickers, banks...">
         </div>
-        <div class="year-pills" id="board-pills" style="flex-shrink: 0;"></div>
         <div class="year-pills" id="year-pills"></div>
         <span class="count-badge" id="count-badge">Loading...</span>
       </div>
@@ -455,7 +434,6 @@
     let currentPage = 1;
     const pageSize = 50;
     let currentYearFilter = '';
-    let currentBoardFilter = '';  // '' = all, 'mainBoard', 'gem'
 
     // Active deals state
     let activeData = [];
@@ -477,8 +455,6 @@
     let columns = [
       { id: 'ticker', label: 'Ticker', width: 70, visible: true, sortable: true },
       { id: 'company', label: 'Company', width: 400, visible: true, sortable: true },
-      { id: 'sector', label: 'Sector', width: 120, visible: true, sortable: true },
-      { id: 'isAH', label: 'A+H', width: 50, visible: true, sortable: true },
       { id: 'date', label: 'Date', width: 90, visible: true, sortable: true },
       { id: 'sizeHKDm', label: 'Size (HKDm)', width: 100, visible: true, sortable: true },
       { id: 'sponsors', label: 'Sponsors', width: 250, visible: true, sortable: false },
@@ -508,69 +484,40 @@
       });
     });
 
-    // Convert ISO date (YYYY-MM-DD) to DD/MM/YYYY for display consistency
-    function isoToDisplay(isoDate) {
-      if (!isoDate) return '';
-      const parts = isoDate.split('-');
-      if (parts.length !== 3) return isoDate;
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-
-    // Load historical deals from API (Main Board + GEM)
+    // Load enriched CSV data (already grouped by deal)
     async function loadData() {
       try {
-        // Fetch Main Board and GEM data in parallel
-        const [mainResponse, gemResponse] = await Promise.all([
-          fetch('/api/ipo/historical'),
-          fetch('/api/ipo/gem')
-        ]);
+        const response = await fetch('/baseline-enriched.csv');
+        const text = await response.text();
+        const lines = text.replace(/^\uFEFF/, '').replace(/\r/g, '').split('\n');
+        const headers = parseCSVLine(lines[0]);
 
-        const mainData = await mainResponse.json();
-        const gemData = await gemResponse.json();
+        allData = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = parseCSVLine(lines[i]);
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = values[idx] || '';
+          });
 
-        // Map Main Board deals
-        const mainDeals = mainData.deals.map(deal => ({
-          ticker: deal.ticker,
-          company: deal.company,
-          companyCn: deal.companyCn || '',
-          type: deal.type,
-          date: isoToDisplay(deal.date),  // Convert to DD/MM/YYYY
-          shares: deal.shares,
-          price: deal.priceHkd,
-          sizeHKDm: deal.sizeHkdm,
-          sponsors: deal.sponsors || [],
-          others: deal.others || [],
-          prospectusUrl: deal.prospectusUrl || '',
-          board: deal.board || 'mainBoard',
-          sector: deal.sector || '',
-          isAHListing: deal.isAHListing || false,
-          aShareTicker: deal.aShareTicker || ''
-        }));
-
-        // Map GEM deals (date is already in DD/MM/YYYY format from CSV)
-        const gemDeals = gemData.deals.map(deal => ({
-          ticker: deal.ticker,
-          company: deal.company,
-          companyCn: deal.companyCn || '',
-          type: deal.type,
-          date: deal.date,  // Already DD/MM/YYYY
-          shares: deal.shares,
-          price: deal.priceHkd,
-          sizeHKDm: deal.sizeHkdm,
-          sponsors: deal.sponsors || [],
-          others: deal.others || [],
-          prospectusUrl: deal.prospectusUrl || '',
-          board: 'gem',
-          sector: deal.sector || '',
-          isAHListing: deal.isAHListing || false,
-          aShareTicker: deal.aShareTicker || ''
-        }));
-
-        // Combine both
-        allData = [...mainDeals, ...gemDeals];
+          // Parse enriched format
+          allData.push({
+            ticker: row.ticker,
+            company: row.company,
+            companyCn: row.company_cn || '',
+            type: row.type,
+            date: row.date,
+            shares: parseFloat(row.shares) || null,
+            price: parseFloat(row.price_hkd) || null,
+            sizeHKDm: isNaN(parseFloat(row.size_hkdm)) ? (row.size_hkdm || null) : parseFloat(row.size_hkdm),
+            sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
+            others: row.others ? row.others.split('; ').filter(Boolean) : [],
+            prospectusUrl: row.prospectus_url || ''
+          });
+        }
 
         populateYearFilter();
-        populateBoardFilter();
         updateTabCounts();
         applyFilters();
       } catch (err) {
@@ -581,19 +528,31 @@
       }
     }
 
-    // Load active deals from API
+    // Load active deals CSV
     async function loadActiveData() {
       try {
-        const response = await fetch('/api/ipo/active');
-        const data = await response.json();
+        const response = await fetch('/active-deals.csv');
+        const text = await response.text();
+        const lines = text.replace(/^\uFEFF/, '').replace(/\r/g, '').split('\n');
+        const headers = parseCSVLine(lines[0]);
 
-        activeData = data.deals.map(deal => ({
-          company: deal.company,
-          ocDate: isoToDisplay(deal.ocDate),  // Convert to DD/MM/YYYY
-          sponsors: deal.sponsors || [],
-          others: deal.others || [],
-          documentUrl: deal.documentUrl || ''
-        }));
+        activeData = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = parseCSVLine(lines[i]);
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = values[idx] || '';
+          });
+
+          activeData.push({
+            company: row.company,
+            ocDate: row.oc_date,
+            sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
+            others: row.others ? row.others.split('; ').filter(Boolean) : [],
+            documentUrl: row.document_url || ''
+          });
+        }
 
         populateActiveYearFilter();
         updateTabCounts();
@@ -635,10 +594,8 @@
       const activeCount = activeData.length;
       document.getElementById('active-count').textContent = `(${activeCount})`;
 
-      // Historical count = total items (Main Board + GEM)
+      // Historical count = total items
       const historicalCount = allData.length;
-      const mainCount = allData.filter(d => d.board === 'mainBoard').length;
-      const gemCount = allData.filter(d => d.board === 'gem').length;
       document.getElementById('historical-count').textContent = `(${historicalCount.toLocaleString()})`;
     }
 
@@ -670,29 +627,6 @@
       });
     }
 
-    function populateBoardFilter() {
-      const mainCount = allData.filter(d => d.board === 'mainBoard').length;
-      const gemCount = allData.filter(d => d.board === 'gem').length;
-
-      const container = document.getElementById('board-pills');
-      if (!container) return;
-
-      container.innerHTML = `
-        <button class="year-pill active" data-board="">All (${(mainCount + gemCount).toLocaleString()})</button>
-        <button class="year-pill" data-board="mainBoard">Main (${mainCount.toLocaleString()})</button>
-        <button class="year-pill" data-board="gem">GEM (${gemCount.toLocaleString()})</button>
-      `;
-
-      container.querySelectorAll('.year-pill').forEach(pill => {
-        pill.addEventListener('click', () => {
-          container.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
-          pill.classList.add('active');
-          currentBoardFilter = pill.dataset.board;
-          applyFilters();
-        });
-      });
-    }
-
     function applyFilters() {
       const search = document.getElementById('search').value.toLowerCase();
 
@@ -711,10 +645,6 @@
         if (currentYearFilter) {
           const parts = (row.date || '').split('/');
           if (parts.length !== 3 || parts[2] !== currentYearFilter) return false;
-        }
-
-        if (currentBoardFilter) {
-          if (row.board !== currentBoardFilter) return false;
         }
 
         return true;
@@ -784,10 +714,6 @@
         } else if (sortColumn === 'ticker' || sortColumn === 'sizeHKDm') {
           aVal = parseFloat(aVal) || 0;
           bVal = parseFloat(bVal) || 0;
-        } else if (sortColumn === 'isAH') {
-          // Sort A+H: true values first when ascending
-          aVal = a.isAHListing ? 1 : 0;
-          bVal = b.isAHListing ? 1 : 0;
         } else {
           aVal = String(aVal).toLowerCase();
           bVal = String(bVal).toLowerCase();
@@ -829,14 +755,6 @@
           const displayHtml = formatCompanyName(row.company, row.companyCn, true);
           const plainName = formatCompanyName(row.company, row.companyCn, false);
           return `<td class="company-name" title="${escapeHtml(plainName)}">${displayHtml}</td>`;
-        case 'sector':
-          return row.sector
-            ? `<td><span class="sector-tag">${escapeHtml(row.sector)}</span></td>`
-            : `<td>-</td>`;
-        case 'isAH':
-          return row.isAHListing
-            ? `<td><span class="ah-badge" title="${row.aShareTicker || 'A+H'}">A+H</span></td>`
-            : `<td>-</td>`;
         case 'date':
           return `<td class="date-cell">${formatDate(row.date)}</td>`;
         case 'sizeHKDm':
@@ -1126,8 +1044,6 @@
             switch(col.id) {
               case 'ticker': value = row.ticker; break;
               case 'company': value = formatCompanyName(row.company, row.companyCn); break;
-              case 'sector': value = row.sector || ''; break;
-              case 'isAH': value = row.isAHListing ? 'Yes' : ''; break;
               case 'date': value = row.date; break;
               case 'sizeHKDm': value = row.sizeHKDm || ''; break;
               case 'sponsors': value = row.sponsors.join('; '); break;

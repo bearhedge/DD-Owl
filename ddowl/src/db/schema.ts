@@ -16,9 +16,6 @@ export const dealStatusEnum = pgEnum('deal_status', ['active', 'listed', 'withdr
 export const bankRoleEnum = pgEnum('bank_role', ['sponsor', 'coordinator', 'bookrunner', 'leadManager', 'other']);
 export const bankTierEnum = pgEnum('bank_tier', ['tier1', 'tier2', 'tier3', 'boutique']);
 
-// Unified IPO pipeline status
-export const ipoStatusEnum = pgEnum('ipo_status', ['filed', 'listed', 'withdrawn', 'lapsed']);
-
 // ============================================================
 // IPO TRACKER TABLES
 // ============================================================
@@ -139,74 +136,6 @@ export const scrapeRuns = pgTable('scrape_runs', {
 });
 
 // ============================================================
-// UNIFIED IPO PIPELINE TABLE
-// ============================================================
-
-/**
- * IPO Deals - Unified table for all HKEX IPOs (filed + listed)
- *
- * This is the main table for the IPO pipeline tracking system.
- * - 'filed' = OC announcement received, awaiting listing
- * - 'listed' = Successfully listed with stock code
- * - 'withdrawn' = Application withdrawn
- * - 'lapsed' = Application lapsed (6 months without listing)
- */
-export const ipoDeals = pgTable('ipo_deals', {
-  id: serial('id').primaryKey(),
-
-  // Identity
-  companyName: text('company_name').notNull(),
-  companyNameCn: text('company_name_cn'),
-
-  // Lifecycle status
-  status: ipoStatusEnum('status').notNull().default('filed'),
-
-  // Dates
-  ocDate: date('oc_date'),           // First OC announcement date
-  listingDate: date('listing_date'), // When ticker assigned (null if filed)
-
-  // Listing details
-  ticker: varchar('ticker', { length: 10 }),  // Stock code (null until listed)
-  board: boardEnum('board').default('mainBoard'),
-
-  // Deal metrics
-  shares: decimal('shares', { precision: 15, scale: 0 }),
-  priceHkd: decimal('price_hkd', { precision: 10, scale: 2 }),
-  sizeHkdm: decimal('size_hkdm', { precision: 12, scale: 2 }),
-  sizeLabel: varchar('size_label', { length: 50 }), // e.g., "Introduction", "Transfer", "SPAC"
-
-  // Deal type
-  dealType: varchar('deal_type', { length: 100 }), // e.g., "Global offering", "Listing by Introduction"
-
-  // Syndicate (stored as arrays for fast queries)
-  sponsors: text('sponsors').array(),  // ["CICC", "Goldman Sachs"]
-  others: text('others').array(),      // ["CMB", "Haitong"]
-
-  // Sector/Industry
-  sector: varchar('sector', { length: 100 }),
-
-  // A+H Dual Listing
-  isAHListing: boolean('is_ah_listing').default(false),
-  aShareTicker: varchar('a_share_ticker', { length: 20 }),
-
-  // Source tracking
-  hkexAppId: varchar('hkex_app_id', { length: 50 }),
-  prospectusUrl: varchar('prospectus_url', { length: 500 }),
-  documentUrl: varchar('document_url', { length: 500 }), // OC announcement URL
-
-  // Scraping metadata
-  lastScrapedAt: timestamp('last_scraped_at'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-}, (table) => ({
-  statusIdx: index('ipo_deals_status_idx').on(table.status),
-  listingDateIdx: index('ipo_deals_listing_date_idx').on(table.listingDate),
-  ocDateIdx: index('ipo_deals_oc_date_idx').on(table.ocDate),
-  tickerIdx: index('ipo_deals_ticker_idx').on(table.ticker),
-  companyNameIdx: index('ipo_deals_company_name_idx').on(table.companyName),
-}));
-
-// ============================================================
 // RELATIONS
 // ============================================================
 
@@ -263,6 +192,3 @@ export type NewDealAppointment = typeof dealAppointments.$inferInsert;
 
 export type OCAnnouncement = typeof ocAnnouncements.$inferSelect;
 export type NewOCAnnouncement = typeof ocAnnouncements.$inferInsert;
-
-export type IpoDeal = typeof ipoDeals.$inferSelect;
-export type NewIpoDeal = typeof ipoDeals.$inferInsert;
