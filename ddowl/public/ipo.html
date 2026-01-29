@@ -505,6 +505,18 @@
       { id: 'others', label: 'Others', width: 250, visible: true, sortable: false },
     ];
 
+    // Dual listing exchange lookup (HK+SH = Shanghai, HK+SZ = Shenzhen)
+    const DUAL_EXCHANGE = {
+      '300': 'HK+SZ', '1304': 'HK+SH', '1347': 'HK+SH', '1354': 'HK+SH', '1375': 'HK+SH',
+      '1501': 'HK+SH', '1530': 'HK+SH', '1679': 'HK+SH', '1786': 'HK+SH', '1858': 'HK+SH',
+      '1877': 'HK+SH', '2016': 'HK+SH', '2359': 'HK+SH', '2611': 'HK+SH', '2648': 'HK+SH',
+      '3288': 'HK+SH', '3347': 'HK+SZ', '3606': 'HK+SH', '3678': 'HK+SZ', '3750': 'HK+SZ',
+      '3759': 'HK+SZ', '3908': 'HK+SH', '3958': 'HK+SH', '3969': 'HK+SH', '3996': 'HK+SH',
+      '6066': 'HK+SH', '6099': 'HK+SH', '6127': 'HK+SH', '6160': 'HK+SH', '6178': 'HK+SH',
+      '6655': 'HK+SH', '6680': 'HK+SZ', '6693': 'HK+SH', '6821': 'HK+SZ', '6826': 'HK+SH',
+      '6886': 'HK+SH', '9989': 'HK+SZ',
+    };
+
     // Format company name with Chinese below English, and remove comma from Co., Ltd.
     function formatCompanyName(company, companyCn, asHtml = false) {
       // Remove comma from "Co., Ltd." → "Co. Ltd."
@@ -791,7 +803,8 @@
           }
           return `<td class="industry-cell">${industryDisplay ? escapeHtml(industryDisplay) : '-'}</td>`;
         case 'isDualListing':
-          return `<td class="dual-listing-cell">${row.isDualListing ? '<span class="ah-badge">A+H</span>' : ''}</td>`;
+          const exchange = DUAL_EXCHANGE[row.ticker] || (row.isDualListing ? 'A+H' : '');
+          return `<td class="dual-listing-cell">${exchange ? '<span class="ah-badge">' + exchange + '</span>' : ''}</td>`;
         case 'sponsors':
           return `<td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
         case 'others':
