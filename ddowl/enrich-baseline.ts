@@ -106,47 +106,6 @@ const KNOWN_SIZES: Record<number, number> = {
   3799: 10419, // Dali Foods Group - 1,694,117,500 × HK$6.15 (~HK$10.4B)
 };
 
-// Known deal types that can't be auto-detected from type field
-// These are listings where the type field says "Global offering" but it's actually Introduction/Transfer/etc.
-const KNOWN_DEAL_TYPES: Record<number, string> = {
-  // Listing by Introduction (secondary listings, spin-offs)
-  3896: 'Introduction', // Kingsoft Cloud - secondary listing from NASDAQ
-  6690: 'Introduction', // Haier Smart Home - secondary listing from Shanghai
-  6655: 'Introduction', // Huaxin Cement - secondary listing from Shanghai
-  2202: 'Introduction', // China Vanke - secondary listing from Shenzhen
-  1113: 'Introduction', // Cheung Kong Property - spin-off from CK Hutchison
-  2669: 'Introduction', // China Overseas Property - spin-off
-  587: 'Introduction', // China Conch Environment - spin-off
-  6623: 'Introduction', // Lufax - secondary listing from NYSE
-  6638: 'Introduction', // OneConnect - secondary listing from NYSE
-  1997: 'Introduction', // Wharf REIC - spin-off
-  807: 'Introduction', // SIIC Environment - restructuring
-  2156: 'Introduction', // C&D Property Management - spin-off
-  3839: 'Introduction', // Chia Tai Enterprises - restructuring
-  2136: 'Introduction', // Lifestyle China - restructuring
-  2421: 'Introduction', // KRP Development - restructuring
-  1466: 'Introduction', // Man Sang Jewellery - restructuring
-  1897: 'Introduction', // Million Hope - restructuring
-  1861: 'Introduction', // Precious Dragon - restructuring
-  1583: 'Introduction', // Qinqin Foodstuffs - restructuring
-  1570: 'Introduction', // Weiye Holdings - restructuring
-  9658: 'Introduction', // Super Hi International - spin-off from Haidilao
-  6098: 'Introduction', // Country Garden Services - spin-off
-  // Transfer from GEM to Main Board
-  1402: 'Transfer', // i-Control - transfer from GEM 8355
-  9882: 'Transfer', // Best Linking Group
-  9900: 'Transfer', // Gain Plus
-  6663: 'Transfer', // IWS Group
-  9689: 'Transfer', // JTF International
-  2295: 'Transfer', // Maxicity
-  933: 'Transfer', // VIVA GOODS
-  // De-SPACs
-  2562: 'De-SPAC', // Synagistics - merged from SPAC
-  6676: 'De-SPAC', // ZG Group - merged from SPAC
-  // Cancelled
-  1573: 'Cancelled', // China Unienergy - delisted/cancelled
-};
-
 // Corrected prospectus URLs (original URLs were wrong, causing extraction failures)
 const KNOWN_URLS: Record<number, string> = {
   2115: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0922/2020092200019.pdf', // Channel Micron
@@ -196,9 +155,9 @@ async function main() {
   const metrics = loadExcelMetrics();
   console.log(`Loaded ${metrics.size} deal metrics from Excel`);
 
-  // Step 1b: Load dates and PDF URLs from Index sheet
-  const { dates, pdfUrls } = loadDatesAndUrlsFromIndex();
-  console.log(`Loaded ${dates.size} dates and ${pdfUrls.size} PDF URLs from Excel Index sheet`);
+  // Step 1b: Load dates, PDF URLs, and deal types from Index sheet
+  const { dates, pdfUrls, dealTypes } = loadDatesAndUrlsFromIndex();
+  console.log(`Loaded ${dates.size} dates, ${pdfUrls.size} PDF URLs, and ${dealTypes.size} deal types from Excel Index sheet`);
 
   // Step 1c: Load prospectus URLs from database (fallback for when Index sheet has "Unavailable")
   const dbUrls = loadProspectusUrls();
@@ -222,7 +181,7 @@ async function main() {
   const chineseNames = loadChineseNames();
 
   // Step 4: Merge and enrich
-  const enriched = enrichData(baseline, metrics, chineseNames, dates, pdfUrls, existingData);
+  const enriched = enrichData(baseline, metrics, chineseNames, dates, pdfUrls, existingData, dealTypes);
   console.log(`Enriched ${enriched.length} deals`);
 
   // Step 5: Save enriched baseline
@@ -305,13 +264,14 @@ function loadExcelMetrics(): Map<number, DealMetrics> {
   return metrics;
 }
 
-function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map<number, string> } {
+function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map<number, string>; dealTypes: Map<number, string> } {
   const wb = XLSX.readFile(PATHS[BOARD].excel);
   const ws = wb.Sheets['Index'];
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
   const dates = new Map<number, string>();
   const pdfUrls = new Map<number, string>();
+  const dealTypes = new Map<number, string>();
 
   // Main Board: Row 0 is empty, row 1 is headers, data starts at row 2
   // Columns: [empty, Ticker, Company, Type, Documents, Date, Info]
@@ -320,12 +280,14 @@ function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map
 
   const startRow = BOARD === 'gem' ? 1 : 2;
   const tickerCol = BOARD === 'gem' ? 0 : 1;
+  const typeCol = BOARD === 'gem' ? 2 : 3;
   const urlCol = BOARD === 'gem' ? 3 : 4;
   const dateCol = BOARD === 'gem' ? 4 : 5;
 
   for (let i = startRow; i < data.length; i++) {
     const row = data[i];
     const ticker = row[tickerCol];
+    const dealType = row[typeCol];
     const url = row[urlCol];
     const date = row[dateCol];
     if (ticker) {
@@ -335,10 +297,14 @@ function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map
       if (url && typeof url === 'string' && url.startsWith('http')) {
         pdfUrls.set(Number(ticker), url);
       }
+      // Store deal type if it's a valid value (not "Unavailable" or empty)
+      if (dealType && typeof dealType === 'string' && dealType !== 'Unavailable') {
+        dealTypes.set(Number(ticker), dealType);
+      }
     }
   }
 
-  return { dates, pdfUrls };
+  return { dates, pdfUrls, dealTypes };
 }
 
 /**
@@ -500,12 +466,8 @@ function loadExistingEnrichedData(): Map<string, ExistingDealData> {
  * Determine deal type based on company name, type field, and other indicators
  */
 function determineDealType(ticker: string, company: string, type: string, sizeHKDm: number | string | null): string {
-  const tickerNum = parseInt(ticker);
-
-  // Check known deal types first
-  if (KNOWN_DEAL_TYPES[tickerNum]) {
-    return KNOWN_DEAL_TYPES[tickerNum];
-  }
+  // This is a fallback for deals where Excel has "Unavailable" for deal type
+  // Most deal types come from the Excel Index sheet directly
 
   const companyUpper = company.toUpperCase();
   const typeUpper = type.toUpperCase();
@@ -1079,7 +1041,8 @@ function enrichData(
   chineseNames: Map<string, string>,
   dates: Map<number, string>,
   pdfUrls: Map<number, string>,
-  existingData: Map<string, ExistingDealData>
+  existingData: Map<string, ExistingDealData>,
+  dealTypes: Map<number, string>
 ): EnrichedDeal[] {
   const dealMap = new Map<string, EnrichedDeal>();
 
@@ -1145,8 +1108,9 @@ function enrichData(
         isDualListing: 'N',
       };
 
-      // Determine deal type
-      const dealType = determineDealType(ticker, companyName, row.type, sizeHKDm);
+      // Get deal type from Excel first, fall back to detection for missing ones
+      const excelDealType = dealTypes.get(tickerNum);
+      const dealType = excelDealType || determineDealType(ticker, companyName, row.type, sizeHKDm);
 
       deal = {
         ticker,
