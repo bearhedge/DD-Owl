@@ -311,13 +311,15 @@
       font-weight: 600;
       text-align: right;
     }
-    .sector-cell {
-      color: #888;
+    .industry-cell {
+      color: #e0e0e0;
       font-size: 0.8rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 130px;
+      max-width: 200px;
+      line-height: 1.3;
+    }
+    .sub-industry {
+      color: #666;
+      font-size: 0.75rem;
     }
     .dual-listing-cell {
       text-align: center;
@@ -497,7 +499,7 @@
       { id: 'company', label: 'Company', width: 350, visible: true, sortable: true },
       { id: 'date', label: 'Date', width: 90, visible: true, sortable: true },
       { id: 'sizeHKDm', label: 'Size (HKDm)', width: 100, visible: true, sortable: true },
-      { id: 'sector', label: 'Sector', width: 130, visible: true, sortable: true },
+      { id: 'industry', label: 'Industry', width: 200, visible: true, sortable: true },
       { id: 'isDualListing', label: 'Dual', width: 50, visible: true, sortable: true },
       { id: 'sponsors', label: 'Sponsors', width: 200, visible: true, sortable: false },
       { id: 'others', label: 'Others', width: 250, visible: true, sortable: false },
@@ -553,6 +555,8 @@
             shares: parseFloat(row.shares) || null,
             price: parseFloat(row.price_hkd) || null,
             sizeHKDm: isNaN(parseFloat(row.size_hkdm)) ? (row.size_hkdm || null) : parseFloat(row.size_hkdm),
+            industry: row.industry || '',
+            subIndustry: row.sub_industry || '',
             sector: row.sector || '',
             isDualListing: row.is_dual_listing === 'Y',
             sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
@@ -779,14 +783,13 @@
           return `<td class="date-cell">${formatDate(row.date)}</td>`;
         case 'sizeHKDm':
           return `<td class="size-cell">${formatSize(row.sizeHKDm, row.type)}</td>`;
-        case 'sector':
-          const shortSector = (row.sector || '')
-            .replace('Information Technology', 'IT')
-            .replace('Health Care', 'Healthcare')
-            .replace('Consumer Discretionary', 'Consumer Disc.')
-            .replace('Consumer Staples', 'Consumer Stpls.')
-            .replace('Communication Services', 'Comms');
-          return `<td class="sector-cell">${shortSector ? escapeHtml(shortSector) : '-'}</td>`;
+        case 'industry':
+          const industryDisplay = row.industry || row.sector || '';
+          const subIndustryDisplay = row.subIndustry || '';
+          if (industryDisplay && subIndustryDisplay) {
+            return `<td class="industry-cell" title="${escapeHtml(industryDisplay)} / ${escapeHtml(subIndustryDisplay)}">${escapeHtml(industryDisplay)}<br><span class="sub-industry">${escapeHtml(subIndustryDisplay)}</span></td>`;
+          }
+          return `<td class="industry-cell">${industryDisplay ? escapeHtml(industryDisplay) : '-'}</td>`;
         case 'isDualListing':
           return `<td class="dual-listing-cell">${row.isDualListing ? '<span class="ah-badge">A+H</span>' : ''}</td>`;
         case 'sponsors':
