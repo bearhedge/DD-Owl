@@ -99,6 +99,8 @@ interface ImportResult {
 
 /**
  * Read deals from Excel
+ * Main Board: Row 0 empty, Row 1 headers, Row 2+ data, columns offset by 1
+ * GEM Board: Row 0 headers, Row 1+ data, columns start at 0
  */
 function readDealsFromExcel(): DealRow[] {
   console.log('Reading Excel file:', EXCEL_PATH);
@@ -109,22 +111,35 @@ function readDealsFromExcel(): DealRow[] {
 
   const deals: DealRow[] = [];
 
-  // Skip header rows (first 2 rows based on structure)
-  for (let i = 2; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !row[4]) continue; // Skip rows without prospectus URL
+  // Different Excel structure for Main Board vs GEM
+  const isGem = BOARD === 'gem';
+  const startRow = isGem ? 1 : 2;  // GEM starts at row 1, Main Board at row 2
+  const colOffset = isGem ? 0 : 1;  // GEM columns start at 0, Main Board at 1
 
-    const ticker = row[1];
-    const company = row[2];
-    const type = row[3];
-    const prospectusUrl = row[4];
-    const date = row[5];
+  for (let i = startRow; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+
+    const ticker = row[colOffset + 0];
+    const company = row[colOffset + 1];
+    const type = row[colOffset + 2];
+    const prospectusUrl = row[colOffset + 3];
+    // For GEM, col 4 might be another URL, date info may be missing
+    const date = isGem ? '' : row[colOffset + 4];
+
+    // Skip rows without prospectus URL
+    if (!prospectusUrl) continue;
 
     if (ticker && company) {
       const tickerNum = typeof ticker === 'number' ? ticker : parseInt(ticker);
       // Check for URL override
       const overrideUrl = urlOverrides[String(tickerNum)];
       const finalUrl = overrideUrl || String(prospectusUrl || '').trim();
+
+      // Skip if URL doesn't look like a prospectus (e.g., suspension reports)
+      if (finalUrl.includes('Exchange-Reports') || finalUrl.includes('psuspenrep')) {
+        continue;
+      }
 
       if (finalUrl) {
         deals.push({

@@ -213,6 +213,11 @@ const ROLE_PATTERNS: Array<{ pattern: RegExp; roles: NormalizedRole[]; priority:
   { pattern: /^Capital\s+Market\s+Intermediar(?:y|ies)$/i, roles: ['bookrunner'], priority: 3 },
   { pattern: /^(?:Hong Kong\s+)?Underwriters?$/i, roles: ['bookrunner'], priority: 3 },
 
+  // GEM Board specific patterns
+  { pattern: /^(?:Joint\s+)?Bookrunners?,?\s*(?:Joint\s+)?Lead\s*Managers?\s+and\s+(?:Public\s+Offer\s+)?Underwriters?$/i, roles: ['bookrunner', 'lead_manager'], priority: 3 },
+  { pattern: /^(?:Public\s+Offer\s+)?Underwriters?$/i, roles: ['bookrunner'], priority: 3 },
+  { pattern: /^(?:Placing\s+)?Underwriters?$/i, roles: ['bookrunner'], priority: 3 },
+
   // Receiving Bank (rare but exists)
   { pattern: /^Receiving\s+Bank$/i, roles: ['other'], priority: 5 },
 ];
@@ -224,7 +229,7 @@ function parseComplexRoleHeading(text: string): { roles: NormalizedRole[]; prior
   const normalized = text.replace(/\s+/g, ' ').trim().toLowerCase();
 
   // Skip if it doesn't look like a role heading
-  if (!normalized.match(/sponsor|coordinator|bookrunner|manager|representative|listing\s+agent|financial\s+advisor|placing\s+agent|intermediar/i)) {
+  if (!normalized.match(/sponsor|coordinator|bookrunner|manager|representative|listing\s+agent|financial\s+advisor|placing\s+agent|intermediar|underwriter/i)) {
     return null;
   }
 
@@ -277,6 +282,13 @@ function parseComplexRoleHeading(text: string): { roles: NormalizedRole[]; prior
       priority = Math.min(priority, 3);
     }
   }
+  if (normalized.includes('underwriter')) {
+    // Underwriters are similar to bookrunners (GEM Board uses this term)
+    if (!roles.includes('bookrunner')) {
+      roles.push('bookrunner');
+      priority = Math.min(priority, 3);
+    }
+  }
 
   if (roles.length > 0) {
     return { roles, priority };
@@ -314,13 +326,16 @@ function isTOCEntry(context: string): boolean {
 function findPartiesSection(text: string): string | null {
   // Find ALL occurrences of "PARTIES INVOLVED" and filter out TOC entries
   // Match various formats:
-  // - "PARTIES INVOLVED IN THE GLOBAL OFFERING"
+  // - "PARTIES INVOLVED IN THE GLOBAL OFFERING" (Main Board)
   // - "PARTIES INVOLVED IN THE OFFERING"
   // - "PARTIES INVOLVED IN THE SPIN-OFF"
   // - "PARTIES INVOLVED IN THE INTRODUCTION" (Listing by Introduction)
+  // - "PARTIES INVOLVED IN THE SHARE OFFER" (GEM Board)
+  // - "PARTIES INVOLVED IN THE PLACING" (GEM Board)
   // - "DIRECTORS AND PARTIES INVOLVED IN THE GLOBAL OFFERING"
+  // - "DIRECTORS AND PARTIES INVOLVED IN THE SHARE OFFER" (GEM Board)
   // - "PARTIES INVOLVED" (as standalone sub-section header)
-  const regex = /(?:DIRECTORS AND )?PARTIES INVOLVED(?:\s+IN THE (?:GLOBAL )?(?:OFFERING|SPIN-OFF|INTRODUCTION))?/gi;
+  const regex = /(?:DIRECTORS AND )?PARTIES INVOLVED(?:\s+IN THE (?:GLOBAL )?(?:OFFERING|SPIN-OFF|INTRODUCTION|SHARE OFFER|PLACING))?/gi;
   let match;
   const candidates: Array<{ index: number; content: string }> = [];
 
@@ -935,6 +950,242 @@ function fallbackBankExtraction(fullText: string): ProspectusBankAppointment[] {
   }
 
   return Array.from(seenBanks.values());
+}
+
+// GICS Sector definitions
+export const GICS_SECTORS = {
+  10: 'Energy',
+  15: 'Materials',
+  20: 'Industrials',
+  25: 'Consumer Discretionary',
+  30: 'Consumer Staples',
+  35: 'Health Care',
+  40: 'Financials',
+  45: 'Information Technology',
+  50: 'Communication Services',
+  55: 'Utilities',
+  60: 'Real Estate',
+} as const;
+
+export type GICSSectorCode = keyof typeof GICS_SECTORS;
+export type GICSSectorName = typeof GICS_SECTORS[GICSSectorCode];
+
+// Sector keyword patterns - order matters (more specific patterns first)
+// Patterns use word boundaries and require strong signals to avoid false positives
+const SECTOR_PATTERNS: Array<{ sector: GICSSectorCode; pattern: RegExp; weight: number }> = [
+  // Health Care - high weight, specific medical terms
+  { sector: 35, pattern: /\b(pharmaceutical company|biotech company|biopharmaceutical|bio-pharmaceutical|medical device|hospital|healthcare provider|drug development|vaccine company|clear aligner|orthodontic|dental|clinical trial|oncology|therapeutics|diagnostic|CRO|clinical research|oncology therapies|drug candidates)\b/i, weight: 3 },
+  { sector: 35, pattern: /\b(pharmaceutical|biotech|biotechnology|vaccine|medicine|medical)\b/i, weight: 1 },
+
+  // Energy - specific power/energy terms, before Utilities
+  { sector: 10, pattern: /\b(nuclear power|power producer|power generation|IPP|independent power producer|oil and gas|petroleum|renewable energy|solar power|wind power|coal-fired|gas-fired)\b/i, weight: 3 },
+  { sector: 10, pattern: /\b(oil|gas|petroleum|solar|wind|crude|refining|LNG)\b/i, weight: 1 },
+
+  // Utilities - water/waste treatment, electricity distribution
+  { sector: 55, pattern: /\b(wastewater treatment|water treatment|water supply|sewage|waste management|electric utility|gas utility|power distribution)\b/i, weight: 3 },
+  { sector: 55, pattern: /\b(utility|utilities)\b/i, weight: 1 },
+
+  // Financials - banks and financial institutions, avoid "insurance" in risk context
+  { sector: 40, pattern: /\b(commercial bank|city bank|regional bank|banking institution|asset management|securities company|brokerage|wealth management|insurance company|insurer)\b/i, weight: 3 },
+  { sector: 40, pattern: /\b(bank(?:ing)?|securities|brokerage|lending|mortgage)\b/i, weight: 1 },
+
+  // Information Technology - tech companies
+  { sector: 45, pattern: /\b(software company|SaaS|cloud computing|cloud platform|AI company|artificial intelligence|semiconductor|fintech|robotics|IT services|cybersecurity|data center)\b/i, weight: 3 },
+  { sector: 45, pattern: /\b(software|technology|digital platform|mobile app|big data|machine learning)\b/i, weight: 1 },
+
+  // Consumer Staples - food and beverage, before Consumer Discretionary
+  { sector: 30, pattern: /\b(food company|beverage company|packaged drinking water|quick-frozen food|dairy company|grocery|supermarket|agriculture|farming)\b/i, weight: 3 },
+  { sector: 30, pattern: /\b(food|beverage|dairy|meat|tobacco|cosmetic)\b/i, weight: 1 },
+
+  // Consumer Discretionary - retail, auto, hospitality
+  { sector: 25, pattern: /\b(retailer|chain store|mobile phone retailer|used vehicle|automobile dealer|restaurant chain|hotel|hospitality|e-commerce|fashion|apparel|luxury)\b/i, weight: 3 },
+  { sector: 25, pattern: /\b(retail|restaurant|hotel|automobile|automotive|apparel|fashion|travel|tourism)\b/i, weight: 1 },
+
+  // Materials - chemicals, mining, materials
+  { sector: 15, pattern: /\b(gold mining|mining company|chemical company|steel company|cement|biodegradable|new materials|packaging materials)\b/i, weight: 3 },
+  { sector: 15, pattern: /\b(chemical|mining|metals|steel|cement|packaging|paper|aluminum|copper|gold|lithium)\b/i, weight: 1 },
+
+  // Industrials - manufacturing, construction, logistics
+  { sector: 20, pattern: /\b(construction company|engineering company|logistics company|manufacturing|machinery|aerospace|defense|building material|rail transit|urban rail)\b/i, weight: 3 },
+  { sector: 20, pattern: /\b(construction|logistics|engineering|industrial|freight|shipping|transportation|railway|airline)\b/i, weight: 1 },
+
+  // Real Estate
+  { sector: 60, pattern: /\b(property management|real estate|property developer|REIT|residential property|commercial property)\b/i, weight: 3 },
+  { sector: 60, pattern: /\b(property|real estate|residential|commercial property|landlord|rental)\b/i, weight: 1 },
+
+  // Communication Services
+  { sector: 50, pattern: /\b(media company|advertising company|telecom|telecommunications|out-of-home media|broadcasting|streaming|social media)\b/i, weight: 3 },
+  { sector: 50, pattern: /\b(media|advertising|telecom|broadcasting|publishing)\b/i, weight: 1 },
+];
+
+export interface SectorExtraction {
+  sectorCode: GICSSectorCode | null;
+  sectorName: string | null;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+  matchedKeywords: string[];
+  overviewText: string;
+}
+
+/**
+ * Find and extract the Overview/Summary section from prospectus text
+ * Strategy: Find "OVERVIEW" or "SUMMARY" section header, then extract text after it
+ */
+function findOverviewSection(text: string): string | null {
+  // Strategy 1: Look for standalone OVERVIEW section (most common in HKEX prospectuses)
+  // The pattern is: \nOVERVIEW\n followed by business description
+  const overviewMatch = text.match(/\nOVERVIEW\n([\s\S]{0,3000})/);
+  if (overviewMatch && overviewMatch[1]) {
+    const content = overviewMatch[1].trim();
+    // Validate it looks like actual business content
+    // Accept: "We are...", "Founded in..., we are...", "Established in..., we..."
+    if (content.match(/^(?:Founded|Established|Incorporated)?\s*(?:in\s+\d{4},?\s*)?we\s+(are|have|were|provide|operate|develop|offer|manufacture|focus)/i)) {
+      return content.slice(0, 1500);
+    }
+    // Also accept if it starts directly with "We are"
+    if (content.match(/^We\s+(are|have|were|provide|operate|develop|offer|manufacture)/i)) {
+      return content.slice(0, 1500);
+    }
+  }
+
+  // Strategy 2: Look for SUMMARY section
+  const summaryMatch = text.match(/\nSUMMARY\n([\s\S]{0,3000})/);
+  if (summaryMatch && summaryMatch[1]) {
+    const content = summaryMatch[1].trim();
+    if (content.match(/^(?:Founded|Established|Incorporated)?\s*(?:in\s+\d{4},?\s*)?we\s+(are|have|were|provide|operate|develop|offer|manufacture|focus)/i) ||
+        content.match(/^We\s+(are|have|were|provide|operate|develop|offer|manufacture)/i)) {
+      return content.slice(0, 1500);
+    }
+  }
+
+  // Strategy 3: Look for OUR BUSINESS section
+  const businessMatch = text.match(/\nOUR BUSINESS\n([\s\S]{0,3000})/);
+  if (businessMatch && businessMatch[1]) {
+    return businessMatch[1].trim().slice(0, 1500);
+  }
+
+  // Strategy 4: Find the first substantial "we are a [type] company" pattern
+  // This captures "Founded in 2014, we are a bio-pharmaceutical company..."
+  const foundedMatch = text.match(/\n((?:Founded|Established|Incorporated)\s+in\s+\d{4},?\s+we\s+are\s+[^.]{50,500}\.)/i);
+  if (foundedMatch && foundedMatch[1]) {
+    const startIdx = text.indexOf(foundedMatch[1]);
+    if (startIdx > 0) {
+      return text.slice(startIdx, startIdx + 1500);
+    }
+  }
+
+  // Strategy 5: Find the first substantial "We are..." paragraph
+  const weAreMatch = text.match(/\n(We are [^.]{100,1000}\.)/);
+  if (weAreMatch && weAreMatch[1]) {
+    const startIdx = text.indexOf(weAreMatch[1]);
+    if (startIdx > 0) {
+      return text.slice(startIdx, startIdx + 1500);
+    }
+  }
+
+  // Strategy 6: Look for BUSINESS OVERVIEW in industry section
+  const industryMatch = text.match(/BUSINESS OVERVIEW[\s\S]{0,500}(We\s+(?:are|have|provide)[^.]{50,500}\.)/);
+  if (industryMatch && industryMatch[1]) {
+    return industryMatch[1];
+  }
+
+  return null;
+}
+
+/**
+ * Extract sector from prospectus text using Overview section analysis
+ * Uses weighted keyword matching for better accuracy
+ */
+export function extractSectorFromText(fullText: string): SectorExtraction {
+  // Find Overview section
+  const overviewText = findOverviewSection(fullText);
+
+  if (!overviewText) {
+    return {
+      sectorCode: null,
+      sectorName: null,
+      confidence: 'none',
+      matchedKeywords: [],
+      overviewText: '',
+    };
+  }
+
+  // Clean text for matching (remove extra whitespace)
+  const cleanText = overviewText.replace(/\s+/g, ' ').trim();
+
+  // Track weighted scores per sector
+  const sectorScores = new Map<GICSSectorCode, { score: number; keywords: string[] }>();
+
+  for (const { sector, pattern, weight } of SECTOR_PATTERNS) {
+    const match = cleanText.match(pattern);
+    if (match) {
+      const existing = sectorScores.get(sector) || { score: 0, keywords: [] };
+      existing.score += weight;
+      existing.keywords.push(match[0]);
+      sectorScores.set(sector, existing);
+    }
+  }
+
+  if (sectorScores.size === 0) {
+    return {
+      sectorCode: null,
+      sectorName: null,
+      confidence: 'none',
+      matchedKeywords: [],
+      overviewText: cleanText.slice(0, 500),
+    };
+  }
+
+  // Find sector with highest weighted score
+  let bestSector: GICSSectorCode | null = null;
+  let bestScore = 0;
+  let bestKeywords: string[] = [];
+
+  for (const [sector, data] of sectorScores.entries()) {
+    if (data.score > bestScore) {
+      bestScore = data.score;
+      bestSector = sector;
+      bestKeywords = data.keywords;
+    }
+  }
+
+  // Determine confidence based on weighted score
+  let confidence: 'high' | 'medium' | 'low' = 'low';
+  if (bestScore >= 4) {
+    confidence = 'high';
+  } else if (bestScore >= 2) {
+    confidence = 'medium';
+  }
+
+  return {
+    sectorCode: bestSector,
+    sectorName: bestSector ? GICS_SECTORS[bestSector] : null,
+    confidence,
+    matchedKeywords: bestKeywords,
+    overviewText: cleanText.slice(0, 500),
+  };
+}
+
+/**
+ * Extract sector from a prospectus PDF buffer
+ */
+export async function extractSectorFromProspectus(pdfBuffer: Buffer): Promise<SectorExtraction> {
+  try {
+    const uint8Array = new Uint8Array(pdfBuffer);
+    const parser = new PDFParse(uint8Array);
+    const result = await parser.getText();
+
+    const allText = result.pages.map(p => p.text).join('\n');
+    return extractSectorFromText(allText);
+  } catch (error) {
+    console.error('Error extracting sector from prospectus:', error);
+    return {
+      sectorCode: null,
+      sectorName: null,
+      confidence: 'none',
+      matchedKeywords: [],
+      overviewText: '',
+    };
+  }
 }
 
 /**
