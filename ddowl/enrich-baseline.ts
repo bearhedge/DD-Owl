@@ -106,6 +106,47 @@ const KNOWN_SIZES: Record<number, number> = {
   3799: 10419, // Dali Foods Group - 1,694,117,500 × HK$6.15 (~HK$10.4B)
 };
 
+// Known deal types that can't be auto-detected from type field
+// These are listings where the type field says "Global offering" but it's actually Introduction/Transfer/etc.
+const KNOWN_DEAL_TYPES: Record<number, string> = {
+  // Listing by Introduction (secondary listings, spin-offs)
+  3896: 'Introduction', // Kingsoft Cloud - secondary listing from NASDAQ
+  6690: 'Introduction', // Haier Smart Home - secondary listing from Shanghai
+  6655: 'Introduction', // Huaxin Cement - secondary listing from Shanghai
+  2202: 'Introduction', // China Vanke - secondary listing from Shenzhen
+  1113: 'Introduction', // Cheung Kong Property - spin-off from CK Hutchison
+  2669: 'Introduction', // China Overseas Property - spin-off
+  587: 'Introduction', // China Conch Environment - spin-off
+  6623: 'Introduction', // Lufax - secondary listing from NYSE
+  6638: 'Introduction', // OneConnect - secondary listing from NYSE
+  1997: 'Introduction', // Wharf REIC - spin-off
+  807: 'Introduction', // SIIC Environment - restructuring
+  2156: 'Introduction', // C&D Property Management - spin-off
+  3839: 'Introduction', // Chia Tai Enterprises - restructuring
+  2136: 'Introduction', // Lifestyle China - restructuring
+  2421: 'Introduction', // KRP Development - restructuring
+  1466: 'Introduction', // Man Sang Jewellery - restructuring
+  1897: 'Introduction', // Million Hope - restructuring
+  1861: 'Introduction', // Precious Dragon - restructuring
+  1583: 'Introduction', // Qinqin Foodstuffs - restructuring
+  1570: 'Introduction', // Weiye Holdings - restructuring
+  9658: 'Introduction', // Super Hi International - spin-off from Haidilao
+  6098: 'Introduction', // Country Garden Services - spin-off
+  // Transfer from GEM to Main Board
+  1402: 'Transfer', // i-Control - transfer from GEM 8355
+  9882: 'Transfer', // Best Linking Group
+  9900: 'Transfer', // Gain Plus
+  6663: 'Transfer', // IWS Group
+  9689: 'Transfer', // JTF International
+  2295: 'Transfer', // Maxicity
+  933: 'Transfer', // VIVA GOODS
+  // De-SPACs
+  2562: 'De-SPAC', // Synagistics - merged from SPAC
+  6676: 'De-SPAC', // ZG Group - merged from SPAC
+  // Cancelled
+  1573: 'Cancelled', // China Unienergy - delisted/cancelled
+};
+
 // Corrected prospectus URLs (original URLs were wrong, causing extraction failures)
 const KNOWN_URLS: Record<number, string> = {
   2115: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0922/2020092200019.pdf', // Channel Micron
@@ -129,6 +170,11 @@ interface EnrichedDeal {
   ticker: string;
   company: string;
   companyCn: string | null;
+  industry: string;
+  subIndustry: string;
+  sector: string;
+  sectorCode: string;
+  dealType: string; // Global Offering, Introduction, Transfer, SPAC, De-SPAC
   type: string;
   date: string;
   shares: number | null;
@@ -137,6 +183,7 @@ interface EnrichedDeal {
   sponsors: string[];
   others: string[];
   prospectusUrl: string | null;
+  isDualListing: string;
 }
 
 async function main() {
@@ -167,11 +214,15 @@ async function main() {
   const baseline = loadBaseline();
   console.log(`Loaded ${baseline.length} baseline entries`);
 
+  // Step 2b: Load existing industry/sector data from current enriched CSV (to preserve it)
+  const existingData = loadExistingEnrichedData();
+  console.log(`Loaded ${existingData.size} existing enriched records`);
+
   // Step 3: Load Chinese names from database with full name preference
   const chineseNames = loadChineseNames();
 
   // Step 4: Merge and enrich
-  const enriched = enrichData(baseline, metrics, chineseNames, dates, pdfUrls);
+  const enriched = enrichData(baseline, metrics, chineseNames, dates, pdfUrls, existingData);
   console.log(`Enriched ${enriched.length} deals`);
 
   // Step 5: Save enriched baseline
@@ -387,6 +438,111 @@ function parseNumber(val: any): number | null {
   if (val === null || val === undefined || val === '-' || val === '') return null;
   const num = Number(val);
   return isNaN(num) ? null : num;
+}
+
+interface ExistingDealData {
+  industry: string;
+  subIndustry: string;
+  sector: string;
+  sectorCode: string;
+  isDualListing: string;
+}
+
+/**
+ * Load existing enriched data to preserve industry/sector during re-enrichment
+ */
+function loadExistingEnrichedData(): Map<string, ExistingDealData> {
+  const map = new Map<string, ExistingDealData>();
+
+  try {
+    let csv = fs.readFileSync(PATHS[BOARD].baselineOutput, 'utf-8');
+    if (csv.charCodeAt(0) === 0xFEFF) {
+      csv = csv.slice(1);
+    }
+    const lines = csv.split('\n');
+    const headers = parseCSVLine(lines[0]);
+
+    const industryIdx = headers.indexOf('industry');
+    const subIndustryIdx = headers.indexOf('sub_industry');
+    const sectorIdx = headers.indexOf('sector');
+    const sectorCodeIdx = headers.indexOf('sector_code');
+    const isDualIdx = headers.indexOf('is_dual_listing');
+    const tickerIdx = headers.indexOf('ticker');
+
+    // If no industry column, return empty map
+    if (industryIdx === -1) {
+      console.log('  Note: No industry column in existing CSV');
+      return map;
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const values = parseCSVLine(lines[i]);
+      const ticker = values[tickerIdx];
+      if (ticker) {
+        map.set(ticker, {
+          industry: values[industryIdx] || '',
+          subIndustry: values[subIndustryIdx] || '',
+          sector: values[sectorIdx] || '',
+          sectorCode: values[sectorCodeIdx] || '',
+          isDualListing: values[isDualIdx] || 'N',
+        });
+      }
+    }
+  } catch (err) {
+    console.log('  Note: Could not load existing enriched data');
+  }
+
+  return map;
+}
+
+/**
+ * Determine deal type based on company name, type field, and other indicators
+ */
+function determineDealType(ticker: string, company: string, type: string, sizeHKDm: number | string | null): string {
+  const tickerNum = parseInt(ticker);
+
+  // Check known deal types first
+  if (KNOWN_DEAL_TYPES[tickerNum]) {
+    return KNOWN_DEAL_TYPES[tickerNum];
+  }
+
+  const companyUpper = company.toUpperCase();
+  const typeUpper = type.toUpperCase();
+
+  // SPACs
+  if (companyUpper.includes('SPAC') || companyUpper.includes('ACQUISITION CORP')) {
+    if (companyUpper.includes('DE-SPAC') || companyUpper.includes('[SPAC - MERGED')) {
+      return 'De-SPAC';
+    }
+    return 'SPAC';
+  }
+
+  // Check status notes in company name
+  if (companyUpper.includes('[SPAC -')) {
+    return 'SPAC';
+  }
+
+  // Listing by Introduction (no new shares)
+  if (typeUpper.includes('INTRODUCTION')) {
+    return 'Introduction';
+  }
+
+  // Transfer of Listing
+  if (typeUpper.includes('TRANSFER')) {
+    return 'Transfer';
+  }
+
+  // Check if size indicates non-IPO
+  if (typeof sizeHKDm === 'string') {
+    const sizeLower = sizeHKDm.toLowerCase();
+    if (sizeLower.includes('introduction')) return 'Introduction';
+    if (sizeLower.includes('transfer')) return 'Transfer';
+    if (sizeLower.includes('spac')) return 'SPAC';
+  }
+
+  // Default to Global Offering
+  return 'Global Offering';
 }
 
 function loadBaseline(): BaselineRow[] {
@@ -922,7 +1078,8 @@ function enrichData(
   metrics: Map<number, DealMetrics>,
   chineseNames: Map<string, string>,
   dates: Map<number, string>,
-  pdfUrls: Map<number, string>
+  pdfUrls: Map<number, string>,
+  existingData: Map<string, ExistingDealData>
 ): EnrichedDeal[] {
   const dealMap = new Map<string, EnrichedDeal>();
 
@@ -979,10 +1136,27 @@ function enrichData(
         companyName = `${companyName} ${statusNote}`;
       }
 
+      // Get existing industry/sector data
+      const existing = existingData.get(ticker) || {
+        industry: '',
+        subIndustry: '',
+        sector: '',
+        sectorCode: '',
+        isDualListing: 'N',
+      };
+
+      // Determine deal type
+      const dealType = determineDealType(ticker, companyName, row.type, sizeHKDm);
+
       deal = {
         ticker,
         company: companyName,
         companyCn: chineseNames.get(ticker) || null,
+        industry: existing.industry,
+        subIndustry: existing.subIndustry,
+        sector: existing.sector,
+        sectorCode: existing.sectorCode,
+        dealType,
         type: row.type,
         date,
         shares: m.shares || null,
@@ -991,6 +1165,7 @@ function enrichData(
         sponsors: [],
         others: [],
         prospectusUrl: KNOWN_URLS[tickerNum] || pdfUrls.get(tickerNum) || null,
+        isDualListing: existing.isDualListing,
       };
       dealMap.set(ticker, deal);
     }
@@ -1158,12 +1333,23 @@ function isGarbageBank(name: string, companyName?: string): boolean {
 }
 
 function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
-  const headers = ['ticker', 'company', 'company_cn', 'type', 'date', 'shares', 'price_hkd', 'size_hkdm', 'sponsors', 'others', 'prospectus_url'];
+  const headers = [
+    'ticker', 'company', 'company_cn',
+    'industry', 'sub_industry', 'sector', 'sector_code',
+    'deal_type', 'type', 'date',
+    'shares', 'price_hkd', 'size_hkdm',
+    'sponsors', 'others', 'prospectus_url', 'is_dual_listing'
+  ];
 
   const rows = deals.map(d => [
     d.ticker,
     d.company,
     d.companyCn || '',
+    d.industry || '',
+    d.subIndustry || '',
+    d.sector || '',
+    d.sectorCode || '',
+    d.dealType || '',
     d.type,
     d.date,
     d.shares || '',
@@ -1172,6 +1358,7 @@ function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
     d.sponsors.join('; '),
     d.others.join('; '),
     d.prospectusUrl || '',
+    d.isDualListing || 'N',
   ]);
 
   const csv = [
