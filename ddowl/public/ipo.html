@@ -558,7 +558,7 @@
             industry: row.industry || '',
             subIndustry: row.sub_industry || '',
             sector: row.sector || '',
-            isDualListing: row.is_dual_listing || '',
+            isDualListing: row.is_dual_listing === 'Y',
             sponsors: row.sponsors ? row.sponsors.split('; ').filter(Boolean) : [],
             others: row.others ? row.others.split('; ').filter(Boolean) : [],
             prospectusUrl: row.prospectus_url || ''
@@ -791,7 +791,7 @@
           }
           return `<td class="industry-cell">${industryDisplay ? escapeHtml(industryDisplay) : '-'}</td>`;
         case 'isDualListing':
-          return `<td class="dual-listing-cell">${row.isDualListing ? '<span class="ah-badge">' + escapeHtml(row.isDualListing) + '</span>' : ''}</td>`;
+          return `<td class="dual-listing-cell">${row.isDualListing ? '<span class="ah-badge">A+H</span>' : ''}</td>`;
         case 'sponsors':
           return `<td class="banks-cell">${row.sponsors.map(b => `<span class="bank-tag sponsor">${escapeHtml(b)}</span>`).join(' ') || '-'}</td>`;
         case 'others':
