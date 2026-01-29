@@ -505,8 +505,11 @@
       { id: 'others', label: 'Others', width: 250, visible: true, sortable: false },
     ];
 
-    // Dual listing exchange lookup (HK+SH = Shanghai, HK+SZ = Shenzhen)
+    // Dual listing exchange lookup
+    // A-shares: HK+SH (Shanghai), HK+SZ (Shenzhen)
+    // ADRs: HK+NYSE, HK+NASDAQ
     const DUAL_EXCHANGE = {
+      // A+H shares (China mainland)
       '300': 'HK+SZ', '1304': 'HK+SH', '1347': 'HK+SH', '1354': 'HK+SH', '1375': 'HK+SH',
       '1501': 'HK+SH', '1530': 'HK+SH', '1679': 'HK+SH', '1786': 'HK+SH', '1858': 'HK+SH',
       '1877': 'HK+SH', '2016': 'HK+SH', '2359': 'HK+SH', '2611': 'HK+SH', '2648': 'HK+SH',
@@ -515,6 +518,19 @@
       '6066': 'HK+SH', '6099': 'HK+SH', '6127': 'HK+SH', '6160': 'HK+SH', '6178': 'HK+SH',
       '6655': 'HK+SH', '6680': 'HK+SZ', '6693': 'HK+SH', '6821': 'HK+SZ', '6826': 'HK+SH',
       '6886': 'HK+SH', '9989': 'HK+SZ',
+      // US ADRs (secondary listings from US)
+      '9988': 'HK+NYSE',   // Alibaba (BABA)
+      '9618': 'HK+NASDAQ', // JD.com (JD)
+      '9888': 'HK+NASDAQ', // Baidu (BIDU)
+      '9999': 'HK+NASDAQ', // NetEase (NTES)
+      '9626': 'HK+NASDAQ', // Bilibili (BILI)
+      '9866': 'HK+NYSE',   // NIO (NIO)
+      '9868': 'HK+NYSE',   // XPeng (XPEV)
+      '2015': 'HK+NASDAQ', // Li Auto (LI)
+      '9961': 'HK+NASDAQ', // Trip.com (TCOM)
+      '9898': 'HK+NASDAQ', // Weibo (WB)
+      '9896': 'HK+NYSE',   // MINISO (MNSO)
+      '2076': 'HK+NASDAQ', // Kanzhun/BOSS Zhipin (BZ)
     };
 
     // Format company name with Chinese below English, and remove comma from Co., Ltd.
