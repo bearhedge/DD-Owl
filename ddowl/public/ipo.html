@@ -303,6 +303,11 @@
       white-space: nowrap;
       font-size: 0.8rem;
     }
+    .deal-type-cell {
+      color: #aaa;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
     .banks-cell {
       line-height: 1.8;
     }
@@ -498,6 +503,7 @@
       { id: 'ticker', label: 'Ticker', width: 70, visible: true, sortable: true },
       { id: 'company', label: 'Company', width: 350, visible: true, sortable: true },
       { id: 'date', label: 'Date', width: 90, visible: true, sortable: true },
+      { id: 'dealType', label: 'Deal Type', width: 130, visible: true, sortable: true },
       { id: 'sizeHKDm', label: 'Size (HKDm)', width: 100, visible: true, sortable: true },
       { id: 'industry', label: 'Industry', width: 200, visible: true, sortable: true },
       { id: 'isDualListing', label: 'Dual', width: 50, visible: true, sortable: true },
@@ -580,6 +586,7 @@
             companyCn: row.company_cn || '',
             type: row.type,
             date: row.date,
+            dealType: row.deal_type || '',
             shares: parseFloat(row.shares) || null,
             price: parseFloat(row.price_hkd) || null,
             sizeHKDm: isNaN(parseFloat(row.size_hkdm)) ? (row.size_hkdm || null) : parseFloat(row.size_hkdm),
@@ -690,6 +697,7 @@
             row.companyCn,
             row.ticker,
             row.date,
+            row.dealType,
             row.sector,
             ...row.sponsors,
             ...row.others
@@ -813,6 +821,8 @@
           return `<td class="company-name" title="${escapeHtml(plainName)}">${displayHtml}</td>`;
         case 'date':
           return `<td class="date-cell">${formatDate(row.date)}</td>`;
+        case 'dealType':
+          return `<td class="deal-type-cell">${escapeHtml(row.dealType || '-')}</td>`;
         case 'sizeHKDm':
           return `<td class="size-cell">${formatSize(row.sizeHKDm, row.type)}</td>`;
         case 'industry':
