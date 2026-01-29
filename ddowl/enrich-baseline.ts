@@ -3,10 +3,34 @@
  * 1. Deal metrics from Excel (shares, price, size)
  * 2. Chinese names from HKEX scraping
  * 3. Dates extracted from PDF URLs (for Unavailable/numeric dates)
+ *
+ * Supports both Main Board and GEM:
+ *   npx tsx enrich-baseline.ts          # Main Board (default)
+ *   npx tsx enrich-baseline.ts --board gem  # GEM Board
  */
 import XLSX from 'xlsx';
 import fs from 'fs';
 import Database from 'better-sqlite3';
+
+// Parse CLI arguments
+const args = process.argv.slice(2);
+const boardArg = args.find(a => a.startsWith('--board'));
+const boardValue = boardArg ? args[args.indexOf(boardArg) + 1] : 'main';
+const BOARD = boardValue?.toLowerCase() === 'gem' ? 'gem' : 'main';
+
+// Board-specific paths
+const PATHS = {
+  main: {
+    excel: '/Users/home/Desktop/DD Owl/Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx',
+    baselineInput: 'public/baseline-export.csv',
+    baselineOutput: 'public/baseline-enriched.csv',
+  },
+  gem: {
+    excel: '/Users/home/Desktop/DD Owl/Reference files/GEM Board/Listed/HKEX_IPO_Listed.xlsx',
+    baselineInput: 'public/baseline-export-gem.csv',
+    baselineOutput: 'public/baseline-enriched-gem.csv',
+  },
+};
 
 interface DealMetrics {
   ticker: number;
@@ -19,6 +43,77 @@ interface DealMetrics {
 
 // Minimum deal size threshold - show "-" for anything below
 const MIN_DEAL_SIZE_HKDM = 10;
+
+// Known deal sizes extracted from prospectus PDFs (shares × price / 1,000,000)
+// These override Excel data when Excel has missing or incorrect values
+const KNOWN_SIZES: Record<number, number> = {
+  // Extracted by extract-missing-sizes.ts on 2026-01-29
+  1761: 2202.84, // BabyTree Group [Delisted 2024] - 250,323,000 × HK$8.8
+  1035: 289.88, // BBI Life Sciences Corporation [Privatized 2020] - 131,166,000 × HK$2.21
+  3358: 1534.67, // Bestway Global Holding Inc. - 264,598,000 × HK$5.8
+  1381: 1165, // Canvest Environmental Protection Group Company Limited [Privatized 2025] - 500,000,000 × HK$2.33
+  2229: 347.48, // Changgang Dunxin Enterprise Company Limited - 248,200,000 × HK$1.4
+  1859: 1348, // China Bright Culture Group [Delisted 2025] - 400,000,000 × HK$3.37
+  1503: 3000, // China Merchants Commercial Real Estate Investment Trust - 750,000,000 × HK$4
+  1365: 1069.1, // China Rundong Auto Group Limited [Delisted] - 268,619,000 × HK$3.98
+  1427: 478, // China Tianbao Group Development Company Limited - 200,000,000 × HK$2.39
+  1492: 508.37, // China ZhongDi Dairy Holdings Company Limited [Delisted] - 391,056,000 × HK$1.3
+  1839: 2141.2, // CIMC Vehicles (Group) Co., Ltd. - 265,000,000 × HK$8.08
+  3992: 137.5, // Creative Enterprise Holdings Limited - 125,000,000 × HK$1.1
+  1620: 127.5, // CTEH Inc. - 300,000,000 × HK$0.425
+  6111: 996, // DaFa Properties Group Limited - 200,000,000 × HK$4.98
+  2117: 1533.64, // Datang Group Holdings Limited - 333,400,000 × HK$4.6
+  1545: 195, // Design Capital Limited - 500,000,000 × HK$0.39
+  1821: 11374.03, // ESR Cayman Limited [Privatized 2024] - 653,680,000 × HK$17.4
+  1995: 790.4, // Ever Sunshine Lifestyle Services Group Limited - 380,000,000 × HK$2.08
+  865: 114.8, // First Mobile Group Holdings Limited - 140,000,000 × HK$0.82
+  1455: 187.5, // Fourace Industries Group Holdings Limited - 312,500,000 × HK$0.6
+  6968: 1640, // Ganglong China Property Group Limited - 400,000,000 × HK$4.1
+  1084: 348, // Green Future Food Hydrocolloid Marine Science Company Limited - 200,000,000 × HK$1.74
+  1367: 74.4, // Hanbo Enterprises Holdings Limited - 120,000,000 × HK$0.62
+  1509: 1591.62, // Harmonicare Medical Holdings Limited - 210,810,000 × HK$7.55
+  6893: 240, // Hin Sang Group (International) Holding Co. Ltd. - 200,000,000 × HK$1.2
+  2296: 150, // Huarchi Global Group Holdings Limited - 500,000,000 × HK$0.3
+  6819: 581.67, // IntelliCentrics Global Holdings Ltd. - 80,900,000 × HK$7.19
+  9877: 232.6, // Jenscare Scientific Co., Ltd. - 8,076,400 × HK$28.8
+  1961: 226.8, // Jiu Zun Digital Interactive Entertainment Group Holdings Limited - 126,000,000 × HK$1.8
+  6918: 129.95, // Kidztech Holdings Limited - 88,400,000 × HK$1.47
+  1533: 275.07, // Lanzhou Zhuangyuan Pasture Co., Ltd. - 35,130,000 × HK$7.83
+  6063: 145, // Lotus Horizon Holdings Limited - 500,000,000 × HK$0.29
+  6939: 168.75, // MEGAIN Holding (Cayman) Co., Ltd. - 125,000,000 × HK$1.35
+  1438: 2280.48, // Nirvana Asia Ltd. [Privatized 2016] - 674,699,000 × HK$3.38
+  1665: 404.8, // Pentamaster International Limited - 368,000,000 × HK$1.1
+  1337: 4254.4, // Razer Inc. [Privatized 2022] - 1,063,600,000 × HK$4
+  2207: 703.75, // Ronshine Service Holding Co., Ltd - 125,000,000 × HK$5.63
+  6600: 2180.51, // SciClone Pharmaceutical (Holdings) Limited [Privatized 2024] - 115,984,500 × HK$18.8
+  2718: 3360.02, // Shanghai Dongzheng Automotive Finance Co., Ltd. [Delisted 2024] - 533,336,000 × HK$6.3
+  2599: 3720, // Shinsun Holdings (Group) Co., Ltd. [Delisted 2024] - 600,000,000 × HK$6.2
+  2606: 1673.73, // Sichuan Languang JUSTBON Services Group Co., Ltd. - 42,916,200 × HK$39
+  1619: 6338.84, // Tianhe Chemicals Group Limited [Delisted 2020] - 2,817,264,000 × HK$2.25
+  6836: 420, // Tianyun International Limited - 250,000,000 × HK$1.68
+  2260: 164.45, // Vanov Holdings Company Limited - 114,200,000 × HK$1.44
+  2148: 1551.12, // Vesync Co., Ltd - 281,000,000 × HK$5.52
+  3878: 120, // Vicon Holdings Limited - 100,000,000 × HK$1.2
+  9639: 182.5, // Wing Lee Development Construction Holdings Limited - 250,000,000 × HK$0.73
+  1941: 158, // Ye Xing Group Holdings Limited - 100,000,000 × HK$1.58
+  9923: 1642.77, // Yeahka Limited - 98,724,000 × HK$16.64
+  1902: 878.57, // Yincheng International Holding Co., Ltd. - 354,262,000 × HK$2.48
+  1158: 1403.5, // Zhejiang New Century Hotel Management Co., Ltd. - 70,000,000 × HK$20.05
+  // Manual additions for edge cases
+  2115: 140, // Channel Micron Holdings - 350,000,000 × HK$0.40
+  1992: 4284, // Fosun Tourism Group - 214,200,000 × HK$20.00
+  2014: 1139.4, // Ozner Water International - 422,000,000 × HK$2.70
+  3799: 10419, // Dali Foods Group - 1,694,117,500 × HK$6.15 (~HK$10.4B)
+};
+
+// Corrected prospectus URLs (original URLs were wrong, causing extraction failures)
+const KNOWN_URLS: Record<number, string> = {
+  2115: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0922/2020092200019.pdf', // Channel Micron
+  1992: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2018/1130/01992_3557349/eftg-20181130-02.pdf', // Fosun Tourism
+  2014: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2014/0605/02014_1952525/e102.pdf', // Ozner Water
+  3799: 'https://www.hkexnews.hk/listedco/listconews/sehk/2015/1110/ltn20151110021.pdf', // Dali Foods
+  1402: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2019/1213/2019121301283.pdf', // i-Control (Transfer from GEM 8355)
+};
 
 interface BaselineRow {
   ticker: string;
@@ -45,7 +140,10 @@ interface EnrichedDeal {
 }
 
 async function main() {
-  console.log('Starting enrichment...');
+  console.log(`Starting enrichment for ${BOARD.toUpperCase()} Board...`);
+  console.log(`Excel: ${PATHS[BOARD].excel}`);
+  console.log(`Input: ${PATHS[BOARD].baselineInput}`);
+  console.log(`Output: ${PATHS[BOARD].baselineOutput}\n`);
 
   // Step 1: Load Excel deal metrics
   const metrics = loadExcelMetrics();
@@ -82,8 +180,14 @@ async function main() {
 }
 
 function loadExcelMetrics(): Map<number, DealMetrics> {
-  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
+  const wb = XLSX.readFile(PATHS[BOARD].excel);
   const ws = wb.Sheets['Deals'];
+
+  // GEM board may not have a Deals sheet - return empty map
+  if (!ws) {
+    console.log('  Note: No Deals sheet found in Excel (GEM may not have deal metrics)');
+    return new Map();
+  }
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
   const metrics = new Map<number, DealMetrics>();
@@ -117,30 +221,68 @@ function loadExcelMetrics(): Map<number, DealMetrics> {
     });
   }
 
+  // Apply KNOWN_SIZES overrides for deals where Excel is missing or has incorrect data
+  // Excel sometimes has garbage values (e.g., size computed from nominal share value HK$0.01)
+  let overrideCount = 0;
+  for (const [ticker, size] of Object.entries(KNOWN_SIZES)) {
+    const tickerNum = Number(ticker);
+    const existing = metrics.get(tickerNum);
+    if (existing) {
+      // Override if Excel doesn't have a size, or if the size looks wrong (below threshold)
+      const excelSize = typeof existing.sizeHKDm === 'number' ? existing.sizeHKDm : null;
+      if (excelSize === null || excelSize < MIN_DEAL_SIZE_HKDM) {
+        existing.sizeHKDm = size;
+        overrideCount++;
+      }
+    } else {
+      // Deal not in Excel - add with just the size
+      metrics.set(tickerNum, {
+        ticker: tickerNum,
+        shares: null,
+        hkShares: null,
+        intlShares: null,
+        price: null,
+        sizeHKDm: size,
+      });
+      overrideCount++;
+    }
+  }
+  if (overrideCount > 0) {
+    console.log(`  Applied ${overrideCount} deal size overrides from KNOWN_SIZES`);
+  }
+
   return metrics;
 }
 
 function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map<number, string> } {
-  const wb = XLSX.readFile('/Users/home/Desktop/DD Owl/Reference files/Main Board/Listed/HKEX_IPO_Listed.xlsx');
+  const wb = XLSX.readFile(PATHS[BOARD].excel);
   const ws = wb.Sheets['Index'];
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
 
   const dates = new Map<number, string>();
   const pdfUrls = new Map<number, string>();
 
-  // Row 0 is empty, row 1 is headers, data starts at row 2
+  // Main Board: Row 0 is empty, row 1 is headers, data starts at row 2
   // Columns: [empty, Ticker, Company, Type, Documents, Date, Info]
-  for (let i = 2; i < data.length; i++) {
+  // GEM Board: Row 0 is headers, data starts at row 1
+  // Columns: [Ticker, Company, Type, Documents, Date, Info]
+
+  const startRow = BOARD === 'gem' ? 1 : 2;
+  const tickerCol = BOARD === 'gem' ? 0 : 1;
+  const urlCol = BOARD === 'gem' ? 3 : 4;
+  const dateCol = BOARD === 'gem' ? 4 : 5;
+
+  for (let i = startRow; i < data.length; i++) {
     const row = data[i];
-    const ticker = row[1]; // Column B
-    const url = row[4];    // Column E - Documents (PDF URL)
-    const date = row[5];   // Column F
+    const ticker = row[tickerCol];
+    const url = row[urlCol];
+    const date = row[dateCol];
     if (ticker) {
       if (date) {
-        dates.set(ticker, String(date));
+        dates.set(Number(ticker), String(date));
       }
       if (url && typeof url === 'string' && url.startsWith('http')) {
-        pdfUrls.set(ticker, url);
+        pdfUrls.set(Number(ticker), url);
       }
     }
   }
@@ -152,17 +294,40 @@ function loadDatesAndUrlsFromIndex(): { dates: Map<number, string>; pdfUrls: Map
  * Extract date from PDF URL
  * Pattern: https://www1.hkexnews.hk/listedco/listconews/sehk/YYYY/MMDD/filename.pdf
  * Also handles: /gem/YYYY/MMDD/ and case variations like /SEHK/
+ * Also handles: e_XXXXpro-YYYYMMDD.pdf (old prospectus format)
  * Returns date in DD/MM/YYYY format
  */
 function extractDateFromUrl(url: string): string | null {
   if (!url) return null;
 
-  // Pattern: /sehk/YYYY/MMDD/ or /gem/YYYY/MMDD/ (case insensitive)
+  // Pattern 1: /sehk/YYYY/MMDD/ or /gem/YYYY/MMDD/ (case insensitive)
   const match = url.match(/\/(sehk|gem)\/(\d{4})\/(\d{2})(\d{2})\//i);
   if (match) {
     const [_, _board, year, month, day] = match;
     return `${day}/${month}/${year}`;
   }
+
+  // Pattern 2: e_XXXXpro-YYYYMMDD.pdf (old prospectus archive format)
+  const oldFormatMatch = url.match(/e_\d+pro-(\d{4})(\d{2})(\d{2})\.pdf$/i);
+  if (oldFormatMatch) {
+    const [_, year, month, day] = oldFormatMatch;
+    return `${day}/${month}/${year}`;
+  }
+
+  // Pattern 3: glnYYYYMMDDXXX.pdf (GEM listing notice format)
+  const glnMatch = url.match(/gln(\d{4})(\d{2})(\d{2})\d+\.pdf$/i);
+  if (glnMatch) {
+    const [_, year, month, day] = glnMatch;
+    return `${day}/${month}/${year}`;
+  }
+
+  // Pattern 4: YYYYMMDDXXXXX.pdf (numeric format, 13+ digits)
+  const numericMatch = url.match(/\/(\d{4})(\d{2})(\d{2})\d{5,}\.pdf$/i);
+  if (numericMatch) {
+    const [_, year, month, day] = numericMatch;
+    return `${day}/${month}/${year}`;
+  }
+
   return null;
 }
 
@@ -225,7 +390,11 @@ function parseNumber(val: any): number | null {
 }
 
 function loadBaseline(): BaselineRow[] {
-  const csv = fs.readFileSync('public/baseline-export.csv', 'utf-8');
+  let csv = fs.readFileSync(PATHS[BOARD].baselineInput, 'utf-8');
+  // Strip BOM if present
+  if (csv.charCodeAt(0) === 0xFEFF) {
+    csv = csv.slice(1);
+  }
   const lines = csv.split('\n');
   const headers = parseCSVLine(lines[0]);
 
@@ -765,11 +934,17 @@ function enrichData(
       const tickerNum = parseInt(ticker);
       const m = metrics.get(tickerNum) || {} as DealMetrics;
 
-      // Get date: first check manual overrides, then Excel, then row data
-      let date = KNOWN_DATES[tickerNum] || dates.get(tickerNum) || row.date || '';
+      // Get date: first check manual overrides, then baseline CSV (if valid), then Excel
+      // GEM Excel has broken dates (URLs), so prefer baseline CSV date when it looks valid
+      const excelDate = dates.get(tickerNum) || '';
+      const baselineDate = row.date || '';
+      const isBaselineDateValid = /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(baselineDate);
+      let date = KNOWN_DATES[tickerNum] || (isBaselineDateValid ? baselineDate : excelDate) || baselineDate;
 
-      // Fix dates: if unavailable or Excel serial, try to extract from PDF URL
-      if (needsDateFix(date)) {
+      // Fix dates: if unavailable, Excel serial, or a URL, try to extract from PDF URL
+      // Check if date is a URL (GEM data quality issue)
+      const dateIsUrl = date.startsWith('http');
+      if (needsDateFix(date) || dateIsUrl) {
         const pdfUrl = pdfUrls.get(tickerNum);
         if (pdfUrl) {
           const urlDate = extractDateFromUrl(pdfUrl);
@@ -781,8 +956,8 @@ function enrichData(
         if (isExcelSerialDate(date)) {
           date = excelDateToString(parseInt(date));
         }
-        // If still "Unavailable", set to empty string
-        if (date.toLowerCase() === 'unavailable') {
+        // If still "Unavailable" or a URL, set to empty string
+        if (date.toLowerCase() === 'unavailable' || date.startsWith('http')) {
           date = '';
         }
       }
@@ -815,7 +990,7 @@ function enrichData(
         sizeHKDm,
         sponsors: [],
         others: [],
-        prospectusUrl: pdfUrls.get(tickerNum) || null,
+        prospectusUrl: KNOWN_URLS[tickerNum] || pdfUrls.get(tickerNum) || null,
       };
       dealMap.set(ticker, deal);
     }
@@ -1004,8 +1179,8 @@ function saveEnrichedBaseline(deals: EnrichedDeal[]): void {
     ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
   ].join('\n');
 
-  fs.writeFileSync('public/baseline-enriched.csv', '\uFEFF' + csv);
-  console.log(`Saved ${deals.length} deals to public/baseline-enriched.csv`);
+  fs.writeFileSync(PATHS[BOARD].baselineOutput, '\uFEFF' + csv);
+  console.log(`Saved ${deals.length} deals to ${PATHS[BOARD].baselineOutput}`);
 }
 
 main();
