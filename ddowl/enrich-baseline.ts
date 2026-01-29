@@ -106,6 +106,54 @@ const KNOWN_SIZES: Record<number, number> = {
   3799: 10419, // Dali Foods Group - 1,694,117,500 × HK$6.15 (~HK$10.4B)
 };
 
+// Deal types extracted from PDFs for deals where Excel has "Unavailable"
+const EXTRACTED_DEAL_TYPES: Record<number, string> = {
+  1761: 'Public offer',
+  1035: 'Public offer',
+  9882: 'Transfer of Listing',
+  3358: 'Public offer',
+  1381: 'Placing',
+  2229: 'Placing and public offer',
+  2115: 'Public offer',
+  1859: 'Public offer',
+  1503: 'Public offer',
+  1365: 'Public offer',
+  1573: 'Public offer',
+  1492: 'Public offer',
+  1839: 'Public offer',
+  3992: 'Share offer',
+  6111: 'Public offer',
+  3799: 'Public offer',
+  2117: 'Public offer',
+  1821: 'Placing',
+  865: 'Placing',
+  1992: 'Public offer',
+  2278: 'Public offer',
+  1367: 'Placing',
+  1509: 'Public offer',
+  6893: 'Share offer',
+  2296: 'Share offer',
+  6819: 'Public offer',
+  1533: 'Public offer',
+  1438: 'Placing',
+  2014: 'Public offer',
+  1665: 'Share offer',
+  1989: 'Share offer',
+  1337: 'Public offer',
+  2207: 'Placing',
+  6600: 'Public offer',
+  2718: 'Public offer',
+  2599: 'Public offer',
+  2606: 'Public offer',
+  1619: 'Public offer',
+  6836: 'Placing',
+  2148: 'Public offer',
+  9923: 'Public offer',
+  1902: 'Public offer',
+  1158: 'Public offer',
+  9877: 'Global offering', // H-share listing, no prospectus URL available
+};
+
 // Corrected prospectus URLs (original URLs were wrong, causing extraction failures)
 const KNOWN_URLS: Record<number, string> = {
   2115: 'https://www1.hkexnews.hk/listedco/listconews/sehk/2020/0922/2020092200019.pdf', // Channel Micron
@@ -1108,9 +1156,10 @@ function enrichData(
         isDualListing: 'N',
       };
 
-      // Get deal type from Excel first, fall back to detection for missing ones
+      // Get deal type: Excel first, then extracted from PDF, then pattern detection
       const excelDealType = dealTypes.get(tickerNum);
-      const dealType = excelDealType || determineDealType(ticker, companyName, row.type, sizeHKDm);
+      const extractedDealType = EXTRACTED_DEAL_TYPES[tickerNum];
+      const dealType = excelDealType || extractedDealType || determineDealType(ticker, companyName, row.type, sizeHKDm);
 
       deal = {
         ticker,
