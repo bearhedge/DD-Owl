@@ -766,6 +766,10 @@
         } else if (sortColumn === 'ticker' || sortColumn === 'sizeHKDm') {
           aVal = parseFloat(aVal) || 0;
           bVal = parseFloat(bVal) || 0;
+        } else if (sortColumn === 'isDualListing') {
+          // Use DUAL_EXCHANGE lookup for proper sorting
+          aVal = DUAL_EXCHANGE[a.ticker] || '';
+          bVal = DUAL_EXCHANGE[b.ticker] || '';
         } else {
           aVal = String(aVal).toLowerCase();
           bVal = String(bVal).toLowerCase();
