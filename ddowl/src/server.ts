@@ -2114,6 +2114,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           title: item.title,
           reason: 'duplicate'
         });
+        // Save progress before continue to ensure reconnect resumes from correct position
+        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
         continue;
       }
       processedUrls.add(item.url);
@@ -2129,6 +2131,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           title: item.title,
           reason: 'invalid_url'
         });
+        // Save progress before continue to ensure reconnect resumes from correct position
+        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
         continue;
       }
 
@@ -2177,6 +2181,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             clusterId: item.clusterId,
             clusterLabel: item.clusterLabel,
           });
+          // Save progress before continue to ensure reconnect resumes from correct position
+          await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
           continue;
         }
 
