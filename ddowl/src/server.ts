@@ -2080,6 +2080,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     const processedUrls = new Set<string>();
 
     for (let i = analyzeStartIndex; i < toProcess.length; i++) {
+      // Check if aborted (client reconnected, starting new screening)
+      if (signal.aborted) {
+        console.log(`[V4] Analyze aborted at ${i + 1}/${toProcess.length} for: ${subjectName}`);
+        activeScreenings.delete(screeningKey);
+        return;
+      }
+
       // Check if user paused the session
       if (await isSessionPaused(sessionId)) {
         console.log(`[V4] Session ${sessionId} paused at analyze ${i + 1}/${toProcess.length}`);
