@@ -354,13 +354,14 @@ export async function fetchPageContent(url: string): Promise<string> {
     return axiosResult.content;
   }
 
-  // If validation failed for quality reasons (not just empty), skip Puppeteer fallback
-  // These are unlikely to improve with JS rendering
+  // If validation failed for quality reasons, skip Puppeteer fallback
+  // Puppeteer is slow and rarely helps for these cases
   if (axiosResult.reason === 'http_error' ||
       axiosResult.reason === 'cross_domain_redirect' ||
-      axiosResult.reason === 'parking_page') {
+      axiosResult.reason === 'parking_page' ||
+      axiosResult.reason === 'low_quality_content') {
     console.log(`[FETCH] Skipping Puppeteer fallback due to: ${axiosResult.reason}`);
-    return '';
+    return axiosResult.content || '';  // Return whatever content we got
   }
 
   // Fallback to Puppeteer for JS-rendered or protected pages
@@ -546,7 +547,7 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${LLM_API_KEY}`,
         },
-        timeout: 60000,
+        timeout: 30000,  // Reduced from 60s - most responses come in 10-20s
       }
     );
 
