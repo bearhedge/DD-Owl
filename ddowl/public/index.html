@@ -1670,6 +1670,8 @@
           <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
         </svg>
       </button>
+      <input type="text" id="logSearchInput" placeholder="Search logs..." oninput="filterLogs(this.value)" style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; width: 120px; margin-left: 8px;">
+      <span id="logSearchCount" style="font-size: 11px; color: #666; margin-left: 4px;"></span>
       <div class="activity-status">
         <div class="status-dot" id="statusDot"></div>
         <span class="activity-stats" id="activityStats">Ready</span>
@@ -3418,13 +3420,42 @@
         <span class="log-message">${messageHtml}</span>
       `;
 
+      // Only auto-scroll if user is already near the bottom (within 100px)
+      const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 100;
       log.appendChild(entry);
-      log.scrollTop = log.scrollHeight;
+      if (wasAtBottom) {
+        log.scrollTop = log.scrollHeight;
+      }
       logEntries++;
     }
 
     function updateActivityStats(text) {
       document.getElementById('activityStats').textContent = text;
+    }
+
+    function filterLogs(searchTerm) {
+      const log = document.getElementById('activityLog');
+      const entries = log.querySelectorAll('.log-entry');
+      const searchLower = searchTerm.toLowerCase();
+      let visibleCount = 0;
+      let totalCount = entries.length;
+
+      entries.forEach(entry => {
+        const text = entry.textContent.toLowerCase();
+        if (!searchTerm || text.includes(searchLower)) {
+          entry.style.display = '';
+          visibleCount++;
+        } else {
+          entry.style.display = 'none';
+        }
+      });
+
+      const countEl = document.getElementById('logSearchCount');
+      if (searchTerm) {
+        countEl.textContent = `${visibleCount}/${totalCount}`;
+      } else {
+        countEl.textContent = '';
+      }
     }
 
     function toggleActivityPanel() {
