@@ -347,42 +347,23 @@ async function fetchWithPuppeteer(url: string): Promise<string> {
 
 // Hybrid fetch: axios first with validation, Puppeteer fallback
 export async function fetchPageContent(url: string): Promise<string> {
+  console.log(`[FETCH] Starting fetch for: ${url}`);
+  const startTime = Date.now();
+
   // Try axios first (faster, 90% success rate) with quality validation
   const axiosResult = await fetchWithAxios(url);
+  const fetchTime = Date.now() - startTime;
 
   if (axiosResult.valid && axiosResult.content && axiosResult.content.length > 100) {
+    console.log(`[FETCH] ✓ Success in ${fetchTime}ms, got ${axiosResult.content.length} chars: ${url}`);
     return axiosResult.content;
   }
 
-  // If validation failed for quality reasons (not just empty), skip Puppeteer fallback
-  // These are unlikely to improve with JS rendering
-  if (axiosResult.reason === 'http_error' ||
-      axiosResult.reason === 'cross_domain_redirect' ||
-      axiosResult.reason === 'parking_page') {
-    console.log(`[FETCH] Skipping Puppeteer fallback due to: ${axiosResult.reason}`);
-    return '';
-  }
+  // Log why it failed
+  console.log(`[FETCH] ✗ Failed in ${fetchTime}ms - reason: ${axiosResult.reason}, status: ${axiosResult.statusCode || 'N/A'}, content: ${axiosResult.content?.length || 0} chars`);
 
-  // Fallback to Puppeteer for JS-rendered or protected pages
-  try {
-    const text = await fetchWithPuppeteer(url);
-
-    // Also validate Puppeteer content for parking pages
-    if (isParkingPage(text)) {
-      console.log(`[FETCH_VALIDATION] Parking page detected (Puppeteer): ${url}`);
-      return '';
-    }
-
-    if (!hasQualityContent(text)) {
-      console.log(`[FETCH_VALIDATION] Low quality content (Puppeteer, ${text.length} chars): ${url}`);
-      return '';
-    }
-
-    return text;
-  } catch (error) {
-    console.error(`Both methods failed for ${url}`);
-    return '';
-  }
+  // Return whatever content we got - don't waste time on Puppeteer
+  return axiosResult.content || '';
 }
 
 // Quick scan for YELLOW result filtering (lightweight pre-analysis)
@@ -534,6 +515,9 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
 }`;
 
   try {
+    console.log(`[ANALYZE] Calling LLM (${LLM_MODEL}) with ${truncatedContent.length} chars of content...`);
+    const llmStart = Date.now();
+
     const response = await axios.post(
       LLM_URL,
       {
@@ -546,9 +530,12 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${LLM_API_KEY}`,
         },
-        timeout: 60000,
+        timeout: 30000,  // 30s timeout
       }
     );
+
+    const llmTime = Date.now() - llmStart;
+    console.log(`[ANALYZE] ✓ LLM responded in ${llmTime}ms`);
 
     const rawText = response.data.choices?.[0]?.message?.content || '';
     // Strip markdown code blocks that DeepSeek wraps around JSON
