@@ -1220,8 +1220,6 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           message: `Resuming clustering from batch ${clusterStartBatchIndex + 1}`,
           clustersRestored: restoredClusterBatchResults?.length || 0
         });
-        sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
-        sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
       }
 
       // Mid-categorize resume: if we have partial categorization progress
@@ -1244,15 +1242,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             green: restoredCategorizePartialResults?.green.length || 0
           }
         });
-        sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
-        sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
-        sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
       }
 
+      // Set skip flags based on current phase (NO phase_skipped events - just set flags)
       if (phase === 'eliminate' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipGather = true;
         restoredResults = existingSession.gatheredResults;
-        sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
       }
 
       if (phase === 'cluster' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
@@ -1261,10 +1256,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         // Only skip cluster if we're past it (categorize or later), not if we're mid-cluster
         if (phase !== 'cluster') {
           skipCluster = true;
-          sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
         }
         restoredPassed = existingSession.passedElimination;
-        sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
       }
 
       if (phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
@@ -1276,7 +1269,6 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         if (analyzeStartIndex === 0 && phase === 'analyze') {
           console.warn(`[V4] WARNING: currentIndex was ${existingSession.currentIndex}, starting analysis from beginning`);
         }
-        sendEvent({ type: 'phase_skipped', phase: 'categorize', reason: 'Restored from session' });
         sendEvent({ type: 'analyze_resume', fromIndex: analyzeStartIndex, totalFindings: restoredFindings.length });
       }
 
@@ -1285,8 +1277,6 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         skipConsolidate = true;
         restoredConsolidated = existingSession.consolidatedFindings;
         analyzeStartIndex = restoredCategorized ? (restoredCategorized.red.length + restoredCategorized.amber.length) : 0;
-        sendEvent({ type: 'phase_skipped', phase: 'analyze', reason: 'Restored from session' });
-        sendEvent({ type: 'phase_skipped', phase: 'consolidate', reason: 'Restored from session' });
         console.log(`[V4] Restoring ${restoredConsolidated.length} consolidated findings from session`);
       }
 
@@ -1727,7 +1717,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     // Skip title dedupe if resuming from a later phase
     if (skipTitleDedupe) {
-      sendEvent({ type: 'phase_skipped', phase: '1.75', reason: 'Restored from session' });
+      // Silently skip - no need to log phase_skipped to client
       console.log(`[V4] Skipped title dedupe phase, resuming from later phase`);
     } else if (passed.length >= 50) {
       // Only run if we have enough articles (worth the LLM cost)
@@ -1764,7 +1754,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       console.log(`[V4] Title dedupe complete: ${dedupeResult.unique.length} unique, ${dedupeResult.duplicates.length} duplicates removed`);
     } else {
-      sendEvent({ type: 'phase_skipped', phase: '1.75', reason: `Only ${passed.length} articles, skipping LLM dedupe` });
+      // Not enough articles for LLM dedupe - skip silently (server log only)
+      console.log(`[V4] Only ${passed.length} articles, skipping LLM title dedupe`);
     }
 
     // Update session with elimination + dedupe results (Redis)
@@ -1794,8 +1785,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
 
     if (skipCluster && restoredPassed) {
-      // Skip clustering - already done in previous session
-      sendEvent({ type: 'phase_skipped', phase: '2.5', reason: 'Restored from session' });
+      // Skip clustering - already done in previous session (no phase_skipped event - cleaner logs)
       passed = restoredPassed;
       console.log(`[V4] Skipped clustering phase, using restored passed results (${passed.length} articles)`);
     } else {
