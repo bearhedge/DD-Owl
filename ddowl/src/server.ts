@@ -2213,12 +2213,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
           if (item.category === 'RED' || item.category === 'AMBER') {
             // Detect suspicious content patterns
-            const contentLower = content.toLowerCase();
-            const isShortContent = content.length < 500;
+            const fetchedContent = result.content || '';
+            const contentLower = fetchedContent.toLowerCase();
+            const isShortContent = fetchedContent.length < 500;
             const isErrorPage = contentLower.includes('403') || contentLower.includes('forbidden') ||
                                contentLower.includes('access denied') || contentLower.includes('not found') ||
                                contentLower.includes('page not available') || contentLower.includes('无法访问');
-            const subjectInContent = nameVariations.some((v: string) => content.includes(v)) ||
+            const subjectInContent = nameVariations.some((v: string) => fetchedContent.includes(v)) ||
               contentLower.includes(subjectName.toLowerCase());
 
             // Determine reason for further review - use clearer wording
