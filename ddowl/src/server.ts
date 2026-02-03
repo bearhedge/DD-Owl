@@ -1169,12 +1169,24 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     if (existingSession && incomingSessionId) {
       // Reconnection: reuse existing session
       sessionId = incomingSessionId;
-      const phase = existingSession.currentPhase;
-      console.log(`[V4] Restoring from phase: ${phase}`);
 
       // Take ownership of the session - this will prevent the old connection from updating it
       await updateSession(sessionId, { connectionId });
       console.log(`[V4] Took ownership of session with connectionId: ${connectionId}`);
+
+      // CRITICAL: Re-fetch session after taking ownership to get the latest state.
+      // The old connection may have updated the session (currentIndex, findings, phase, etc.)
+      // between when we first read it and when we took ownership.
+      // Without this re-fetch, we would use stale data for restoration.
+      const freshSession = await getSession(sessionId);
+      if (freshSession) {
+        existingSession = freshSession;
+        console.log(`[V4] Refreshed session: phase=${freshSession.currentPhase}, index=${freshSession.currentIndex}, findings=${freshSession.findings?.length || 0}`);
+      }
+
+      // Get phase from refreshed session (not stale data)
+      const phase = existingSession.currentPhase;
+      console.log(`[V4] Restoring from phase: ${phase}`);
 
       // Mid-gather resume: if we have partial gather progress, resume from there
       if (phase === 'gather' && existingSession.gatherIndex && existingSession.gatherIndex > 0) {
