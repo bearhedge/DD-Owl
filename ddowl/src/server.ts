@@ -1761,12 +1761,27 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       passed = restoredPassed;
       console.log(`[V4] Skipped clustering phase, using restored passed results (${passed.length} articles)`);
     } else {
-      sendEvent({
-        type: 'phase',
-        phase: '2.5',
-        name: 'INCIDENT_CLUSTERING',
-        message: `Clustering ${passed.length} articles by incident...`
-      });
+      // Calculate remaining batches for resume message
+      const CLUSTER_BATCH_SIZE = 40;
+      const totalClusterBatches = Math.ceil(passed.length / CLUSTER_BATCH_SIZE);
+      const remainingClusterBatches = totalClusterBatches - clusterStartBatchIndex;
+
+      if (clusterStartBatchIndex > 0) {
+        console.log(`[V4] Resuming clustering from batch ${clusterStartBatchIndex + 1}/${totalClusterBatches}, ${remainingClusterBatches} batches remaining`);
+        sendEvent({
+          type: 'phase',
+          phase: '2.5',
+          name: 'INCIDENT_CLUSTERING',
+          message: `Resuming clustering from batch ${clusterStartBatchIndex + 1}: ${remainingClusterBatches} batches remaining...`
+        });
+      } else {
+        sendEvent({
+          type: 'phase',
+          phase: '2.5',
+          name: 'INCIDENT_CLUSTERING',
+          message: `Clustering ${passed.length} articles by incident...`
+        });
+      }
 
       const clusterStart = Date.now();
 
@@ -1808,7 +1823,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         }
       };
 
-      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 5, clusterProgress);
+      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 5, clusterProgress, clusterStartBatchIndex, restoredClusterBatchResults);
 
       // Send cluster summary
       sendEvent({

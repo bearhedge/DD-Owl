@@ -311,9 +311,11 @@ export async function clusterByIncidentLLM(
   articles: BatchSearchResult[],
   subjectName: string,
   maxPerCluster: number = 3,
-  onProgress?: ClusterProgressCallback
+  onProgress?: ClusterProgressCallback,
+  startBatchIndex: number = 0,  // For mid-clustering resume: which batch to start from (0-indexed)
+  previousBatchResults: IncidentCluster[] | null = null  // Restored clusters from previous batches
 ): Promise<ClusteringResult> {
-  console.log(`[CLUSTER] Starting clustering for ${articles.length} articles about "${subjectName}"`);
+  console.log(`[CLUSTER] Starting clustering for ${articles.length} articles about "${subjectName}"${startBatchIndex > 0 ? ` (resuming from batch ${startBatchIndex + 1})` : ''}`);
 
   if (articles.length === 0) {
     return {
@@ -364,7 +366,19 @@ export async function clusterByIncidentLLM(
   // Process batches SEQUENTIALLY to avoid rate limits
   // (Parallel processing causes failures with 700+ articles)
   const batchResults: { clusters: IncidentCluster[]; articleIndexOffset: number }[] = [];
-  for (let i = 0; i < batches.length; i++) {
+
+  // If resuming, initialize with restored clusters from previous batches
+  // We create placeholder entries for each previous batch's results
+  if (startBatchIndex > 0 && previousBatchResults) {
+    console.log(`[CLUSTER] Resuming from batch ${startBatchIndex + 1}, restoring ${previousBatchResults.length} clusters from ${startBatchIndex} previous batches`);
+    // Group the restored clusters - we'll treat them as a single restored entry
+    // and add them to allClusters later
+  }
+
+  // Clusters restored from previous session (for accumulation tracking)
+  const restoredClusters = previousBatchResults || [];
+
+  for (let i = startBatchIndex; i < batches.length; i++) {
     // Notify batch start
     await onProgress?.({
       type: 'batch_start',
@@ -378,8 +392,8 @@ export async function clusterByIncidentLLM(
     const result = await clusterBatch(batches[i], subjectName, i);
     batchResults.push(result);
 
-    // Collect all clusters so far for session persistence
-    const clustersSoFar: IncidentCluster[] = [];
+    // Collect all clusters so far for session persistence (include restored clusters)
+    const clustersSoFar: IncidentCluster[] = [...restoredClusters];
     for (const r of batchResults) {
       clustersSoFar.push(...r.clusters);
     }
@@ -401,12 +415,12 @@ export async function clusterByIncidentLLM(
     }
   }
 
-  // Collect all clusters
-  let allClusters: IncidentCluster[] = [];
+  // Collect all clusters (include restored clusters from previous session)
+  let allClusters: IncidentCluster[] = [...restoredClusters];
   for (const result of batchResults) {
     allClusters.push(...result.clusters);
   }
-  console.log(`[CLUSTER] Got ${allClusters.length} clusters before merging`);
+  console.log(`[CLUSTER] Got ${allClusters.length} clusters before merging${startBatchIndex > 0 ? ` (${restoredClusters.length} restored + ${allClusters.length - restoredClusters.length} new)` : ''}`);
 
   // Merge similar clusters across batches
   const mergedClusters = mergeSimilarClusters(allClusters);
