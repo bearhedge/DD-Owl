@@ -1010,6 +1010,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const variationsParam = req.query.variations as string;
   const language = (req.query.language as string) || 'both';
   const incomingSessionId = req.query.sessionId as string;
+  const lastSeenBatch = parseInt(req.query.lastBatch as string) || 0;
+  const lastSeenArticle = parseInt(req.query.lastArticle as string) || 0;
 
   // Session-based reconnection (preferred) - restore state from Redis
   let existingSession: ScreeningSession | null = null;
@@ -1308,14 +1310,31 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     if (existingSession && incomingSessionId) {
       const phase = existingSession.currentPhase;
       const phaseName = phase === 'gather' ? 'gathering' : phase === 'eliminate' ? 'filtering' : phase === 'cluster' ? 'clustering' : phase === 'categorize' ? 'categorizing' : phase === 'analyze' ? 'analyzing' : 'consolidating';
-      const progress = phase === 'analyze' ? `${existingSession.currentIndex}/${existingSession.categorized.red.length + existingSession.categorized.amber.length}` : '';
+      const currentBatch = existingSession.categorizeBatchIndex || 0;
+      const currentArticle = existingSession.currentIndex || 0;
+      const totalArticles = existingSession.categorized ? (existingSession.categorized.red.length + existingSession.categorized.amber.length) : 0;
+      const progress = phase === 'analyze' ? `${currentArticle}/${totalArticles}` : '';
+
+      // Calculate what was missed while disconnected
+      const missedBatches = currentBatch > lastSeenBatch ? `batches ${lastSeenBatch + 1}-${currentBatch}` : null;
+      const missedArticles = currentArticle > lastSeenArticle ? `articles ${lastSeenArticle + 1}-${currentArticle}` : null;
+
+      let missedMessage = '';
+      if (missedBatches || missedArticles) {
+        const missed = [missedBatches, missedArticles].filter(Boolean).join(', ');
+        missedMessage = `While disconnected: completed ${missed}. `;
+      }
+
       sendEvent({
         type: 'reconnect_status',
         phase,
         phaseName,
         progress,
-        message: `Connection restored. Resuming ${phaseName} phase${progress ? ` at ${progress}` : ''}...`,
+        message: `${missedMessage}Connection restored. Resuming ${phaseName} phase${progress ? ` at ${progress}` : ''}...`,
         findingsCount: existingSession.findings.length,
+        // Include missed progress details for client to display
+        missedBatches: currentBatch > lastSeenBatch ? { from: lastSeenBatch + 1, to: currentBatch } : null,
+        missedArticles: currentArticle > lastSeenArticle ? { from: lastSeenArticle + 1, to: currentArticle } : null,
       });
     }
 
