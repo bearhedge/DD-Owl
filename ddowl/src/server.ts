@@ -1240,13 +1240,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         sendEvent({ type: 'phase_skipped', phase: 'cluster', reason: 'Restored from session' });
       }
 
-      if (phase === 'eliminate' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
+      if (phase === 'eliminate' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipGather = true;
         restoredResults = existingSession.gatheredResults;
         sendEvent({ type: 'phase_skipped', phase: 'gather', reason: 'Restored from session' });
       }
 
-      if (phase === 'cluster' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate') {
+      if (phase === 'cluster' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipElimination = true;
         skipTitleDedupe = true;  // Skip title dedupe if past elimination phase
         // Only skip cluster if we're past it (categorize or later), not if we're mid-cluster
@@ -1258,7 +1258,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         sendEvent({ type: 'phase_skipped', phase: 'eliminate', reason: 'Restored from session' });
       }
 
-      if (phase === 'analyze' || phase === 'consolidate') {
+      if (phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipCategorize = true;
         restoredCategorized = existingSession.categorized;
         restoredFindings = existingSession.findings || [];
@@ -1272,13 +1272,18 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       }
 
       // If we're in consolidate phase and already have results, skip consolidation
-      if (phase === 'consolidate' && existingSession.consolidatedFindings) {
+      if ((phase === 'consolidate' || phase === 'complete') && existingSession.consolidatedFindings) {
         skipConsolidate = true;
         restoredConsolidated = existingSession.consolidatedFindings;
         analyzeStartIndex = restoredCategorized ? (restoredCategorized.red.length + restoredCategorized.amber.length) : 0;
         sendEvent({ type: 'phase_skipped', phase: 'analyze', reason: 'Restored from session' });
         sendEvent({ type: 'phase_skipped', phase: 'consolidate', reason: 'Restored from session' });
         console.log(`[V4] Restoring ${restoredConsolidated.length} consolidated findings from session`);
+      }
+
+      // If screening is already complete, skip everything and return cached results
+      if (phase === 'complete') {
+        console.log(`[V4] Screening already complete, returning cached results`);
       }
     } else {
       // New screening: create fresh session
