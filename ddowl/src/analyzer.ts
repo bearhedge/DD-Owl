@@ -290,10 +290,10 @@ async function fetchWithAxiosLegacy(url: string): Promise<string> {
 // Fallback fetch with Puppeteer for JS-rendered pages
 async function fetchWithPuppeteer(url: string): Promise<string> {
   await acquirePage();
-  const b = await getBrowser();
-  const page = await b.newPage();
-
+  let page;
   try {
+    const b = await getBrowser();
+    page = await b.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.setExtraHTTPHeaders({ 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -340,7 +340,7 @@ async function fetchWithPuppeteer(url: string): Promise<string> {
 
     return text.slice(0, 8000);
   } finally {
-    await page.close();
+    if (page) await page.close().catch(() => {});
     releasePage();
   }
 }
