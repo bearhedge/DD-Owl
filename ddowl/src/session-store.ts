@@ -69,9 +69,17 @@ export async function getSession(sessionId: string): Promise<ScreeningSession | 
 
 export async function updateSession(sessionId: string, updates: Partial<ScreeningSession>): Promise<void> {
   const session = await getSession(sessionId);
-  if (!session) return;
+  if (!session) {
+    console.error(`[SESSION] ERROR: Cannot update session ${sessionId} - session not found!`);
+    return;
+  }
   const updated = { ...session, ...updates };
   await redis.set(`session:${sessionId}`, JSON.stringify(updated), { ex: SESSION_TTL });
+
+  // Log critical updates for debugging resume issues
+  if (updates.currentIndex !== undefined || updates.currentPhase !== undefined) {
+    console.log(`[SESSION] Updated ${sessionId}: phase=${updated.currentPhase}, index=${updated.currentIndex}, findings=${updated.findings?.length || 0}`);
+  }
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
