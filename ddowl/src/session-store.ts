@@ -56,6 +56,9 @@ export interface ScreeningSession {
   // === Event replay for reconnection ===
   recentEvents?: { type: string; data: any; timestamp: number }[];  // Last N events for replay
   lastEventIndex?: number;  // Index of last event sent to client
+
+  // === Connection ownership ===
+  connectionId?: string;  // ID of the connection that owns this session
 }
 
 const SESSION_TTL = 14400; // 4 hours in seconds
@@ -71,12 +74,19 @@ export async function getSession(sessionId: string): Promise<ScreeningSession | 
   return typeof data === 'string' ? JSON.parse(data) : data;
 }
 
-export async function updateSession(sessionId: string, updates: Partial<ScreeningSession>): Promise<void> {
+export async function updateSession(sessionId: string, updates: Partial<ScreeningSession>, connectionId?: string): Promise<boolean> {
   const session = await getSession(sessionId);
   if (!session) {
     console.error(`[SESSION] ERROR: Cannot update session ${sessionId} - session not found!`);
-    return;
+    return false;
   }
+
+  // If connectionId is provided and doesn't match, reject the update (stale connection)
+  if (connectionId && session.connectionId && session.connectionId !== connectionId) {
+    console.log(`[SESSION] REJECTED update from stale connection ${connectionId}, current owner is ${session.connectionId}`);
+    return false;
+  }
+
   const updated = { ...session, ...updates };
   await redis.set(`session:${sessionId}`, JSON.stringify(updated), { ex: SESSION_TTL });
 
@@ -84,6 +94,7 @@ export async function updateSession(sessionId: string, updates: Partial<Screenin
   if (updates.currentIndex !== undefined || updates.currentPhase !== undefined) {
     console.log(`[SESSION] Updated ${sessionId}: phase=${updated.currentPhase}, index=${updated.currentIndex}, findings=${updated.findings?.length || 0}`);
   }
+  return true;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
