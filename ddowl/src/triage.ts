@@ -310,6 +310,107 @@ Return JSON only:
 import { BatchSearchResult } from './searcher.js';
 
 // ============================================================================
+// IRRELEVANT DOMAIN DETECTION
+// Filter out social media, music platforms, and other non-DD-relevant sites
+// ============================================================================
+
+/**
+ * Domains that are irrelevant for due diligence screening
+ * These sites contain personal profiles, music, social posts - not adverse media
+ */
+const IRRELEVANT_DOMAINS = [
+  // Social Media (excluding LinkedIn - useful for professional info)
+  'instagram.com',
+  'twitter.com',
+  'x.com',
+  'facebook.com',
+  'fb.com',
+  'tiktok.com',
+  'weibo.com',
+  'xiaohongshu.com',
+  'threads.net',
+  'pinterest.com',
+  'snapchat.com',
+
+  // Music Platforms
+  'music.apple.com',
+  'open.spotify.com',
+  'spotify.com',
+  'soundcloud.com',
+  'music.163.com',      // NetEase Music
+  'y.qq.com',           // QQ Music
+  'kugou.com',
+  'kuwo.cn',
+  'deezer.com',
+  'tidal.com',
+  'bandcamp.com',
+
+  // Video/Streaming (entertainment, not news)
+  'youtube.com',
+  'youtu.be',
+  'bilibili.com',
+  'douyin.com',
+  'ixigua.com',
+  'vimeo.com',
+  'twitch.tv',
+  'netflix.com',
+  'iqiyi.com',
+  'youku.com',
+  'v.qq.com',
+
+  // E-commerce / Shopping
+  'taobao.com',
+  'tmall.com',
+  'jd.com',
+  'amazon.com',
+  'amazon.cn',
+  'ebay.com',
+  'aliexpress.com',
+
+  // Generic Profile / Directory Sites
+  'gravatar.com',
+  'about.me',
+  'linktree.com',
+  'linktr.ee',
+  'carrd.co',
+  'bio.link',
+
+  // App Stores
+  'apps.apple.com',
+  'play.google.com',
+
+  // Image Hosting
+  'imgur.com',
+  'flickr.com',
+  'unsplash.com',
+
+  // Forums / Q&A (usually not authoritative sources)
+  'quora.com',
+  'zhihu.com',
+  'reddit.com',
+
+  // Dating / Personal
+  'tinder.com',
+  'bumble.com',
+];
+
+/**
+ * Check if URL is from an irrelevant domain for DD purposes
+ */
+function isIrrelevantDomain(url: string): boolean {
+  const urlLower = url.toLowerCase();
+
+  for (const domain of IRRELEVANT_DOMAINS) {
+    // Match domain in URL (handles subdomains too)
+    if (urlLower.includes(domain)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// ============================================================================
 // FICTION/ENTERTAINMENT DETECTION
 // Detect fiction content (novels, TV dramas, movies) to mark as GREEN
 // ============================================================================
@@ -324,9 +425,7 @@ function isFiction(item: { title: string; snippet: string; url: string }): boole
 
   // URL signals - entertainment/novel sites
   if (url.includes('linovel') || url.includes('lightnovel') || url.includes('novel') ||
-      url.includes('/entertainment/') || url.includes('/tvshow/') || url.includes('/drama/') ||
-      url.includes('douyin.com/video') || url.includes('youtube.com/watch') ||
-      url.includes('bilibili.com')) return true;
+      url.includes('/entertainment/') || url.includes('/tvshow/') || url.includes('/drama/')) return true;
 
   // Chinese content signals for fiction/entertainment
   const fictionKeywords = [
@@ -353,6 +452,23 @@ function isFiction(item: { title: string; snippet: string; url: string }): boole
   if (text.startsWith('《') && text.includes('》')) return true;
 
   return false;
+}
+
+/**
+ * Combined check: is this URL irrelevant for DD screening?
+ */
+function shouldSkipUrl(item: { title: string; snippet: string; url: string }): { skip: boolean; reason: string } {
+  // Check domain blocklist first (fast)
+  if (isIrrelevantDomain(item.url)) {
+    return { skip: true, reason: 'Irrelevant domain (social/music/video)' };
+  }
+
+  // Check fiction content
+  if (isFiction(item)) {
+    return { skip: true, reason: 'Fiction/Entertainment content' };
+  }
+
+  return { skip: false, reason: '' };
 }
 
 export interface CategorizedResult {
@@ -382,18 +498,25 @@ async function categorizeBatch(
 ): Promise<CategorizedOutput> {
   const output: CategorizedOutput = { red: [], amber: [], green: [] };
 
-  // Pre-filter: Mark fiction/entertainment as GREEN before LLM call
-  const nonFiction: BatchSearchResult[] = [];
+  // Pre-filter: Mark irrelevant domains and fiction/entertainment as GREEN before LLM call
+  const relevant: BatchSearchResult[] = [];
+  let skippedCount = 0;
   for (const r of results) {
-    if (isFiction({ title: r.title, snippet: r.snippet || '', url: r.url })) {
-      output.green.push({ ...r, category: 'GREEN' as const, reason: 'Fiction/Entertainment content' });
+    const skipCheck = shouldSkipUrl({ title: r.title, snippet: r.snippet || '', url: r.url });
+    if (skipCheck.skip) {
+      output.green.push({ ...r, category: 'GREEN' as const, reason: skipCheck.reason });
+      skippedCount++;
     } else {
-      nonFiction.push(r);
+      relevant.push(r);
     }
   }
 
-  // If all items were fiction, return early
-  if (nonFiction.length === 0) {
+  if (skippedCount > 0) {
+    console.log(`[CATEGORIZE] Pre-filtered ${skippedCount} irrelevant URLs (social media, music, fiction)`);
+  }
+
+  // If all items were filtered, return early
+  if (relevant.length === 0) {
     return output;
   }
 
@@ -401,13 +524,13 @@ async function categorizeBatch(
   if (providers.length === 0) {
     return {
       red: [],
-      amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'no api keys configured' })),
+      amber: relevant.map(r => ({ ...r, category: 'AMBER' as const, reason: 'no api keys configured' })),
       green: output.green
     };
   }
 
   // Format non-fiction results as numbered list
-  const resultsText = nonFiction.map((r, i) =>
+  const resultsText = relevant.map((r, i) =>
     `${i + 1}. Title: ${r.title.slice(0, 80)}\n   Snippet: ${(r.snippet || '').slice(0, 150)}`
   ).join('\n\n');
 
@@ -456,35 +579,35 @@ Return JSON only:
   }
 
   if (!rawText) {
-    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'api failed' })), green: output.green };
+    return { red: [], amber: relevant.map(r => ({ ...r, category: 'AMBER' as const, reason: 'api failed' })), green: output.green };
   }
 
   // Parse response
   const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
+    return { red: [], amber: relevant.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
   }
 
   let parsed;
   try {
     parsed = JSON.parse(jsonMatch[0]);
   } catch {
-    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
+    return { red: [], amber: relevant.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
   }
 
   if (!parsed.classifications || !Array.isArray(parsed.classifications)) {
     console.error(`[CATEGORIZE] No classifications array in response`);
-    return { red: [], amber: nonFiction.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
+    return { red: [], amber: relevant.map(r => ({ ...r, category: 'AMBER' as const, reason: 'parse failed' })), green: output.green };
   }
 
-  console.log(`[CATEGORIZE] Got ${parsed.classifications.length} classifications for ${nonFiction.length} items (${results.length - nonFiction.length} fiction filtered)`);
+  console.log(`[CATEGORIZE] Got ${parsed.classifications.length} classifications for ${relevant.length} items (${results.length - relevant.length} fiction filtered)`);
 
   // Track which items got classified
   const classifiedIndices = new Set<number>();
 
   for (const c of parsed.classifications) {
-    const result = nonFiction[c.index - 1];
+    const result = relevant[c.index - 1];
     if (!result) continue;
     classifiedIndices.add(c.index - 1);
     const cat = (typeof c.category === 'string' ? c.category.toUpperCase() : 'AMBER') as 'RED' | 'AMBER' | 'GREEN';
@@ -496,10 +619,10 @@ Return JSON only:
   }
 
   // Any items not classified default to AMBER (investigate)
-  for (let i = 0; i < nonFiction.length; i++) {
+  for (let i = 0; i < relevant.length; i++) {
     if (!classifiedIndices.has(i)) {
-      console.warn(`[CATEGORIZE] Item ${i + 1} not classified, defaulting to AMBER: ${nonFiction[i].title?.slice(0, 50)}`);
-      output.amber.push({ ...nonFiction[i], category: 'AMBER', reason: 'not classified by model' });
+      console.warn(`[CATEGORIZE] Item ${i + 1} not classified, defaulting to AMBER: ${relevant[i].title?.slice(0, 50)}`);
+      output.amber.push({ ...relevant[i], category: 'AMBER', reason: 'not classified by model' });
     }
   }
 

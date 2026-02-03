@@ -2142,15 +2142,31 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       try {
-        // Timeout wrapper: max 2 minutes per URL to prevent hung URLs from killing 5-hour sessions
-        const ANALYZE_TIMEOUT_MS = 120000;
-        const content = await Promise.race([
-          fetchPageContent(item.url),
-          new Promise<string>((_, reject) => setTimeout(() => reject(new Error('FETCH_TIMEOUT')), ANALYZE_TIMEOUT_MS))
-        ]);
-        tracker.recordFetch(content.length > 100);
+        // Timeout wrapper: max 90 seconds for BOTH fetch AND analyze combined
+        // This prevents hung URLs from killing long sessions
+        const TOTAL_TIMEOUT_MS = 90000;
 
-        if (content.length < 100) {
+        // Helper to run fetch + analyze with combined timeout
+        const fetchAndAnalyze = async (): Promise<{ content: string; analysis: { isAdverse: boolean; severity: string; headline: string; summary: string } | null }> => {
+          const content = await fetchPageContent(item.url);
+          tracker.recordFetch(content.length > 100);
+
+          if (content.length < 100) {
+            return { content, analysis: null };
+          }
+
+          const analysis = await analyzeWithLLM(content, subjectName, item.query);
+          return { content, analysis };
+        };
+
+        const result = await Promise.race([
+          fetchAndAnalyze(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('FETCH_ANALYZE_TIMEOUT')), TOTAL_TIMEOUT_MS))
+        ]);
+
+        const { content, analysis } = result;
+
+        if (content.length < 100 || !analysis) {
           // Flag for manual review if triage thought it was important
           urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Content unavailable' });
           allFindings.push({
@@ -2166,8 +2182,6 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           });
           continue;
         }
-
-        const analysis = await analyzeWithLLM(content, subjectName, item.query);
         tracker.recordAnalysis(analysis.isAdverse, analysis.severity as 'RED' | 'AMBER');
 
         sendEvent({
@@ -2232,10 +2246,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           }
         }
       } catch (err: any) {
-        const isTimeout = err?.message === 'FETCH_TIMEOUT';
-        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: isTimeout ? 'Timeout (2min)' : 'Fetch/analyze error' });
-        console.error(`[V4] Analysis ${isTimeout ? 'timed out' : 'failed'} for ${item.url}:`, err);
-        sendEvent({ type: 'analyze_error', url: item.url, error: isTimeout ? 'Timeout (2min) - skipped' : 'Failed to fetch/analyze' });
+        const isTimeout = err?.message === 'FETCH_ANALYZE_TIMEOUT';
+        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: isTimeout ? 'Timeout (90s)' : 'Fetch/analyze error' });
+        console.error(`[V4] Analysis ${isTimeout ? 'timed out (90s)' : 'failed'} for ${item.url}:`, err);
+        sendEvent({ type: 'analyze_error', url: item.url, error: isTimeout ? 'Timeout (90s) - skipped' : 'Failed to fetch/analyze' });
       }
 
       // Save progress AFTER this article is fully processed (for mid-analyze resume)
