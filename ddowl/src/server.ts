@@ -1142,6 +1142,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     const tracker = new MetricsTracker(subjectName);
     const startTime = Date.now();
 
+    // Generate unique connection ID to prevent stale connections from updating session
+    const connectionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     // Session handling: reuse existing session on reconnect, or create new
     let sessionId: string;
     let skipGather = false;
@@ -1168,6 +1171,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       sessionId = incomingSessionId;
       const phase = existingSession.currentPhase;
       console.log(`[V4] Restoring from phase: ${phase}`);
+
+      // Take ownership of the session - this will prevent the old connection from updating it
+      await updateSession(sessionId, { connectionId });
+      console.log(`[V4] Took ownership of session with connectionId: ${connectionId}`);
 
       // Mid-gather resume: if we have partial gather progress, resume from there
       if (phase === 'gather' && existingSession.gatherIndex && existingSession.gatherIndex > 0) {
@@ -1300,6 +1307,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         currentPhase: 'gather',
         currentIndex: 0,
         findings: [],
+        connectionId,  // Track which connection owns this session
       });
     }
 
@@ -1465,7 +1473,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         gatheredResults: allResults,
         gatherIndex: i + 1,  // 1-indexed: completed queries
         currentPhase: 'gather'
-      });
+      }, connectionId);
 
       await new Promise(r => setTimeout(r, 500));
     }
@@ -1505,7 +1513,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       // Update session with gathered results (Redis) - clear gatherIndex to indicate gather is fully complete
-      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate', gatherIndex: undefined });
+      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate', gatherIndex: undefined }, connectionId);
     } // End of gather phase else block
 
     // ========================================
@@ -1579,7 +1587,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             detectedCompanies,
             companyExpansionIndex: compIdx + 1,  // 1-indexed: completed companies
             currentPhase: 'gather'  // Still in gather phase during company expansion
-          });
+          }, connectionId);
         }
 
         sendEvent({
@@ -1591,7 +1599,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         });
 
         // Update session with expanded results - clear companyExpansionIndex to indicate expansion is complete
-        await updateSession(sessionId, { gatheredResults: allResults, detectedCompanies, companyExpansionIndex: undefined });
+        await updateSession(sessionId, { gatheredResults: allResults, detectedCompanies, companyExpansionIndex: undefined }, connectionId);
       }
     }
 
@@ -1762,7 +1770,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // Update session with elimination + dedupe results (Redis)
     // Only update phase if not skipping (don't overwrite 'analyze' with 'cluster' on resume)
     if (!skipTitleDedupe) {
-      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'cluster' });
+      await updateSession(sessionId, { passedElimination: passed, currentPhase: 'cluster' }, connectionId);
     }
 
     if (passed.length === 0) {
@@ -1841,7 +1849,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
               clusterBatchIndex: progress.batch,
               clusterBatchResults: progress.clustersSoFar,
               currentPhase: 'cluster'
-            });
+            }, connectionId);
           }
         } else if (progress.type === 'merge_complete') {
           sendEvent({
@@ -1886,7 +1894,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         currentPhase: 'categorize',
         clusterBatchIndex: undefined,
         clusterBatchResults: undefined
-      });
+      }, connectionId);
     }
 
     if (passed.length === 0) {
@@ -1977,7 +1985,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         categorizePartialResults: { ...partialCategorized },
         categorizeBatchIndex: adjustedBatchNumber,
         currentPhase: 'categorize'
-      });
+      }, connectionId);
     });
 
       // Merge new results with any restored partial results
@@ -2062,7 +2070,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         currentPhase: 'analyze',
         categorizeBatchIndex: undefined,
         categorizePartialResults: undefined
-      });
+      }, connectionId);
     } // End of categorize phase else block
 
     tracker.recordTriage(categorized.red.length, categorized.amber.length, categorized.green.length);
@@ -2134,7 +2142,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           reason: 'duplicate'
         });
         // Save progress before continue to ensure reconnect resumes from correct position
-        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
+        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
         continue;
       }
       processedUrls.add(item.url);
@@ -2151,7 +2159,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           reason: 'invalid_url'
         });
         // Save progress before continue to ensure reconnect resumes from correct position
-        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
+        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
         continue;
       }
 
@@ -2201,7 +2209,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             clusterLabel: item.clusterLabel,
           });
           // Save progress before continue to ensure reconnect resumes from correct position
-          await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
+          await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
           continue;
         }
 
@@ -2279,7 +2287,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       // Save progress AFTER this article is fully processed (for mid-analyze resume)
       // Use i + 1 so on resume we start with the NEXT article, not re-analyze this one
-      await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings });
+      await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
     }
 
     // ========================================
@@ -2295,13 +2303,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       sendEvent({ type: 'phase', phase: 5, name: 'CONSOLIDATE', message: `Consolidating ${allFindings.length} findings...` });
 
       // Update session to consolidate phase BEFORE starting (for reconnection tracking)
-      await updateSession(sessionId, { currentPhase: 'consolidate' });
+      await updateSession(sessionId, { currentPhase: 'consolidate' }, connectionId);
 
       consolidatedFindings = await consolidateFindings(allFindings, subjectName, parkedArticles);
       tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
 
       // Store consolidated results in session (for reconnection)
-      await updateSession(sessionId, { consolidatedFindings });
+      await updateSession(sessionId, { consolidatedFindings }, connectionId);
 
       sendEvent({
         type: 'eliminate_complete',
@@ -2400,7 +2408,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
     activeScreenings.delete(screeningKey);
     // Keep session for resume - mark as completed instead of deleting
-    await updateSession(sessionId, { currentPhase: 'complete' });
+    await updateSession(sessionId, { currentPhase: 'complete' }, connectionId);
     res.end();
   } catch (error) {
     clearInterval(heartbeat);
