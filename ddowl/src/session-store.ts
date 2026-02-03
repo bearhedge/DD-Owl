@@ -52,6 +52,10 @@ export interface ScreeningSession {
   // === Pause/Resume support ===
   isPaused?: boolean;   // true = server should stop processing
   pausedAt?: number;    // Timestamp when paused
+
+  // === Event replay for reconnection ===
+  recentEvents?: { type: string; data: any; timestamp: number }[];  // Last N events for replay
+  lastEventIndex?: number;  // Index of last event sent to client
 }
 
 const SESSION_TTL = 14400; // 4 hours in seconds
