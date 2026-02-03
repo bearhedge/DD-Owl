@@ -87,7 +87,27 @@ export async function updateSession(sessionId: string, updates: Partial<Screenin
     return false;
   }
 
-  const updated = { ...session, ...updates };
+  // CRITICAL: Re-read session just before writing to minimize race window.
+  // This prevents stale reads from overwriting a connectionId that a new connection set.
+  // Without this, the following race can occur:
+  // 1. Old conn reads session (connectionId = old)
+  // 2. New conn takes ownership (connectionId = new)
+  // 3. Old conn writes { ...oldSession, updates } which has connectionId = old
+  // 4. Old conn's write OVERWRITES new connectionId, stealing ownership back!
+  const freshSession = await getSession(sessionId);
+  if (!freshSession) {
+    console.error(`[SESSION] ERROR: Session ${sessionId} disappeared during update!`);
+    return false;
+  }
+
+  // Re-validate with fresh data
+  if (connectionId && freshSession.connectionId && freshSession.connectionId !== connectionId) {
+    console.log(`[SESSION] REJECTED update from stale connection ${connectionId} (detected on re-read), current owner is ${freshSession.connectionId}`);
+    return false;
+  }
+
+  // Use fresh session as base to preserve any updates that happened since our first read
+  const updated = { ...freshSession, ...updates };
   await redis.set(`session:${sessionId}`, JSON.stringify(updated), { ex: SESSION_TTL });
 
   // Log critical updates for debugging resume issues
