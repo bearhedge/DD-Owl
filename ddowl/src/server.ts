@@ -1261,8 +1261,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       if (phase === 'analyze' || phase === 'consolidate') {
         skipCategorize = true;
         restoredCategorized = existingSession.categorized;
-        restoredFindings = existingSession.findings;
-        analyzeStartIndex = existingSession.currentIndex;
+        restoredFindings = existingSession.findings || [];
+        // Safety: ensure currentIndex is a valid number, default to 0 if missing
+        analyzeStartIndex = typeof existingSession.currentIndex === 'number' ? existingSession.currentIndex : 0;
+        if (analyzeStartIndex === 0 && phase === 'analyze') {
+          console.warn(`[V4] WARNING: currentIndex was ${existingSession.currentIndex}, starting analysis from beginning`);
+        }
         sendEvent({ type: 'phase_skipped', phase: 'categorize', reason: 'Restored from session' });
         sendEvent({ type: 'analyze_resume', fromIndex: analyzeStartIndex, totalFindings: restoredFindings.length });
       }
@@ -1338,9 +1342,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     // Initialize with restored results if mid-gather resume, otherwise empty
     let allResults: BatchSearchResult[] = gatherStartIndex > 0 ? [...restoredResults] : [];
 
-    if (skipGather && restoredResults.length > 0) {
+    if (skipGather) {
       // Skip gather phase - use restored results from session
-      allResults = restoredResults;
+      // CRITICAL: We must skip even if restoredResults is empty, otherwise we'd restart
+      // gather and OVERWRITE currentPhase back to 'gather', destroying session state
+      allResults = restoredResults || [];
       console.log(`[V4] Skipped gather phase, using ${allResults.length} restored results`);
     } else {
       const totalSearches = selectedTemplates.length - gatherStartIndex;
