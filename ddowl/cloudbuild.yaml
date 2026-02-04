@@ -32,6 +32,7 @@ steps:
       - --image=asia-east1-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_SERVICE}:$COMMIT_SHA
       - --region=${_REGION}
       - --allow-unauthenticated
+      - --timeout=3600
       - --quiet
 
 images:

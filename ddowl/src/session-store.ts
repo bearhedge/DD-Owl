@@ -81,9 +81,27 @@ export async function updateSession(sessionId: string, updates: Partial<Screenin
     return false;
   }
 
-  // If connectionId is provided and doesn't match, reject the update (stale connection)
+  // If stale connection, still accept PROGRESS updates (currentIndex, findings)
   if (connectionId && session.connectionId && session.connectionId !== connectionId) {
-    console.log(`[SESSION] REJECTED update from stale connection ${connectionId}, current owner is ${session.connectionId}`);
+    // Check if this is a progress update worth keeping
+    if (updates.currentIndex !== undefined || updates.findings !== undefined) {
+      console.log(`[SESSION] Accepting progress from stale connection: index=${updates.currentIndex}, findings=${updates.findings?.length}`);
+      // Only update progress fields, take MAX to never go backward
+      const progressOnly: Partial<ScreeningSession> = {};
+      if (updates.currentIndex !== undefined && (session.currentIndex === undefined || updates.currentIndex > session.currentIndex)) {
+        progressOnly.currentIndex = updates.currentIndex;
+      }
+      if (updates.findings !== undefined && updates.findings.length > (session.findings?.length || 0)) {
+        progressOnly.findings = updates.findings;
+      }
+      if (Object.keys(progressOnly).length > 0) {
+        const updated = { ...session, ...progressOnly };
+        await redis.set(`session:${sessionId}`, JSON.stringify(updated), { ex: SESSION_TTL });
+        console.log(`[SESSION] Merged progress: index=${updated.currentIndex}, findings=${updated.findings?.length}`);
+      }
+      return true;
+    }
+    console.log(`[SESSION] REJECTED non-progress update from stale connection ${connectionId}, current owner is ${session.connectionId}`);
     return false;
   }
 
