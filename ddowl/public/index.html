@@ -3676,8 +3676,10 @@
       let lastMessageTime = Date.now();
 
       // Track last seen progress for reconnect replay
-      let lastSeenBatch = 0;
-      let lastSeenArticle = 0;
+      // Initialize from localStorage to survive page refresh
+      const storageKey = sessionId ? `ddowl_progress_${sessionId}` : null;
+      let lastSeenBatch = storageKey ? parseInt(localStorage.getItem(`${storageKey}_batch`) || '0', 10) : 0;
+      let lastSeenArticle = storageKey ? parseInt(localStorage.getItem(`${storageKey}_article`) || '0', 10) : 0;
 
       function connectSSE() {
         // Build reconnection URL - use sessionId (stored in Redis on server)
@@ -3807,6 +3809,11 @@
           }
 
           if (data.type === 'cluster_batch_complete') {
+            lastSeenBatch = data.batch;  // Track for reconnect replay
+            // Persist to localStorage to survive page refresh
+            if (storageKey) {
+              localStorage.setItem(`${storageKey}_batch`, data.batch.toString());
+            }
             const labels = data.clusterLabels?.slice(0, 5).join(', ') || '';
             const more = data.clusterLabels?.length > 5 ? ` (+${data.clusterLabels.length - 5} more)` : '';
             addLogEntry('analyze', `  [Batch ${data.batch}/${data.totalBatches}] Found ${data.clustersFound} incidents: ${labels}${more}`);
@@ -3901,6 +3908,10 @@
 
           if (data.type === 'categorize_batch_complete') {
             lastSeenBatch = data.batch;  // Track for reconnect replay
+            // Persist to localStorage to survive page refresh
+            if (storageKey) {
+              localStorage.setItem(`${storageKey}_batch`, data.batch.toString());
+            }
             addLogEntry('analyze', `Batch ${data.batch}/${data.totalBatches}: ${data.processedSoFar}/${data.totalItems} (${data.batchRed} RED, ${data.batchAmber} AMBER)`);
             updateActivityStats(`Categorizing ${data.processedSoFar}/${data.totalItems}...`);
             // Update progress bar with cumulative counts
@@ -4008,6 +4019,10 @@
           // === STAGE 3: DEEP ANALYSIS ===
           if (data.type === 'analyze_start') {
             lastSeenArticle = data.index;  // Track for reconnect replay
+            // Persist to localStorage to survive page refresh
+            if (storageKey) {
+              localStorage.setItem(`${storageKey}_article`, data.index.toString());
+            }
             addLogEntry('fetch', `[${data.index}/${data.total}] Analyzing: ${data.title}`, data.url);
             // Update progress bar
             const pct = calculateOverallProgress('analyze', data.index, data.total);
@@ -4085,6 +4100,12 @@
             }
             eventSource.close();
             const stats = data.stats || {};
+
+            // Clean up progress tracking from localStorage
+            if (storageKey) {
+              localStorage.removeItem(`${storageKey}_batch`);
+              localStorage.removeItem(`${storageKey}_article`);
+            }
 
             // Update session history to completed
             if (sessionId) {

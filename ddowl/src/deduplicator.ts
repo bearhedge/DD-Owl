@@ -304,6 +304,7 @@ export type ClusterProgressCallback = (progress: {
   totalClusters?: number;
   message?: string;
   clustersSoFar?: IncidentCluster[];  // Accumulated clusters for session persistence
+  currentBatchIndex?: number;  // 0-indexed batch number for session persistence on batch_start
 }) => void | Promise<void>;  // Allow async callbacks for session saves
 
 // Main entry point: cluster articles by incident using LLM
@@ -385,7 +386,8 @@ export async function clusterByIncidentLLM(
       batch: i + 1,
       totalBatches: batches.length,
       articlesInBatch: batches[i].length,
-      message: `Processing batch ${i + 1}/${batches.length} (${batches[i].length} articles)...`
+      message: `Processing batch ${i + 1}/${batches.length} (${batches[i].length} articles)...`,
+      currentBatchIndex: i,  // 0-indexed batch number for session persistence
     });
 
     console.log(`[CLUSTER] Processing batch ${i + 1}/${batches.length} (${batches[i].length} articles)...`);

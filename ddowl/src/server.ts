@@ -1226,6 +1226,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         restoredResults = existingSession.gatheredResults;
         restoredPassed = existingSession.passedElimination;
         console.log(`[V4] Resuming clustering from batch ${clusterStartBatchIndex + 1}, ${restoredClusterBatchResults?.length || 0} clusters so far`);
+        console.log(`[V4] DEBUG: clusterStartBatchIndex set to ${clusterStartBatchIndex} from session.clusterBatchIndex=${existingSession.clusterBatchIndex}`);
         sendEvent({
           type: 'phase_resumed',
           phase: 'cluster',
@@ -1835,6 +1836,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
             articlesInBatch: progress.articlesInBatch,
             message: progress.message,
           });
+          // Save batch index at START to ensure resume works even if batch doesn't complete
+          if (typeof progress.currentBatchIndex === 'number') {
+            await updateSession(sessionId, {
+              clusterBatchIndex: progress.currentBatchIndex,
+              currentPhase: 'cluster'
+            }, connectionId);
+            console.log(`[V4] DEBUG: Saved clusterBatchIndex=${progress.currentBatchIndex} on batch_start`);
+          }
         } else if (progress.type === 'batch_complete') {
           sendEvent({
             type: 'cluster_batch_complete',
@@ -1863,6 +1872,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         }
       };
 
+      console.log(`[V4] DEBUG: Calling clusterByIncidentLLM with clusterStartBatchIndex=${clusterStartBatchIndex}, restoredClusters=${restoredClusterBatchResults?.length || 0}`);
       const clusterResult = await clusterByIncidentLLM(passed, subjectName, 5, clusterProgress, clusterStartBatchIndex, restoredClusterBatchResults);
 
       // Send cluster summary
@@ -2070,6 +2080,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       await updateSession(sessionId, {
         categorized,
         currentPhase: 'analyze',
+        currentIndex: 0,  // Explicitly initialize for analyze phase to prevent undefined on reconnect
         categorizeBatchIndex: undefined,
         categorizePartialResults: undefined
       }, connectionId);
