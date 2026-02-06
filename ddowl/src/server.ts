@@ -2476,10 +2476,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   } catch (error) {
     clearInterval(heartbeat);
     activeScreenings.delete(screeningKey);
-    // Delete session if we had one (sessionId may not exist if error happened early)
-    if (incomingSessionId) {
-      await deleteSession(incomingSessionId);
-    }
+    // IMPORTANT: Do NOT delete the session here. Errors often happen because
+    // Cloud Run killed the SSE connection (5-min timeout). The session contains
+    // valuable progress (currentIndex, findings) that the next reconnect needs.
     console.error('[V4] Screening error:', error);
     sendEvent({ type: 'error', message: 'Screening failed' });
     res.end();
