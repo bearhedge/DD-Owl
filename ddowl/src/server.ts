@@ -6,11 +6,12 @@ process.on('unhandledRejection', (reason, promise) => {
   // Don't exit - let the server continue running
 });
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error: any) => {
   console.error('[UNCAUGHT EXCEPTION]', error);
-  // Don't exit for non-fatal errors
-  if (error.message?.includes('ECONNRESET') || error.message?.includes('ETIMEDOUT')) {
-    console.log('[RECOVERY] Ignoring network error, continuing...');
+  // Don't exit for non-fatal errors (network and stream errors)
+  if (error.message?.includes('ECONNRESET') || error.message?.includes('ETIMEDOUT') ||
+      error.code === 'ERR_STREAM_WRITE_AFTER_END' || error.code === 'ERR_STREAM_DESTROYED') {
+    console.log('[RECOVERY] Ignoring network/stream error, continuing...');
     return;
   }
 });
@@ -1123,10 +1124,16 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   // Heartbeat (1s for robust connection stability)
   let heartbeatCount = 0;
   const heartbeat = setInterval(() => {
-    res.write(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
-    // Force flush to bypass proxy buffering
-    if (typeof (res as any).flush === 'function') {
-      (res as any).flush();
+    try {
+      res.write(`data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`);
+      // Force flush to bypass proxy buffering
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+      }
+    } catch (err) {
+      // Connection closed - stop heartbeat to prevent repeated errors
+      clearInterval(heartbeat);
+      return;
     }
     heartbeatCount++;
     if (heartbeatCount % 30 === 0) { // Log every 30 seconds
@@ -1310,7 +1317,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         // Safety: ensure currentIndex is a valid number, default to 0 if missing
         analyzeStartIndex = typeof existingSession.currentIndex === 'number' ? existingSession.currentIndex : 0;
         if (analyzeStartIndex === 0 && phase === 'analyze') {
-          console.warn(`[V4] WARNING: currentIndex was ${existingSession.currentIndex}, starting analysis from beginning`);
+          console.warn(`[V4] WARNING: currentIndex was ${existingSession.currentIndex} (type: ${typeof existingSession.currentIndex}), starting analysis from beginning`);
+          console.warn(`[V4] Session keys: ${Object.keys(existingSession).join(', ')}`);
+          console.warn(`[V4] Session findings: ${existingSession.findings?.length || 0}, phase: ${existingSession.currentPhase}`);
+        } else {
+          console.log(`[V4] Resuming analyze from index ${analyzeStartIndex}, ${restoredFindings.length} findings restored`);
         }
         sendEvent({ type: 'analyze_resume', fromIndex: analyzeStartIndex, totalFindings: restoredFindings.length });
       }
@@ -2363,7 +2374,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       // Save progress AFTER this article is fully processed (for mid-analyze resume)
       // Use i + 1 so on resume we start with the NEXT article, not re-analyze this one
-      await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
+      try {
+        const saved = await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
+        if (!saved) {
+          console.warn(`[V4] PROGRESS_SAVE_FAILED: article ${i + 1}/${toProcess.length}, updateSession returned false`);
+        }
+      } catch (saveErr) {
+        console.error(`[V4] PROGRESS_SAVE_ERROR: article ${i + 1}/${toProcess.length}:`, saveErr);
+        // Don't rethrow - continue analyzing even if progress save fails
+      }
     }
 
     // ========================================
