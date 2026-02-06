@@ -2148,6 +2148,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         categorized,
         currentPhase: 'analyze',
         currentIndex: 0,  // Explicitly initialize for analyze phase to prevent undefined on reconnect
+        findings: [],  // Explicitly initialize findings for analyze phase
         categorizeBatchIndex: undefined,
         categorizePartialResults: undefined
       }, connectionId);
@@ -2190,6 +2191,16 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       console.log(`[V4] Resuming analysis from index ${analyzeStartIndex}`);
     }
     const processedUrls = new Set<string>();
+
+    // Eagerly save current progress at analyze phase start so a quick re-disconnect preserves position
+    if (analyzeStartIndex > 0 || restoredFindings.length > 0) {
+      try {
+        await updateSession(sessionId, { currentIndex: analyzeStartIndex, findings: allFindings }, connectionId);
+        console.log(`[V4] Eager save at analyze start: currentIndex=${analyzeStartIndex}, findings=${allFindings.length}`);
+      } catch (saveErr) {
+        console.error(`[V4] Failed eager save at analyze start:`, saveErr);
+      }
+    }
 
     for (let i = analyzeStartIndex; i < toProcess.length; i++) {
       // Check if aborted (client reconnected, starting new screening)
