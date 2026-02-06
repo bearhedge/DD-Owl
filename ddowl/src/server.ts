@@ -1171,7 +1171,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       sessionId = incomingSessionId;
 
       // Take ownership of the session - this will prevent the old connection from updating it
+      console.log(`[V4] Taking ownership: sessionId=${sessionId.slice(0,8)}, newConnId=${connectionId.slice(0,8)}`);
+      const beforeOwnership = await getSession(sessionId);
+      console.log(`[V4] Before ownership: index=${beforeOwnership?.currentIndex}, findings=${beforeOwnership?.findings?.length}, phase=${beforeOwnership?.currentPhase}`);
       await updateSession(sessionId, { connectionId });
+      const afterOwnership = await getSession(sessionId);
+      console.log(`[V4] After ownership: index=${afterOwnership?.currentIndex}, findings=${afterOwnership?.findings?.length}, phase=${afterOwnership?.currentPhase}`);
       console.log(`[V4] Took ownership of session with connectionId: ${connectionId}`);
 
       // CRITICAL: Re-fetch session after taking ownership to get the latest state.

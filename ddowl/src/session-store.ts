@@ -79,11 +79,17 @@ export async function getSession(sessionId: string): Promise<ScreeningSession | 
 }
 
 export async function updateSession(sessionId: string, updates: Partial<ScreeningSession>, connectionId?: string): Promise<boolean> {
+  const updateKeys = Object.keys(updates);
+  const hasProgress = updates.currentIndex !== undefined || updates.findings !== undefined;
+  console.log(`[SESSION] updateSession: sessionId=${sessionId.slice(0,8)}, connId=${connectionId?.slice(0,8)}, keys=[${updateKeys.join(',')}], hasProgress=${hasProgress}, index=${updates.currentIndex}, findings=${updates.findings?.length}`);
+
   const session = await getSession(sessionId);
   if (!session) {
     console.error(`[SESSION] ERROR: Cannot update session ${sessionId} - session not found!`);
     return false;
   }
+
+  console.log(`[SESSION] Current state: connId=${session.connectionId?.slice(0,8)}, index=${session.currentIndex}, findings=${session.findings?.length}, phase=${session.currentPhase}`);
 
   // If stale connection, still accept PROGRESS updates (currentIndex, findings)
   if (connectionId && session.connectionId && session.connectionId !== connectionId) {
@@ -122,9 +128,26 @@ export async function updateSession(sessionId: string, updates: Partial<Screenin
     return false;
   }
 
-  // Re-validate with fresh data
+  // Re-validate with fresh data - but still accept progress updates
   if (connectionId && freshSession.connectionId && freshSession.connectionId !== connectionId) {
-    console.log(`[SESSION] REJECTED update from stale connection ${connectionId} (detected on re-read), current owner is ${freshSession.connectionId}`);
+    // Same progress exception as the first check
+    if (updates.currentIndex !== undefined || updates.findings !== undefined) {
+      console.log(`[SESSION] Accepting progress from stale connection (re-read check): index=${updates.currentIndex}, findings=${updates.findings?.length}`);
+      const progressOnly: Partial<ScreeningSession> = {};
+      if (updates.currentIndex !== undefined && (freshSession.currentIndex === undefined || updates.currentIndex > freshSession.currentIndex)) {
+        progressOnly.currentIndex = updates.currentIndex;
+      }
+      if (updates.findings !== undefined && updates.findings.length > (freshSession.findings?.length || 0)) {
+        progressOnly.findings = updates.findings;
+      }
+      if (Object.keys(progressOnly).length > 0) {
+        const updated = { ...freshSession, ...progressOnly };
+        await redis.set(`session:${sessionId}`, JSON.stringify(updated), { ex: SESSION_TTL });
+        console.log(`[SESSION] Merged progress (re-read): index=${updated.currentIndex}, findings=${updated.findings?.length}`);
+      }
+      return true;
+    }
+    console.log(`[SESSION] REJECTED non-progress update from stale connection ${connectionId} (detected on re-read), current owner is ${freshSession.connectionId}`);
     return false;
   }
 
