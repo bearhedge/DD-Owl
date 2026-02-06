@@ -33,6 +33,7 @@ steps:
       - --region=${_REGION}
       - --allow-unauthenticated
       - --timeout=3600
+      - --session-affinity
       - --quiet
 
 images:
