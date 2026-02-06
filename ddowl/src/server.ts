@@ -2176,6 +2176,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Check if aborted (client reconnected, starting new screening)
       if (signal.aborted) {
         console.log(`[V4] Analyze aborted at ${i + 1}/${toProcess.length} for: ${subjectName}`);
+        // Save progress before aborting so next reconnect resumes from here
+        try {
+          await updateSession(sessionId, { currentIndex: i, findings: allFindings }, connectionId);
+          console.log(`[V4] Saved progress on abort: currentIndex=${i}`);
+        } catch (saveErr) {
+          console.error(`[V4] Failed to save progress on abort:`, saveErr);
+        }
         activeScreenings.delete(screeningKey);
         return;
       }
