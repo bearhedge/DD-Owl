@@ -37,6 +37,10 @@ export interface ScreeningSession {
   // Phase 1.5: Company Expansion progress
   companyExpansionIndex?: number; // Which company we've searched (1-indexed)
 
+  // Phase 1.75: Title Dedupe progress
+  titleDedupeBatchIndex?: number;     // Which batch completed (1-indexed)
+  titleDedupeComplete?: boolean;      // True when phase finished
+
   // Phase 2.5: Clustering progress
   clusterBatchIndex?: number;     // Which batch we've clustered (1-indexed)
   clusterBatchResults?: IncidentCluster[]; // Clusters found so far (before merge)

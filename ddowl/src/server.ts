@@ -1273,6 +1273,21 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         restoredPassed = existingSession.passedElimination;
       }
 
+      // If phase is 'eliminate' but we already have passedElimination results,
+      // skip elimination. Only skip title_dedupe if it's marked complete.
+      if (phase === 'eliminate' && existingSession.passedElimination && existingSession.passedElimination.length > 0) {
+        console.log(`[V4] Phase is 'eliminate' but passedElimination exists (${existingSession.passedElimination.length} results) - skipping elimination`);
+        skipElimination = true;
+        restoredPassed = existingSession.passedElimination;
+
+        if (existingSession.titleDedupeComplete) {
+          console.log(`[V4] titleDedupeComplete=true, skipping title_dedupe`);
+          skipTitleDedupe = true;
+        } else {
+          console.log(`[V4] titleDedupeComplete=false, will run title_dedupe`);
+        }
+      }
+
       if (phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipCategorize = true;
         restoredCategorized = existingSession.categorized;
@@ -1404,7 +1419,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       // Check if user paused the session
       if (await isSessionPaused(sessionId)) {
-        console.log(`[V4] Session ${sessionId} paused at gather query ${i + 1}/${selectedTemplates.length}`);
+        // Save current position before exiting so resume starts here
+        await updateSession(sessionId, { gatheredResults: allResults, gatherIndex: i }, connectionId);
+        console.log(`[V4] Session ${sessionId} paused at gather query ${i + 1}/${selectedTemplates.length}, saved gatherIndex=${i}`);
         sendEvent({ type: 'paused', phase: 'gather', queryIndex: i + 1 });
         clearInterval(heartbeat);
         activeScreenings.delete(screeningKey);
@@ -1545,7 +1562,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         for (let compIdx = companyExpansionStartIndex; compIdx < detectedCompanies.length; compIdx++) {
           // Check if user paused the session
           if (await isSessionPaused(sessionId)) {
-            console.log(`[V4] Session ${sessionId} paused at company expansion ${compIdx + 1}/${detectedCompanies.length}`);
+            // Save current position before exiting so resume starts here
+            await updateSession(sessionId, {
+              gatheredResults: allResults,
+              companyExpansionIndex: compIdx,
+              detectedCompanies
+            }, connectionId);
+            console.log(`[V4] Session ${sessionId} paused at company expansion ${compIdx + 1}/${detectedCompanies.length}, saved companyExpansionIndex=${compIdx}`);
             sendEvent({ type: 'paused', phase: 'company_expansion', companyIndex: compIdx + 1 });
             clearInterval(heartbeat);
             activeScreenings.delete(screeningKey);
@@ -1751,10 +1774,20 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           totalItems: progress.totalItems,
           duplicatesFound: progress.duplicatesFound,
         });
+        // Save progress for mid-title_dedupe resume
+        await updateSession(sessionId, {
+          titleDedupeBatchIndex: progress.batchNumber
+        }, connectionId);
       });
 
       titleDedupeDuplicates = dedupeResult.duplicates;
       passed = dedupeResult.unique;
+
+      // Mark title dedupe as complete
+      await updateSession(sessionId, {
+        titleDedupeComplete: true,
+        passedElimination: passed
+      }, connectionId);
 
       sendEvent({
         type: 'title_dedupe_complete',
@@ -2134,7 +2167,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
       // Check if user paused the session
       if (await isSessionPaused(sessionId)) {
-        console.log(`[V4] Session ${sessionId} paused at analyze ${i + 1}/${toProcess.length}`);
+        // Save current position before exiting so resume starts here
+        await updateSession(sessionId, { currentIndex: i, findings: allFindings }, connectionId);
+        console.log(`[V4] Session ${sessionId} paused at analyze ${i + 1}/${toProcess.length}, saved currentIndex=${i}`);
         sendEvent({ type: 'paused', phase: 'analyze', articleIndex: i + 1 });
         clearInterval(heartbeat);
         activeScreenings.delete(screeningKey);

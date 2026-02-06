@@ -3420,8 +3420,8 @@
         <span class="log-message">${messageHtml}</span>
       `;
 
-      // Only auto-scroll if user is already near the bottom (within 100px)
-      const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 100;
+      // Only auto-scroll if user is already near the bottom (within 300px)
+      const wasAtBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 300;
       log.appendChild(entry);
       if (wasAtBottom) {
         log.scrollTop = log.scrollHeight;
