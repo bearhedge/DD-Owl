@@ -627,6 +627,10 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
 
+  // Disable per-request socket timeout for SSE (Cloud Run manages lifecycle)
+  req.setTimeout(0);
+  if (req.socket) req.socket.setTimeout(0);
+
   // Collect all events for logging
   const eventLog: any[] = [];
   const sendEvent = (data: any) => {
@@ -1108,6 +1112,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no'); // Disable proxy buffering for real-time SSE
   res.flushHeaders();
+
+  // Disable per-request socket timeout for SSE (Cloud Run manages lifecycle)
+  req.setTimeout(0);
+  if (req.socket) req.socket.setTimeout(0);
 
   const eventLog: any[] = [];
   const sendEvent = (data: any) => {
@@ -2889,6 +2897,11 @@ app.get('/verify-banks', (req: Request, res: Response) => {
 
 // Create HTTP server for both Express and WebSocket
 const server = http.createServer(app);
+
+// Disable Node.js default server timeouts - Cloud Run manages the request lifecycle
+// Without this, Node.js kills sockets after 120s (default), breaking SSE connections
+server.setTimeout(0);
+server.keepAliveTimeout = 0;
 
 // Initialize WebSocket server
 const wsServer = initWSServer(server);
