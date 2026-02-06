@@ -2350,9 +2350,15 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         }
       } catch (err: any) {
         const isTimeout = err?.message === 'FETCH_TIMEOUT';
-        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: isTimeout ? 'Timeout (2min)' : 'Fetch/analyze error' });
-        console.error(`[V4] Analysis ${isTimeout ? 'timed out' : 'failed'} for ${item.url}:`, err);
-        sendEvent({ type: 'analyze_error', url: item.url, error: isTimeout ? 'Timeout (2min) - skipped' : 'Failed to fetch/analyze' });
+        const isStreamError = err?.code === 'ERR_STREAM_DESTROYED' || err?.code === 'ERR_STREAM_WRITE_AFTER_END';
+        if (isStreamError) {
+          // Connection closed mid-article - not an article error, just a disconnect
+          console.log(`[V4] Connection closed during analysis of ${item.url}`);
+        } else {
+          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: isTimeout ? 'Timeout (2min)' : 'Fetch/analyze error' });
+          console.error(`[V4] Analysis ${isTimeout ? 'timed out' : 'failed'} for ${item.url}:`, err);
+          sendEvent({ type: 'analyze_error', url: item.url, error: isTimeout ? 'Timeout (2min) - skipped' : 'Failed to fetch/analyze' });
+        }
       }
 
       // Save progress AFTER this article is fully processed (for mid-analyze resume)
