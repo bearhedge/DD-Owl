@@ -631,7 +631,12 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
   const sendEvent = (data: any) => {
     const event = { timestamp: new Date().toISOString(), ...data };
     eventLog.push(event);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (err) {
+      // Connection closed (Cloud Run timeout, client disconnect) - silently ignore
+      // Progress is saved to Redis independently, so lost SSE events are OK
+    }
   };
 
   // Heartbeat (1s for robust connection stability)
@@ -1107,7 +1112,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const sendEvent = (data: any) => {
     const event = { timestamp: new Date().toISOString(), ...data };
     eventLog.push(event);
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    try {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    } catch (err) {
+      // Connection closed (Cloud Run timeout, client disconnect) - silently ignore
+      // Progress is saved to Redis independently, so lost SSE events are OK
+    }
   };
 
   // Heartbeat (1s for robust connection stability)
