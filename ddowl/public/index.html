@@ -2712,10 +2712,6 @@
         }
       }
 
-      if (data.type === 'phase_skipped') {
-        addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
-      }
-
       // Handle search progress
       if (data.type === 'search_page') {
         const stopReason = data.pageResults === 0 ? ' → STOP (empty)' : (data.pageResults < 10 ? ' → STOP (last page)' : '');
@@ -3183,10 +3179,6 @@
             if (phaseKey && PHASE_WEIGHTS[phaseKey]) {
               updateProgressCard('running', PHASE_WEIGHTS[phaseKey].start, progressState.redCount, progressState.amberCount, savedName);
             }
-          }
-
-          if (data.type === 'phase_skipped') {
-            addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
           }
 
           // Handle search progress
@@ -3765,11 +3757,6 @@
             if (data.findingsCount > 0) {
               addLogEntry('result', `  ${data.findingsCount} findings restored from previous session`);
             }
-          }
-
-          // Handle phase skipped (reconnection)
-          if (data.type === 'phase_skipped') {
-            addLogEntry('search', `Phase ${data.phase} skipped: ${data.reason}`);
           }
 
           // Handle analyze resume (reconnection)
