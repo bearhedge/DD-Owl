@@ -2405,7 +2405,11 @@ If you cannot determine a field with reasonable confidence, use the default empt
             return { content: '', analysis: null };
           }
 
-          const analysis = await analyzeWithLLM(content, subjectName, item.query);
+          const analysis = await analyzeWithLLM(content, subjectName, item.query, item.url, {
+            companies: subjectProfile.associatedCompanies.map(c => c.name),
+            role: subjectProfile.currentRole?.title,
+            associates: subjectProfile.associatedPeople.map(p => p.name),
+          });
           return { content, analysis };
         };
 
@@ -2443,9 +2447,63 @@ If you cannot determine a field with reasonable confidence, use the default empt
           isAdverse: analysis.isAdverse,
           severity: analysis.severity,
           headline: analysis.headline,
+          matchConfidence: analysis.matchConfidence,
+          matchReasons: analysis.matchReasons,
+          clusterId: item.clusterId,
+          clusterLabel: item.clusterLabel,
           // Include accumulated findings for client to restore on reconnect
           _findings: allFindings,
         });
+
+        // Merge profile facts from this article
+        if (analysis.profileFacts && analysis.profileFacts.length > 0) {
+          let profileUpdated = false;
+          const updates: ProfileFact[] = [];
+
+          for (const fact of analysis.profileFacts) {
+            const source: ProfileFact = {
+              field: fact.field,
+              value: fact.value,
+              articleUrl: item.url,
+              snippet: fact.evidence,
+            };
+
+            if (fact.field === 'currentRole' && !subjectProfile.currentRole && fact.value) {
+              try {
+                const parts = fact.value.match(/(.+?)\s+(?:of|at)\s+(.+)/i);
+                if (parts) {
+                  subjectProfile.currentRole = { title: parts[1], company: parts[2] };
+                  profileUpdated = true;
+                  updates.push(source);
+                }
+              } catch {}
+            } else if (fact.field === 'associatedCompany' && fact.value) {
+              if (!subjectProfile.associatedCompanies.some(c => c.name === fact.value)) {
+                subjectProfile.associatedCompanies.push({ name: fact.value, relationship: 'associated' });
+                profileUpdated = true;
+                updates.push(source);
+              }
+            } else if (fact.field === 'associatedPerson' && fact.value) {
+              if (!subjectProfile.associatedPeople.some(p => p.name === fact.value)) {
+                subjectProfile.associatedPeople.push({ name: fact.value, relationship: 'associated' });
+                profileUpdated = true;
+                updates.push(source);
+              }
+            }
+
+            subjectProfile.sources.push(source);
+          }
+
+          // Update confidence based on corroborating facts
+          const factCount = subjectProfile.sources.length;
+          if (factCount >= 5) subjectProfile.confidence = 'high';
+          else if (factCount >= 3) subjectProfile.confidence = 'medium';
+          subjectProfile.lastUpdated = Date.now();
+
+          if (profileUpdated) {
+            sendEvent({ type: 'profile_update', updates });
+          }
+        }
 
         if (analysis.isAdverse) {
           urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'ADVERSE', severity: analysis.severity, headline: analysis.headline });
@@ -2458,6 +2516,8 @@ If you cannot determine a field with reasonable confidence, use the default empt
             triageClassification: item.category,
             clusterId: item.clusterId,
             clusterLabel: item.clusterLabel,
+            matchConfidence: analysis.matchConfidence,
+            matchReasons: analysis.matchReasons,
           });
         } else {
           // LLM said "Clear" - but if triage flagged RED/AMBER, we should preserve for manual review
@@ -2514,7 +2574,8 @@ If you cannot determine a field with reasonable confidence, use the default empt
       // Save progress AFTER this article is fully processed (for mid-analyze resume)
       // Use i + 1 so on resume we start with the NEXT article, not re-analyze this one
       try {
-        const saved = await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
+        const profileUpdate = ((i + 1) % 5 === 0) ? { profile: subjectProfile } : {};
+        const saved = await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings, ...profileUpdate }, connectionId);
         if (!saved) {
           console.warn(`[V4] PROGRESS_SAVE_FAILED: article ${i + 1}/${toProcess.length}, updateSession returned false`);
         }
