@@ -2673,7 +2673,11 @@ If you cannot determine a field with reasonable confidence, use the default empt
         durationMin: (totalDuration / 60000).toFixed(1),
       },
       findings: consolidatedFindings,
+      profile: subjectProfile,
     });
+
+    // Save final profile to session
+    await updateSession(sessionId, { profile: subjectProfile }, connectionId);
 
     // Save log with full URL tracking
     const metrics = tracker.finalize();

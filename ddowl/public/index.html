@@ -4446,6 +4446,12 @@
             currentSubjectName = name;
             currentFindings = data.findings || [];
 
+            // Render final profile if available
+            if (data.profile) {
+              renderProfile(data.profile);
+              showViewTabs();
+            }
+
             // Display consolidated findings
             if (data.findings && data.findings.length > 0) {
               // Clear existing results first
