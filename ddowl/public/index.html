@@ -3111,7 +3111,7 @@
 
       // Retry state
       let retryCount = 0;
-      const MAX_RETRIES = 3;
+      const MAX_RETRIES = 5;
       let eventSource = null;
       let lastMessageTime = Date.now();
 
@@ -3385,6 +3385,24 @@
       }
 
       connectSSE();
+
+      // Handle browser tab resume — immediately check connection health
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && eventSource && eventSource.readyState !== EventSource.CLOSED) {
+          const gap = Date.now() - lastMessageTime;
+          if (gap > 30000) {  // 30s without messages after tab resume
+            console.warn(`[SSE] Tab resumed, ${Math.round(gap/1000)}s since last message, reconnecting...`);
+            addLogEntry('warn', `Tab resumed after ${Math.round(gap/1000)}s, reconnecting...`);
+            eventSource.close();
+            if (currentHealthCheckInterval) {
+              clearInterval(currentHealthCheckInterval);
+              currentHealthCheckInterval = null;
+            }
+            // Don't count tab suspension against retry limit
+            setTimeout(connectSSE, 500);
+          }
+        }
+      });
     }
 
     function getTimestamp() {
@@ -3662,7 +3680,7 @@
 
       // Retry state
       let retryCount = 0;
-      const MAX_RETRIES = 3;
+      const MAX_RETRIES = 5;
       let lastQueryIndex = 0;
       let eventSource = null;
       let lastMessageTime = Date.now();
@@ -4258,6 +4276,24 @@
 
       // Start the connection
       connectSSE();
+
+      // Handle browser tab resume — immediately check connection health
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && eventSource && eventSource.readyState !== EventSource.CLOSED) {
+          const gap = Date.now() - lastMessageTime;
+          if (gap > 30000) {  // 30s without messages after tab resume
+            console.warn(`[SSE] Tab resumed, ${Math.round(gap/1000)}s since last message, reconnecting...`);
+            addLogEntry('warn', `Tab resumed after ${Math.round(gap/1000)}s, reconnecting...`);
+            eventSource.close();
+            if (currentHealthCheckInterval) {
+              clearInterval(currentHealthCheckInterval);
+              currentHealthCheckInterval = null;
+            }
+            // Don't count tab suspension against retry limit
+            setTimeout(connectSSE, 500);
+          }
+        }
+      });
     }
 
     function addResultToUI(result) {

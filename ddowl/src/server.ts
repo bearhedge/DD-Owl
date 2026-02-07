@@ -1073,40 +1073,8 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     return;
   }
 
-  // Parse name variations (comma-separated), always include main name
-  const nameVariations = [subjectName];
-  if (variationsParam) {
-    variationsParam.split(',').forEach(v => {
-      const trimmed = v.trim();
-      if (trimmed && trimmed !== subjectName) nameVariations.push(trimmed);
-    });
-  }
-
-  // For Chinese language: auto-generate Simplified/Traditional variants using DeepSeek LLM
-  if (language === 'chinese' || language === 'both') {
-    const currentNames = [...nameVariations];
-    for (const name of currentNames) {
-      const variants = await getChineseVariantsLLM(name);
-      for (const variant of variants) {
-        if (!nameVariations.includes(variant)) {
-          nameVariations.push(variant);
-        }
-      }
-    }
-  }
-
-  // Build search templates based on language selection
-  let selectedTemplates: string[] = [];
-  if (language === 'chinese') {
-    selectedTemplates = [...CHINESE_TEMPLATES, ...SITE_TEMPLATES];
-  } else if (language === 'english') {
-    selectedTemplates = [...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
-  } else {
-    // 'both' - all templates
-    selectedTemplates = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
-  }
-
-  // SSE setup
+  // SSE setup — IMMEDIATELY send headers so client gets heartbeats within 1s
+  // This MUST be before any async work (getSession, getChineseVariantsLLM, etc.)
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
@@ -1162,6 +1130,45 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     abortController.abort();
     clearInterval(heartbeat);
   });
+
+  // Parse name variations (comma-separated), always include main name
+  const nameVariations = [subjectName];
+  if (variationsParam) {
+    variationsParam.split(',').forEach(v => {
+      const trimmed = v.trim();
+      if (trimmed && trimmed !== subjectName) nameVariations.push(trimmed);
+    });
+  }
+
+  // For Chinese language: auto-generate Simplified/Traditional variants using DeepSeek LLM
+  // Skip on reconnect — variants are already stored in the session
+  if (!existingSession && (language === 'chinese' || language === 'both')) {
+    const currentNames = [...nameVariations];
+    for (const name of currentNames) {
+      const variants = await getChineseVariantsLLM(name);
+      for (const variant of variants) {
+        if (!nameVariations.includes(variant)) {
+          nameVariations.push(variant);
+        }
+      }
+    }
+  }
+  // On reconnect, use stored variations from session
+  if (existingSession?.variations) {
+    nameVariations.length = 0;
+    nameVariations.push(...existingSession.variations);
+  }
+
+  // Build search templates based on language selection
+  let selectedTemplates: string[] = [];
+  if (language === 'chinese') {
+    selectedTemplates = [...CHINESE_TEMPLATES, ...SITE_TEMPLATES];
+  } else if (language === 'english') {
+    selectedTemplates = [...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
+  } else {
+    // 'both' - all templates
+    selectedTemplates = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
+  }
 
   try {
     const tracker = new MetricsTracker(subjectName);
@@ -2213,6 +2220,16 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         } catch (saveErr) {
           console.error(`[V4] Failed to save progress on abort:`, saveErr);
         }
+        activeScreenings.delete(screeningKey);
+        return;
+      }
+
+      // Check if response stream is still alive (prevents zombie processing)
+      if (res.destroyed || res.writableEnded) {
+        console.log(`[V4] Response stream dead at article ${i + 1}/${toProcess.length}, stopping`);
+        try {
+          await updateSession(sessionId, { currentIndex: i, findings: allFindings }, connectionId);
+        } catch (e) { /* ignore */ }
         activeScreenings.delete(screeningKey);
         return;
       }
