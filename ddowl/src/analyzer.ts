@@ -436,16 +436,25 @@ export async function analyzeWithLLM(
   content: string,
   subjectName: string,
   searchTerm: string,
-  sourceUrl?: string
-): Promise<{ isAdverse: boolean; severity: 'RED' | 'AMBER' | 'GREEN' | 'REVIEW'; headline: string; summary: string }> {
+  sourceUrl?: string,
+  currentProfile?: { companies: string[]; role?: string; associates: string[] }
+): Promise<{
+  isAdverse: boolean;
+  severity: 'RED' | 'AMBER' | 'GREEN' | 'REVIEW';
+  headline: string;
+  summary: string;
+  profileFacts?: { field: string; value: string; evidence: string }[];
+  matchConfidence?: 'strong' | 'possible' | 'weak';
+  matchReasons?: string[];
+}> {
   if (!content || content.length < 50) {
     console.error(`[ANALYZE FAIL] Content too short (${content?.length || 0} chars) - requires manual review`);
-    return { isAdverse: false, severity: 'REVIEW', headline: 'Content fetch failed', summary: 'Unable to fetch page content - requires manual review' };
+    return { isAdverse: false, severity: 'REVIEW', headline: 'Content fetch failed', summary: 'Unable to fetch page content - requires manual review', profileFacts: [], matchConfidence: 'possible' as const, matchReasons: [] };
   }
 
   if (!LLM_API_KEY) {
     console.error('[ANALYZE FAIL] No LLM API key configured');
-    return { isAdverse: false, severity: 'REVIEW', headline: 'LLM not configured', summary: 'LLM API key not configured - requires manual review' };
+    return { isAdverse: false, severity: 'REVIEW', headline: 'LLM not configured', summary: 'LLM API key not configured - requires manual review', profileFacts: [], matchConfidence: 'possible' as const, matchReasons: [] };
   }
 
   // Store full content for quote validation (before truncation)
@@ -485,6 +494,25 @@ SEVERITY GUIDE:
 - RED: Criminal conviction, sanctions, serious fraud, money laundering
 - AMBER: Regulatory investigation, civil litigation, allegations, historical issues
 - GREEN: No adverse information, or name not actually mentioned
+${currentProfile ? `
+KNOWN SUBJECT PROFILE (use to improve identity matching):
+- Companies: ${currentProfile.companies.join(', ') || 'unknown'}
+- Role: ${currentProfile.role || 'unknown'}
+- Associates: ${currentProfile.associates.join(', ') || 'unknown'}
+` : ''}
+ALSO EXTRACT (in addition to claims):
+"profile_facts": [
+  { "field": "currentRole", "value": "CFO of XYZ Corp", "evidence": "exact quote from article" },
+  { "field": "associatedCompany", "value": "XYZ Corp", "evidence": "exact quote" },
+  { "field": "associatedPerson", "value": "John Smith", "evidence": "exact quote" }
+],
+"match_confidence": "strong" | "possible" | "weak",
+"match_reasons": ["name_match", "company_connection", "role_match", "location_match"]
+
+MATCH CONFIDENCE GUIDE:
+- strong: Name + at least one other signal (company, role, location) match known profile
+- possible: Name matches but no other signals confirm identity
+- weak: Only connected via company/associate, name not directly mentioned
 
 CLAIM EXAMPLES (showing required quote format):
 
@@ -545,13 +573,13 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error(`[ANALYZE FAIL] No JSON in LLM response: ${text.slice(0, 200)}`);
-      return { isAdverse: false, severity: 'REVIEW', headline: 'Analysis parse failed', summary: 'LLM response could not be parsed - requires manual review' };
+      return { isAdverse: false, severity: 'REVIEW', headline: 'Analysis parse failed', summary: 'LLM response could not be parsed - requires manual review', profileFacts: [], matchConfidence: 'possible' as const, matchReasons: [] };
     }
 
     const analysis = JSON.parse(jsonMatch[0]);
 
     if (!analysis.mentions_subject) {
-      return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Subject not mentioned' };
+      return { isAdverse: false, severity: 'GREEN', headline: '', summary: 'Subject not mentioned', profileFacts: [], matchConfidence: 'possible' as const, matchReasons: [] };
     }
 
     // ANTI-HALLUCINATION: Validate claims against source content
@@ -570,7 +598,10 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
           isAdverse: false,
           severity: 'GREEN',
           headline: '',
-          summary: 'No verifiable adverse information found'
+          summary: 'No verifiable adverse information found',
+          profileFacts: analysis.profile_facts || [],
+          matchConfidence: analysis.match_confidence || 'possible',
+          matchReasons: analysis.match_reasons || [],
         };
       }
     }
@@ -591,10 +622,13 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
       severity: validatedClaims.length > 0 ? (analysis.severity || 'GREEN') : 'GREEN',
       headline: validatedClaims.length > 0 ? (analysis.headline || '') : '',
       summary: summary,
+      profileFacts: analysis.profile_facts || [],
+      matchConfidence: analysis.match_confidence || 'possible',
+      matchReasons: analysis.match_reasons || [],
     };
   } catch (error: any) {
     console.error(`[ANALYZE FAIL] LLM error: ${error?.message || error}`);
-    return { isAdverse: false, severity: 'REVIEW', headline: 'Analysis error', summary: `Analysis failed: ${error?.message || 'Unknown error'} - requires manual review` };
+    return { isAdverse: false, severity: 'REVIEW', headline: 'Analysis error', summary: `Analysis failed: ${error?.message || 'Unknown error'} - requires manual review`, profileFacts: [], matchConfidence: 'possible' as const, matchReasons: [] };
   }
 }
 
