@@ -78,6 +78,8 @@ export interface RawFinding {
   fetchFailed?: boolean;  // True if content couldn't be fetched - needs manual review
   clusterId?: string;     // From Phase 2.5 incident clustering
   clusterLabel?: string;  // Incident description from clustering
+  matchConfidence?: 'strong' | 'possible' | 'weak';
+  matchReasons?: string[];
 }
 
 // Consolidated finding after deduplication
@@ -91,6 +93,44 @@ export interface ConsolidatedFinding {
   sources: { url: string; title: string }[];
   clusterId?: string;     // From Phase 2.5 incident clustering
   clusterLabel?: string;  // Incident description from clustering
+}
+
+// Subject profile built progressively during screening
+export interface ProfileFact {
+  field: string;       // e.g. "currentRole", "associatedCompanies"
+  value: string;       // Human-readable value
+  articleUrl: string;  // Source article
+  snippet: string;     // Evidence snippet from article
+}
+
+export interface SubjectProfile {
+  // Identity
+  primaryName: string;
+  nameVariants: string[];
+  gender: 'male' | 'female' | 'unknown';
+  nationality: string[];
+  ageRange: string;
+
+  // Professional
+  currentRole: { title: string; company: string; since?: string } | null;
+  pastRoles: { title: string; company: string; period?: string }[];
+  industry: string[];
+  licenses: string[];
+
+  // Network
+  associatedCompanies: { name: string; relationship: string }[];
+  associatedPeople: { name: string; relationship: string }[];
+
+  // Meta
+  confidence: 'low' | 'medium' | 'high';
+  sources: ProfileFact[];
+  lastUpdated: number;
+}
+
+// Match confidence for findings
+export interface MatchConfidence {
+  level: 'strong' | 'possible' | 'weak';
+  reasons: string[];  // ["name_match", "company_connection", "role_match"]
 }
 
 // ============================================================
