@@ -1463,6 +1463,157 @@
     .resume-btn:hover { background: #e0e0e0; }
     .delete-btn { background: #1a1a1a; color: #666; border: 1px solid #333 !important; }
     .delete-btn:hover { background: #222; color: #888; }
+
+    /* View tabs */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #333;
+    }
+    .view-tab {
+      padding: 8px 20px;
+      background: transparent;
+      color: #888;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .view-tab:hover { color: #ccc; }
+    .view-tab.active { color: #fff; border-bottom-color: #fff; }
+
+    /* Profiles container */
+    .profiles-container {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      min-height: 400px;
+    }
+    @media (max-width: 768px) {
+      .profiles-container { grid-template-columns: 1fr; }
+    }
+
+    /* Profile card */
+    .profile-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .profile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #222;
+    }
+    .profile-header h3 { margin: 0; font-size: 16px; }
+    .confidence-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .confidence-badge.low { background: #333; color: #888; }
+    .confidence-badge.medium { background: #3a3000; color: #ffd700; }
+    .confidence-badge.high { background: #003a00; color: #00ff00; }
+    .profile-section { margin-bottom: 16px; }
+    .profile-section h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+      letter-spacing: 1px;
+      margin: 0 0 8px 0;
+    }
+    .profile-field {
+      font-size: 13px;
+      padding: 4px 0;
+      display: flex;
+      gap: 8px;
+    }
+    .pf-label { color: #888; min-width: 100px; flex-shrink: 0; }
+    .pf-value { color: #ddd; }
+    .pf-value.updated { animation: pfHighlight 1.5s ease; }
+    @keyframes pfHighlight {
+      0% { background: #3a3000; }
+      100% { background: transparent; }
+    }
+
+    /* Evidence map */
+    .evidence-map {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .evidence-map h3 { margin: 0 0 16px 0; font-size: 16px; }
+    .evidence-empty { color: #555; font-style: italic; padding: 20px; text-align: center; }
+    .evidence-group {
+      margin-bottom: 16px;
+      border: 1px solid #222;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .evidence-group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      background: #1a1a1a;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .evidence-group-header:hover { background: #222; }
+    .evidence-group-meta { display: flex; gap: 8px; align-items: center; }
+    .evidence-group-count { color: #888; font-size: 12px; font-weight: 400; }
+    .evidence-item {
+      padding: 8px 12px;
+      border-top: 1px solid #1a1a1a;
+      font-size: 12px;
+    }
+    .evidence-item:hover { background: #0a0a0a; }
+    .evidence-item-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .evidence-title { color: #ccc; flex: 1; }
+    .evidence-title a { color: #ccc; text-decoration: none; }
+    .evidence-title a:hover { text-decoration: underline; }
+    .match-badge {
+      padding: 1px 6px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .match-badge.strong { background: #003a00; color: #00ff00; }
+    .match-badge.possible { background: #3a3000; color: #ffd700; }
+    .match-badge.weak { background: #333; color: #888; }
+    .severity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .severity-dot.red { background: #ff4444; }
+    .severity-dot.amber { background: #ffaa00; }
+    .match-reasons {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .match-reason-tag {
+      font-size: 10px;
+      color: #666;
+      background: #1a1a1a;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -1563,44 +1714,94 @@
         </div>
       </div>
 
-      <div class="results-section" id="resultsSection">
-        <div class="stats" style="grid-template-columns: repeat(2, 1fr);">
-          <div class="stat-card red">
-            <div class="stat-number" id="redCount">0</div>
-            <div class="stat-label">Potential Flags</div>
+      <!-- Tab Navigation for Results vs Profiles -->
+      <div class="view-tabs" id="viewTabs" style="display: none;">
+        <button class="view-tab active" id="tabResults" onclick="switchTab('results')">Results</button>
+        <button class="view-tab" id="tabProfiles" onclick="switchTab('profiles')">Profiles</button>
+      </div>
+
+      <div id="resultsView">
+        <div class="results-section" id="resultsSection">
+          <div class="stats" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="stat-card red">
+              <div class="stat-number" id="redCount">0</div>
+              <div class="stat-label">Potential Flags</div>
+            </div>
+            <div class="stat-card amber">
+              <div class="stat-number" id="amberCount">0</div>
+              <div class="stat-label">Potential Flags</div>
+            </div>
           </div>
-          <div class="stat-card amber">
-            <div class="stat-number" id="amberCount">0</div>
-            <div class="stat-label">Potential Flags</div>
+
+          <div class="flags-list" id="redFlags">
+            <div class="flags-header red">Potential Flags</div>
+            <div id="redFlagsList"></div>
+          </div>
+
+          <div class="flags-list" id="amberFlags">
+            <div class="flags-header amber">Potential Flags</div>
+            <div id="amberFlagsList"></div>
+          </div>
+
+          <div class="action-box">
+            <div class="action-title">Recommended Action</div>
+            <div class="action-text" id="actionText"></div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 20px;">
+            <button class="btn-generate" id="generateReportBtn" onclick="generateDetailedReport()" disabled style="flex: 1;">
+              Generate Report (<span id="selectedCount">0</span>)
+            </button>
+            <button class="btn-secondary" id="furtherSearchBtn" onclick="furtherSearchSelected()" disabled style="flex: 1;">
+              Further Searches
+            </button>
+          </div>
+          <button class="btn-further-links" id="furtherLinksBtn" onclick="openFurtherLinksModal()" style="display: none; margin-top: 12px; width: 100%;">
+            Further Links (<span id="furtherLinksCount">0</span>)
+          </button>
+        </div>
+      </div>
+
+      <div id="profilesView" style="display: none;">
+        <div class="profiles-container">
+          <!-- Left Panel: Subject Profile Card -->
+          <div class="profile-card">
+            <div class="profile-header">
+              <h3 id="profileName"></h3>
+              <span class="confidence-badge" id="profileConfidence">Low</span>
+            </div>
+
+            <div class="profile-section" id="profileIdentity">
+              <h4>Identity</h4>
+              <div class="profile-field" id="pfGender"><span class="pf-label">Gender:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfNationality"><span class="pf-label">Nationality:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfAge"><span class="pf-label">Age:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfVariants"><span class="pf-label">Name variants:</span> <span class="pf-value">—</span></div>
+            </div>
+
+            <div class="profile-section" id="profileProfessional">
+              <h4>Professional</h4>
+              <div class="profile-field" id="pfCurrentRole"><span class="pf-label">Current role:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfPastRoles"><span class="pf-label">Past roles:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfIndustry"><span class="pf-label">Industry:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfLicenses"><span class="pf-label">Licenses:</span> <span class="pf-value">—</span></div>
+            </div>
+
+            <div class="profile-section" id="profileNetwork">
+              <h4>Network</h4>
+              <div class="profile-field" id="pfCompanies"><span class="pf-label">Companies:</span> <span class="pf-value">—</span></div>
+              <div class="profile-field" id="pfPeople"><span class="pf-label">Associates:</span> <span class="pf-value">—</span></div>
+            </div>
+          </div>
+
+          <!-- Right Panel: Evidence Map -->
+          <div class="evidence-map">
+            <h3>Evidence Map</h3>
+            <div id="evidenceGroups">
+              <div class="evidence-empty">Evidence will appear here as articles are analyzed...</div>
+            </div>
           </div>
         </div>
-
-        <div class="flags-list" id="redFlags">
-          <div class="flags-header red">Potential Flags</div>
-          <div id="redFlagsList"></div>
-        </div>
-
-        <div class="flags-list" id="amberFlags">
-          <div class="flags-header amber">Potential Flags</div>
-          <div id="amberFlagsList"></div>
-        </div>
-
-        <div class="action-box">
-          <div class="action-title">Recommended Action</div>
-          <div class="action-text" id="actionText"></div>
-        </div>
-
-        <div style="display: flex; gap: 12px; margin-top: 20px;">
-          <button class="btn-generate" id="generateReportBtn" onclick="generateDetailedReport()" disabled style="flex: 1;">
-            Generate Report (<span id="selectedCount">0</span>)
-          </button>
-          <button class="btn-secondary" id="furtherSearchBtn" onclick="furtherSearchSelected()" disabled style="flex: 1;">
-            Further Searches
-          </button>
-        </div>
-        <button class="btn-further-links" id="furtherLinksBtn" onclick="openFurtherLinksModal()" style="display: none; margin-top: 12px; width: 100%;">
-          Further Links (<span id="furtherLinksCount">0</span>)
-        </button>
       </div>
     </div>
   </div>
@@ -4430,6 +4631,136 @@
       a.download = `ddowl-${currentReport.subject}-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    // ============================================================
+    // PROFILES TAB
+    // ============================================================
+    let currentProfile = null;
+    let evidenceItems = [];
+
+    function switchTab(tab) {
+      document.getElementById('tabResults').classList.toggle('active', tab === 'results');
+      document.getElementById('tabProfiles').classList.toggle('active', tab === 'profiles');
+      document.getElementById('resultsView').style.display = tab === 'results' ? '' : 'none';
+      document.getElementById('profilesView').style.display = tab === 'profiles' ? '' : 'none';
+    }
+
+    function showViewTabs() {
+      document.getElementById('viewTabs').style.display = '';
+    }
+
+    function renderProfile(profile) {
+      if (!profile) return;
+      currentProfile = profile;
+
+      document.getElementById('profileName').textContent = profile.primaryName;
+
+      const badge = document.getElementById('profileConfidence');
+      badge.textContent = profile.confidence;
+      badge.className = 'confidence-badge ' + profile.confidence;
+
+      setProfileField('pfGender', profile.gender !== 'unknown' ? profile.gender : null);
+      setProfileField('pfNationality', profile.nationality?.length ? profile.nationality.join(', ') : null);
+      setProfileField('pfAge', profile.ageRange || null);
+      setProfileField('pfVariants', profile.nameVariants?.length > 1 ? profile.nameVariants.slice(1).join(', ') : null);
+
+      setProfileField('pfCurrentRole', profile.currentRole ? `${profile.currentRole.title} at ${profile.currentRole.company}${profile.currentRole.since ? ` (since ${profile.currentRole.since})` : ''}` : null);
+      setProfileField('pfPastRoles', profile.pastRoles?.length ? profile.pastRoles.map(r => `${r.title} at ${r.company}${r.period ? ` (${r.period})` : ''}`).join('; ') : null);
+      setProfileField('pfIndustry', profile.industry?.length ? profile.industry.join(', ') : null);
+      setProfileField('pfLicenses', profile.licenses?.length ? profile.licenses.join(', ') : null);
+
+      setProfileField('pfCompanies', profile.associatedCompanies?.length ? profile.associatedCompanies.map(c => `${c.name} (${c.relationship})`).join('; ') : null);
+      setProfileField('pfPeople', profile.associatedPeople?.length ? profile.associatedPeople.map(p => `${p.name} (${p.relationship})`).join('; ') : null);
+    }
+
+    function setProfileField(fieldId, value) {
+      const el = document.getElementById(fieldId);
+      if (!el) return;
+      const valueEl = el.querySelector('.pf-value');
+      if (valueEl) {
+        const oldVal = valueEl.textContent;
+        valueEl.textContent = value || '\u2014';
+        if (value && value !== '\u2014' && oldVal !== value) {
+          valueEl.classList.add('updated');
+          setTimeout(() => valueEl.classList.remove('updated'), 1500);
+        }
+      }
+    }
+
+    function addEvidenceItem(item) {
+      evidenceItems.push(item);
+      renderEvidenceMap();
+    }
+
+    function renderEvidenceMap() {
+      const container = document.getElementById('evidenceGroups');
+      if (evidenceItems.length === 0) return;
+
+      const groups = {};
+      const ungrouped = [];
+
+      for (const item of evidenceItems) {
+        if (item.clusterId && item.clusterLabel) {
+          if (!groups[item.clusterId]) {
+            groups[item.clusterId] = { label: item.clusterLabel, items: [] };
+          }
+          groups[item.clusterId].items.push(item);
+        } else {
+          ungrouped.push(item);
+        }
+      }
+
+      let html = '';
+
+      const sortedGroups = Object.values(groups).sort((a, b) => {
+        const aSev = a.items.some(i => i.severity === 'RED') ? 0 : 1;
+        const bSev = b.items.some(i => i.severity === 'RED') ? 0 : 1;
+        return aSev - bSev;
+      });
+
+      for (const group of sortedGroups) {
+        const highestSev = group.items.some(i => i.severity === 'RED') ? 'RED' : 'AMBER';
+        html += `<div class="evidence-group">
+          <div class="evidence-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span><span class="severity-dot ${highestSev.toLowerCase()}"></span> ${escapeHtml(group.label)}</span>
+            <div class="evidence-group-meta">
+              <span class="evidence-group-count">${group.items.length} article${group.items.length > 1 ? 's' : ''}</span>
+            </div>
+          </div>`;
+
+        for (const item of group.items) {
+          html += renderEvidenceItemHTML(item);
+        }
+        html += '</div>';
+      }
+
+      if (ungrouped.length > 0) {
+        html += `<div class="evidence-group">
+          <div class="evidence-group-header" onclick="this.parentElement.classList.toggle('collapsed')">
+            <span>Other</span>
+            <span class="evidence-group-count">${ungrouped.length} article${ungrouped.length > 1 ? 's' : ''}</span>
+          </div>`;
+        for (const item of ungrouped) {
+          html += renderEvidenceItemHTML(item);
+        }
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    function renderEvidenceItemHTML(item) {
+      const confidence = item.matchConfidence || 'possible';
+      const reasons = item.matchReasons || [];
+      return `<div class="evidence-item">
+        <div class="evidence-item-header">
+          <span class="severity-dot ${(item.severity || 'amber').toLowerCase()}"></span>
+          <span class="evidence-title"><a href="${escapeHtml(item.url)}" target="_blank">${escapeHtml(item.title)}</a></span>
+          <span class="match-badge ${confidence}">${confidence}</span>
+        </div>
+        ${reasons.length ? `<div class="match-reasons">${reasons.map(r => `<span class="match-reason-tag">${escapeHtml(r.replace('_', ' '))}</span>`).join('')}</div>` : ''}
+      </div>`;
     }
 
     function escapeHtml(text) {
