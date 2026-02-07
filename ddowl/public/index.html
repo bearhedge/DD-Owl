@@ -3016,6 +3016,35 @@
         } else {
           addLogEntry('green', `Clear`, data.url);
         }
+        // Feed into evidence map
+        if (data.isAdverse) {
+          addEvidenceItem({
+            url: data.url,
+            title: data.title,
+            severity: data.severity,
+            headline: data.headline,
+            matchConfidence: data.matchConfidence,
+            matchReasons: data.matchReasons,
+            clusterId: data.clusterId,
+            clusterLabel: data.clusterLabel,
+          });
+        }
+      }
+
+      // Handle profile events in processSSEEvent
+      if (data.type === 'profile_seed') {
+        renderProfile(data.profile);
+        showViewTabs();
+        addLogEntry('info', `Profile seeded: ${data.profile.confidence} confidence`);
+      }
+      if (data.type === 'profile_update') {
+        if (data.updates && currentProfile) {
+          for (const update of data.updates) {
+            currentProfile.sources = currentProfile.sources || [];
+            currentProfile.sources.push(update);
+          }
+          renderProfile(currentProfile);
+        }
       }
 
       // Handle paused event
@@ -3463,6 +3492,35 @@
             } else {
               addLogEntry('green', `Clear`, data.url);
             }
+            // Feed into evidence map
+            if (data.isAdverse) {
+              addEvidenceItem({
+                url: data.url,
+                title: data.title,
+                severity: data.severity,
+                headline: data.headline,
+                matchConfidence: data.matchConfidence,
+                matchReasons: data.matchReasons,
+                clusterId: data.clusterId,
+                clusterLabel: data.clusterLabel,
+              });
+            }
+          }
+
+          // Handle profile events in resume handler
+          if (data.type === 'profile_seed') {
+            renderProfile(data.profile);
+            showViewTabs();
+            addLogEntry('info', `Profile seeded: ${data.profile.confidence} confidence`);
+          }
+          if (data.type === 'profile_update') {
+            if (data.updates && currentProfile) {
+              for (const update of data.updates) {
+                currentProfile.sources = currentProfile.sources || [];
+                currentProfile.sources.push(update);
+              }
+              renderProfile(currentProfile);
+            }
           }
 
           // Handle paused event (server stopped due to pause flag)
@@ -3853,6 +3911,12 @@
       currentSubjectName = '';
       furtherLinks = [];
 
+      // Reset profile state
+      currentProfile = null;
+      evidenceItems = [];
+      document.getElementById('evidenceGroups').innerHTML = '<div class="evidence-empty">Evidence will appear here as articles are analyzed...</div>';
+      switchTab('results');
+
       // Clear UI elements
       document.getElementById('furtherLinksBtn').style.display = 'none';
       document.getElementById('furtherLinksCount').textContent = '0';
@@ -3865,6 +3929,7 @@
 
       // Show progress card in running state
       updateProgressCard('running', 0, 0, 0, name);
+      showViewTabs();
 
       // Hide legacy UI elements
       document.getElementById('disconnectBtn').style.display = 'none';
@@ -3960,6 +4025,23 @@
             ScreeningSync.init(sessionId);
             ScreeningSync.becomeLeader();
             ScreeningSync.screeningState = 'running';
+          }
+
+          // Handle profile events
+          if (data.type === 'profile_seed') {
+            renderProfile(data.profile);
+            showViewTabs();
+            addLogEntry('info', `Profile seeded: ${data.profile.confidence} confidence`);
+          }
+
+          if (data.type === 'profile_update') {
+            if (data.updates && currentProfile) {
+              for (const update of data.updates) {
+                currentProfile.sources = currentProfile.sources || [];
+                currentProfile.sources.push(update);
+              }
+              renderProfile(currentProfile);
+            }
           }
 
           // Handle reconnection status - show clear context about where we are
@@ -4261,6 +4343,34 @@
               updateProgressCard('running', progressState.percentage, newRed, newAmber, name);
             } else {
               addLogEntry('green', `Clear`, data.url);
+            }
+            // Feed into evidence map
+            if (data.isAdverse) {
+              addEvidenceItem({
+                url: data.url,
+                title: data.title,
+                severity: data.severity,
+                headline: data.headline,
+                matchConfidence: data.matchConfidence,
+                matchReasons: data.matchReasons,
+                clusterId: data.clusterId,
+                clusterLabel: data.clusterLabel,
+              });
+            }
+          }
+
+          // Handle profile events in follower handler
+          if (data.type === 'profile_seed') {
+            renderProfile(data.profile);
+            showViewTabs();
+          }
+          if (data.type === 'profile_update') {
+            if (data.updates && currentProfile) {
+              for (const update of data.updates) {
+                currentProfile.sources = currentProfile.sources || [];
+                currentProfile.sources.push(update);
+              }
+              renderProfile(currentProfile);
             }
           }
 
