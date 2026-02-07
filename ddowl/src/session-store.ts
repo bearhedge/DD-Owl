@@ -1,7 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { BatchSearchResult } from './searcher.js';
 import { CategorizedResult } from './triage.js';
-import { RawFinding, ConsolidatedFinding } from './types.js';
+import { RawFinding, ConsolidatedFinding, SubjectProfile } from './types.js';
 import { ClusteringResult, IncidentCluster } from './deduplicator.js';
 
 const redis = new Redis({
@@ -28,6 +28,7 @@ export interface ScreeningSession {
   findings: RawFinding[];
   consolidatedFindings?: ConsolidatedFinding[];  // Stored after consolidation phase
   clusterResult?: ClusteringResult;  // Stored after clustering phase
+  profile?: SubjectProfile;  // Subject profile built during screening
 
   // === Granular progress tracking for mid-phase resume ===
 
