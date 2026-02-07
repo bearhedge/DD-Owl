@@ -29,7 +29,7 @@ import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './ana
 import { triageSearchResults, TriageResult, categorizeAll, CategorizedResult } from './triage.js';
 import { consolidateFindings } from './consolidator.js';
 import { generateFullReport } from './reportGenerator.js';
-import { RawFinding, ConsolidatedFinding, SearchResult } from './types.js';
+import { RawFinding, ConsolidatedFinding, SearchResult, SubjectProfile, ProfileFact } from './types.js';
 import { extractFinding, isSameFinding, mergeFindings, Finding } from './extract.js';
 import { detectCategory } from './searchStrings.js';
 import { DDOwlReport, DDOwlReportV2, Issue, AnalyzedResult } from './types.js';
@@ -1676,6 +1676,109 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       sendEvent({ type: 'complete', stats: { totalResults: 0, findings: 0 }, findings: [] });
       res.end();
       return;
+    }
+
+    // ========================================
+    // PHASE 1.9: PROFILE SEED (from search snippets)
+    // ========================================
+    let subjectProfile: SubjectProfile = {
+      primaryName: subjectName,
+      nameVariants: [...nameVariations],
+      gender: 'unknown',
+      nationality: [],
+      ageRange: '',
+      currentRole: null,
+      pastRoles: [],
+      industry: [],
+      licenses: [],
+      associatedCompanies: [],
+      associatedPeople: [],
+      confidence: 'low',
+      sources: [],
+      lastUpdated: Date.now(),
+    };
+
+    // On reconnect, restore profile from session
+    if (existingSession?.profile) {
+      subjectProfile = existingSession.profile;
+      console.log(`[V4] Restored profile from session, confidence: ${subjectProfile.confidence}`);
+      sendEvent({ type: 'profile_seed', profile: subjectProfile });
+    } else {
+      // Build preliminary profile from search snippets (1 LLM call)
+      try {
+        const snippetSummary = allResults.slice(0, 100).map((r, i) =>
+          `[${i + 1}] ${r.title} — ${r.snippet || ''}`
+        ).join('\n');
+
+        const profilePrompt = `You are a due diligence analyst. Given these search results about "${subjectName}", extract a preliminary subject profile.
+
+SEARCH RESULTS:
+${snippetSummary}
+
+Extract ONLY facts that appear in multiple results or are stated clearly. Mark uncertain facts.
+
+OUTPUT FORMAT (JSON only):
+{
+  "gender": "male" | "female" | "unknown",
+  "nationality": ["Hong Kong", ...] or [],
+  "ageRange": "40s" or "born 1982" or "",
+  "currentRole": { "title": "CFO", "company": "XYZ Corp", "since": "2020" } or null,
+  "pastRoles": [{ "title": "Director", "company": "ABC Ltd", "period": "2015-2019" }],
+  "industry": ["finance", "real estate"] or [],
+  "licenses": ["SFC Type 9"] or [],
+  "associatedCompanies": [{ "name": "XYZ Corp", "relationship": "director" }],
+  "associatedPeople": [{ "name": "John Smith", "relationship": "business partner" }]
+}
+
+If you cannot determine a field with reasonable confidence, use the default empty value. Do NOT guess.`;
+
+        const dsKey = process.env.DEEPSEEK_API_KEY || '';
+        if (dsKey) {
+          const profileResponse = await axios.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            {
+              model: 'deepseek-chat',
+              messages: [{ role: 'user', content: profilePrompt }],
+              temperature: 0.1,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${dsKey}`,
+              },
+              timeout: 15000,
+            }
+          );
+
+          const profileText = profileResponse.data.choices?.[0]?.message?.content || '';
+          const cleanText = profileText.replace(/```json\s*/gi, '').replace(/```/g, '');
+          const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            subjectProfile.gender = parsed.gender || 'unknown';
+            subjectProfile.nationality = parsed.nationality || [];
+            subjectProfile.ageRange = parsed.ageRange || '';
+            subjectProfile.currentRole = parsed.currentRole || null;
+            subjectProfile.pastRoles = parsed.pastRoles || [];
+            subjectProfile.industry = parsed.industry || [];
+            subjectProfile.licenses = parsed.licenses || [];
+            subjectProfile.associatedCompanies = parsed.associatedCompanies || [];
+            subjectProfile.associatedPeople = parsed.associatedPeople || [];
+            subjectProfile.lastUpdated = Date.now();
+            console.log(`[V4] Profile seed extracted: gender=${subjectProfile.gender}, role=${subjectProfile.currentRole?.title}, companies=${subjectProfile.associatedCompanies.length}`);
+          }
+        } else {
+          console.log(`[V4] No DeepSeek API key - skipping profile seed`);
+        }
+      } catch (err: any) {
+        console.error(`[V4] Profile seed extraction failed (non-fatal): ${err?.message}`);
+        // Profile stays at defaults — will be enriched during analyze
+      }
+
+      // Save profile to session and send to client
+      await updateSession(sessionId, { profile: subjectProfile }, connectionId);
+      sendEvent({ type: 'profile_seed', profile: subjectProfile });
     }
 
     // ========================================
