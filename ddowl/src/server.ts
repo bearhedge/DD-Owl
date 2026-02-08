@@ -2885,6 +2885,11 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
 
   console.log(`[REPORT] Generating report for ${subjectName} with ${findings.length} findings (session: ${sessionId})`);
 
+  // Load session to access cached article content
+  const session = await getSession(sessionId);
+  const rawFindings = session?.findings || [];
+  const consolidatedFindings = session?.consolidatedFindings || [];
+
   // Check LLM configuration
   const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
   const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
@@ -2908,8 +2913,62 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
       const primarySource = sources[0];
       const otherSources = sources.slice(1);
 
+      // Look up cached article content from session
+      let articleText = '';
+      const sourceUrls = new Set(sources.map((s: any) => s.url));
+
+      // Try consolidated findings first (has articleContents[])
+      const matchedConsolidated = consolidatedFindings.find((cf: any) =>
+        cf.headline === finding.headline && cf.summary === finding.summary
+      );
+
+      if (matchedConsolidated?.articleContents && matchedConsolidated.articleContents.length > 0) {
+        articleText = matchedConsolidated.articleContents
+          .map((ac) => ac.content)
+          .join('\n\n---\n\n')
+          .slice(0, 8000);
+      } else {
+        // Fall back to raw findings by URL match
+        const matchedRaw = rawFindings.filter((rf: any) => sourceUrls.has(rf.url) && rf.articleContent);
+        if (matchedRaw.length > 0) {
+          articleText = matchedRaw
+            .map((rf: any) => rf.articleContent)
+            .join('\n\n---\n\n')
+            .slice(0, 8000);
+        }
+      }
+
+      console.log(`[REPORT] Finding ${i + 1}: ${articleText ? `${articleText.length} chars of article text` : 'no article text, metadata only'}`);
+
       // Generate professional due diligence paragraph
-      const prompt = `Write a due diligence report paragraph for this finding:
+      const prompt = articleText
+        ? `You are a professional due diligence report writer. Read the following article and write a factual report paragraph.
+
+ARTICLE TEXT:
+${articleText}
+
+SCREENING CLAIMS (cross-reference these against the article — use the article as ground truth, silently correct any inaccuracies):
+- Headline: ${finding.headline || 'N/A'}
+- Summary: ${finding.summary || 'N/A'}
+
+SUBJECT BEING SCREENED: ${subjectName}
+PRIMARY SOURCE: ${primarySource?.title || 'Unknown source'}
+SOURCE URL: ${primarySource?.url || 'N/A'}
+PUBLICATION DATE: ${finding.dateRange || 'Unknown'}
+ADDITIONAL SOURCES: ${otherSources.map((s: any) => s.title || s.url).join(', ') || 'None'}
+SOURCE COUNT: ${finding.sourceCount || 1}
+
+WRITING INSTRUCTIONS:
+1. Start with: "According to an article published by [state whether mainstream or alternative media outlet] [outlet name] on [Month Year], ..."
+2. Write a topic sentence summarizing the key finding
+3. Follow with 3-5 sentences covering ALL key facts from the article as they relate to ${subjectName}
+4. Include specific details: names, dates, amounts, entities, roles mentioned in the article
+5. Do NOT include any information not present in the source article — no hallucination
+6. Write in neutral, professional due diligence English (third person, past tense for events, present tense for ongoing matters)
+7. Do NOT use bullet points — write flowing prose paragraphs only
+
+Return ONLY the paragraph text, no JSON, no markdown formatting, no headers.`
+        : `Write a due diligence report paragraph for this finding:
 
 Subject being screened: ${subjectName}
 Source: ${primarySource?.title || 'Unknown source'}
@@ -2920,18 +2979,10 @@ Key details: ${finding.summary || 'N/A'}
 Additional sources: ${otherSources.map((s: any) => s.title || s.url).join(', ') || 'None'}
 Source count: ${finding.sourceCount || 1}
 
-IMPORTANT FORMAT INSTRUCTIONS:
-1. Start with "According to an article published by [Source] on [Date]..." or "According to [Source]..." if date unknown
-2. Write a topic sentence summarizing the allegation
-3. Write 5+ sentences with key facts:
-   - What happened and when
-   - How this relates to ${subjectName}
-   - Specific details: amounts, dates, parties involved
-   - Outcome or current status if known
-4. If multiple sources (sourceCount > 1), end with: "This was corroborated by [N] additional sources."
-
-Write in professional, factual due diligence tone. Be specific with dates, amounts, and names when available.
-Do NOT use bullet points. Write flowing paragraphs.
+Start with "According to an article published by [Source] on [Date]..." or "According to [Source]..." if date unknown.
+Write a topic sentence then 3-5 sentences with key facts relating to ${subjectName}.
+Write in professional due diligence tone. No bullet points, flowing paragraphs only.
+Do NOT include any information not stated in the source material.
 Return ONLY the paragraph text, no JSON or markdown.`;
 
       // Try LLM providers in order (Kimi K2 preferred for better writing quality)
