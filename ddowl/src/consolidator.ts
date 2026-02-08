@@ -648,6 +648,7 @@ export async function consolidateFindings(
         sources: allSources,
         clusterId: f.clusterId,
         clusterLabel: f.clusterLabel,
+        articleContents: f.articleContent ? [{ url: f.url, content: f.articleContent }] : undefined,
       });
     } else {
       // Multiple findings - consolidate with LLM
@@ -660,6 +661,13 @@ export async function consolidateFindings(
       // Preserve cluster info in consolidated result
       merged.clusterId = groupWithFp[0].clusterId;
       merged.clusterLabel = groupWithFp[0].clusterLabel;
+      // Carry article content from raw findings into consolidated finding
+      const articleContents = groupWithFp
+        .filter(f => f.articleContent)
+        .map(f => ({ url: f.url, content: f.articleContent! }));
+      if (articleContents.length > 0) {
+        merged.articleContents = articleContents;
+      }
       consolidated.push(merged);
     }
   }
