@@ -499,6 +499,14 @@ SEVERITY GUIDE:
 - RED: Criminal conviction, sanctions, serious fraud, money laundering
 - AMBER: Regulatory investigation, civil litigation, allegations, historical issues
 - GREEN: No adverse information, or name not actually mentioned
+
+REGULATORY FILING DETECTION:
+If this article appears to be a stock exchange regulatory filing (prospectus/招股書, listing document/上市文件, annual report/年報, circular/通函, 配股說明書, 債券募集說明書):
+- Standard legal language in "Risk Factors"/"風險因素", "Regulatory Overview"/"監管概覽", or "Statutory Information"/"法定資料" sections is TEMPLATE BOILERPLATE — not actual adverse events
+- Words like "criminal fraud"/"刑事欺詐", "money laundering"/"洗錢", "sanctions"/"制裁" in these sections describe hypothetical legal risks that ALL listed companies must disclose
+- This applies to filings from HKEX (港交所), SSE (上交所), SZSE (深交所), and CSRC (證監會/证监会)
+- Only flag as adverse if the document describes ACTUAL events (enforcement actions/行政處罰, disciplinary proceedings/紀律行動, specific incidents) involving "${subjectName}"
+- If the content is purely boilerplate disclosure language → set is_adverse: false, severity: GREEN
 ${currentProfile ? `
 KNOWN SUBJECT PROFILE (use to improve identity matching):
 - Companies: ${currentProfile.companies.join(', ') || 'unknown'}
