@@ -487,7 +487,12 @@ OUTPUT FORMAT (JSON only):
       "quote": "EXACT text from article (copy-paste, do not paraphrase)",
       "quote_location": "approximate location in article"
     }
-  ]
+  ],
+  "profile_facts": [
+    { "field": "currentRole|associatedCompany|associatedPerson", "value": "extracted value", "evidence": "exact quote from article" }
+  ],
+  "match_confidence": "strong" | "possible" | "weak",
+  "match_reasons": ["name_match", "company_connection", "role_match", "location_match"]
 }
 
 SEVERITY GUIDE:
@@ -500,14 +505,6 @@ KNOWN SUBJECT PROFILE (use to improve identity matching):
 - Role: ${currentProfile.role || 'unknown'}
 - Associates: ${currentProfile.associates.join(', ') || 'unknown'}
 ` : ''}
-ALSO EXTRACT (in addition to claims):
-"profile_facts": [
-  { "field": "currentRole", "value": "CFO of XYZ Corp", "evidence": "exact quote from article" },
-  { "field": "associatedCompany", "value": "XYZ Corp", "evidence": "exact quote" },
-  { "field": "associatedPerson", "value": "John Smith", "evidence": "exact quote" }
-],
-"match_confidence": "strong" | "possible" | "weak",
-"match_reasons": ["name_match", "company_connection", "role_match", "location_match"]
 
 MATCH CONFIDENCE GUIDE:
 - strong: Name + at least one other signal (company, role, location) match known profile
