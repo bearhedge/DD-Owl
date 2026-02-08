@@ -80,6 +80,7 @@ export interface RawFinding {
   clusterLabel?: string;  // Incident description from clustering
   matchConfidence?: 'strong' | 'possible' | 'weak';
   matchReasons?: string[];
+  articleContent?: string;  // Cached article text for report generation
 }
 
 // Consolidated finding after deduplication
@@ -93,6 +94,7 @@ export interface ConsolidatedFinding {
   sources: { url: string; title: string }[];
   clusterId?: string;     // From Phase 2.5 incident clustering
   clusterLabel?: string;  // Incident description from clustering
+  articleContents?: { url: string; content: string }[];  // Cached article texts from source findings
 }
 
 // Subject profile built progressively during screening
