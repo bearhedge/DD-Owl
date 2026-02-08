@@ -2523,6 +2523,7 @@ If you cannot determine a field with reasonable confidence, use the default empt
             clusterLabel: item.clusterLabel,
             matchConfidence: analysis.matchConfidence,
             matchReasons: analysis.matchReasons,
+            articleContent: result.content?.slice(0, 6000) || undefined,
           });
         } else {
           // LLM said "Clear" - but if triage flagged RED/AMBER, we should preserve for manual review
