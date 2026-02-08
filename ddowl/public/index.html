@@ -3341,7 +3341,7 @@
 
       // Retry state
       let retryCount = 0;
-      const MAX_RETRIES = 5;
+      const MAX_RETRIES = 10;
       let eventSource = null;
       let lastMessageTime = Date.now();
 
@@ -3373,7 +3373,7 @@
             currentHealthCheckInterval = null;
             if (retryCount < MAX_RETRIES) {
               retryCount++;
-              setTimeout(connectSSE, 1000);
+              setTimeout(connectSSE, Math.min(2000 * retryCount, 15000));
             }
           }
         }, 5000);
@@ -3627,7 +3627,7 @@
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
-            setTimeout(connectSSE, 2000 * retryCount);
+            setTimeout(connectSSE, Math.min(2000 * retryCount, 15000));
           } else {
             addLogEntry('error', 'Max retries exceeded. Please try again.');
             resetUI();
@@ -3946,7 +3946,7 @@
 
       // Retry state
       let retryCount = 0;
-      const MAX_RETRIES = 5;
+      const MAX_RETRIES = 10;
       let lastQueryIndex = 0;
       let eventSource = null;
       let lastMessageTime = Date.now();
@@ -3986,7 +3986,7 @@
             currentHealthCheckInterval = null;
             if (retryCount < MAX_RETRIES) {
               retryCount++;
-              setTimeout(connectSSE, 1000);
+              setTimeout(connectSSE, Math.min(2000 * retryCount, 15000));
             }
           }
         }, 5000);
@@ -4575,7 +4575,7 @@
           if (retryCount < MAX_RETRIES) {
             retryCount++;
             addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
-            setTimeout(connectSSE, 2000 * retryCount);
+            setTimeout(connectSSE, Math.min(2000 * retryCount, 15000));
           } else {
             addLogEntry('error', 'Max retries exceeded. Please try again.');
             resetUI();
