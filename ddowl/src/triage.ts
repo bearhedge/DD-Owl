@@ -455,6 +455,91 @@ function isFiction(item: { title: string; snippet: string; url: string }): boole
 }
 
 /**
+ * Detect stock exchange regulatory filing boilerplate that contains standard legal language
+ * (criminal fraud, money laundering, etc.) but is NOT actual adverse media.
+ *
+ * Covers: HKEX (港交所), SSE (上交所), SZSE (深交所), and CSRC filing platforms.
+ *
+ * Key distinction:
+ * - Boilerplate: "Risk Factors", "Prospectus", "Listing Document" with template legal language
+ * - Real adverse: "disciplinary action", "enforcement", "censure" naming the subject specifically
+ */
+function isStockExchangeBoilerplate(item: { title: string; snippet: string; url: string }): boolean {
+  const url = item.url.toLowerCase();
+
+  // Stock exchange and regulatory filing domains
+  const exchangeDomains = [
+    'hkexnews.hk', 'hkex.com.hk',           // HKEX (Hong Kong)
+    'sse.com.cn',                              // SSE (Shanghai)
+    'szse.cn', 'szse.com.cn',                  // SZSE (Shenzhen)
+    'cninfo.com.cn',                           // 巨潮资讯网 (CSRC filing platform)
+    'csrc.gov.cn',                             // CSRC (China Securities Regulatory Commission)
+  ];
+
+  const isExchangeDomain = exchangeDomains.some(d => url.includes(d));
+  if (!isExchangeDomain) return false;
+
+  const text = `${item.title} ${item.snippet || ''}`;
+  const textLower = text.toLowerCase();
+
+  // Boilerplate document indicators in title/snippet (EN + Traditional Chinese + Simplified Chinese)
+  const boilerplateIndicators = [
+    // Document types
+    'prospectus', '招股', '招股書', '招股书', '招股章程',
+    'listing document', '上市文件',
+    'circular', '通函',
+    'annual report', '年報', '年报', '年度報告', '年度报告',
+    'interim report', '中期報告', '中期报告',
+    'quarterly report', '季度報告', '季度报告',
+    // Standard sections
+    'risk factors', '風險因素', '风险因素',
+    'disclosure of interests', '權益披露', '权益披露',
+    'regulatory overview', '監管概覽', '监管概览',
+    'statutory and general information', '法定及一般資料', '法定及一般资料',
+    // Form types
+    'form a', 'form b', 'form c',
+    // Template language patterns
+    'summary of the constitution', '章程概要',
+    '公司章程', '公司治理', '董事會報告', '董事会报告',
+    '管理層討論', '管理层讨论',
+    // Mainland-specific filing types
+    '配股说明书', '配股說明書',
+    '债券募集说明书', '債券募集說明書',
+    '公开发行', '公開發行',
+    '信息披露', '資訊披露',
+  ];
+
+  const hasBoilerplateIndicator = boilerplateIndicators.some(ind => textLower.includes(ind) || text.includes(ind));
+
+  if (!hasBoilerplateIndicator) return false;
+
+  // If it IS a regulatory filing, check if it's actually an enforcement/disciplinary action
+  // These should NOT be filtered — they're real adverse findings
+  const enforcementIndicators = [
+    'disciplinary action', '紀律行動', '纪律行动',
+    'enforcement', '執法', '执法',
+    'censure', '譴責', '谴责',
+    'fine imposed', '罰款', '罚款',
+    'suspended from trading', '停牌',
+    'delisting', '除牌',
+    'winding up', '清盤', '清盘',
+    // Mainland enforcement terms
+    '行政处罚', '行政處罰',
+    '立案调查', '立案調查',
+    '监管措施', '監管措施',
+    '警示函', '责令改正', '責令改正',
+    '市场禁入', '市場禁入',
+  ];
+
+  const isEnforcement = enforcementIndicators.some(ind => textLower.includes(ind) || text.includes(ind));
+
+  // If enforcement language present, do NOT filter — let it through for analysis
+  if (isEnforcement) return false;
+
+  return true;  // It's boilerplate, filter it out
+}
+
+/**
  * Combined check: is this URL irrelevant for DD screening?
  */
 function shouldSkipUrl(item: { title: string; snippet: string; url: string }): { skip: boolean; reason: string } {
@@ -466,6 +551,11 @@ function shouldSkipUrl(item: { title: string; snippet: string; url: string }): {
   // Check fiction content
   if (isFiction(item)) {
     return { skip: true, reason: 'Fiction/Entertainment content' };
+  }
+
+  // Check stock exchange regulatory filing boilerplate
+  if (isStockExchangeBoilerplate(item)) {
+    return { skip: true, reason: 'Stock exchange regulatory filing boilerplate' };
   }
 
   return { skip: false, reason: '' };
