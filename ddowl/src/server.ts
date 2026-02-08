@@ -2494,6 +2494,11 @@ If you cannot determine a field with reasonable confidence, use the default empt
             subjectProfile.sources.push(source);
           }
 
+          // Cap sources to prevent Redis session bloat
+          if (subjectProfile.sources.length > 50) {
+            subjectProfile.sources = subjectProfile.sources.slice(-50);
+          }
+
           // Update confidence based on corroborating facts
           const factCount = subjectProfile.sources.length;
           if (factCount >= 5) subjectProfile.confidence = 'high';
