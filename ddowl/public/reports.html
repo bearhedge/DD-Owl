@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DD Owl — Reports</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Nav — matches index.html exactly */
+    .top-nav {
+      background: #111;
+      border-bottom: 1px solid #222;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-links { display: flex; gap: 8px; }
+    .nav-link {
+      padding: 8px 16px;
+      color: #888;
+      text-decoration: none;
+      font-size: 13px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    .nav-link:hover { color: #fff; background: #1a1a1a; }
+    .nav-link.active { color: #fff; background: #222; }
+
+    .main-content { flex: 1; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+
+    /* Stats ribbon */
+    .stats-ribbon {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 12px 16px;
+      min-width: 120px;
+      flex: 1;
+    }
+    .stat-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+    .stat-value { font-size: 20px; font-weight: 700; }
+    .stat-value.red { color: #ff4757; }
+    .stat-value.green { color: #2ed573; }
+    .stat-value.amber { color: #ffa502; }
+    .stat-value.blue { color: #4a9eff; }
+
+    /* Search */
+    .search-bar {
+      width: 100%;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 13px;
+      margin-bottom: 16px;
+      outline: none;
+    }
+    .search-bar:focus { border-color: #4a9eff; }
+    .search-bar::placeholder { color: #555; }
+
+    /* Table */
+    .reports-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+    }
+    .reports-table th {
+      text-align: left;
+      font-size: 11px;
+      color: #666;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-bottom: 1px solid #222;
+    }
+    .reports-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1a1a1a;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .reports-table tr:hover td { background: #111; }
+    .severity-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .severity-badge.red { background: rgba(255,71,87,0.15); color: #ff4757; }
+    .severity-badge.amber { background: rgba(255,165,2,0.15); color: #ffa502; }
+    .severity-badge.green { background: rgba(46,213,115,0.15); color: #2ed573; }
+    .review-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .review-status.reviewed { background: rgba(46,213,115,0.15); color: #2ed573; }
+    .review-status.pending { background: rgba(255,165,2,0.15); color: #ffa502; }
+    .review-status.unreviewed { color: #444; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      overflow-y: auto;
+      padding: 40px 20px;
+    }
+    .modal-overlay.active { display: block; }
+    .modal {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h2 { font-size: 18px; font-weight: 600; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: #fff; }
+
+    /* Finding cards */
+    .finding-card {
+      background: #0a0a0a;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .finding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .finding-headline { font-size: 14px; font-weight: 600; flex: 1; }
+    .finding-summary { font-size: 12px; color: #888; margin-bottom: 8px; }
+    .finding-meta { font-size: 11px; color: #555; margin-bottom: 10px; }
+    .finding-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #333;
+      background: #1a1a1a;
+      color: #888;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { color: #fff; border-color: #555; }
+    .btn.confirm { border-color: #2ed573; color: #2ed573; }
+    .btn.confirm:hover { background: rgba(46,213,115,0.15); }
+    .btn.confirm.active { background: rgba(46,213,115,0.2); color: #2ed573; border-color: #2ed573; }
+    .btn.wrong { border-color: #ff4757; color: #ff4757; }
+    .btn.wrong:hover { background: rgba(255,71,87,0.15); }
+    .btn.wrong.active { background: rgba(255,71,87,0.2); color: #ff4757; border-color: #ff4757; }
+    .btn.primary { background: #4a9eff; color: #fff; border-color: #4a9eff; }
+    .btn.primary:hover { background: #3a8eef; }
+
+    .wrong-reason-select {
+      background: #0a0a0a;
+      border: 1px solid #333;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+
+    /* Missed flags section */
+    .missed-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #222;
+    }
+    .missed-section h3 { font-size: 14px; color: #ffa502; margin-bottom: 10px; }
+    .missed-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .missed-input {
+      flex: 1;
+      background: #0a0a0a;
+      border: 1px solid #222;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      outline: none;
+    }
+    .missed-input:focus { border-color: #ffa502; }
+    .missed-item {
+      background: rgba(255,165,2,0.1);
+      border: 1px solid rgba(255,165,2,0.2);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: #ffa502;
+    }
+
+    /* Report editor */
+    .report-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid #222;
+    }
+    .report-section h3 { font-size: 14px; margin-bottom: 10px; }
+    .report-editor {
+      width: 100%;
+      min-height: 300px;
+      background: #0a0a0a;
+      border: 1px solid #222;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      resize: vertical;
+      outline: none;
+      line-height: 1.6;
+    }
+    .report-editor:focus { border-color: #4a9eff; }
+    .edit-distance-display {
+      font-size: 11px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .save-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+    .save-status { font-size: 11px; color: #2ed573; }
+
+    /* Learnings section */
+    .learnings-section {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #222;
+    }
+    .learnings-section h2 { font-size: 16px; margin-bottom: 16px; }
+    .learning-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .learning-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .learning-card h3 { font-size: 13px; color: #4a9eff; margin-bottom: 10px; }
+    .learning-item { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .learning-item strong { color: #e0e0e0; }
+
+    .empty-state {
+      text-align: center;
+      color: #444;
+      padding: 60px 20px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .learning-grid { grid-template-columns: 1fr; }
+      .stats-ribbon { gap: 8px; }
+      .stat-card { min-width: 90px; padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <div class="nav-links">
+      <a href="/" class="nav-link">Screening</a>
+      <a href="/ipo" class="nav-link">IPO Tracker</a>
+      <a href="/reports" class="nav-link active">Reports</a>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="container">
+      <h1>Reports & Learning</h1>
+
+      <!-- Stats ribbon -->
+      <div class="stats-ribbon" id="statsRibbon">
+        <div class="stat-card">
+          <div class="stat-label">Reports</div>
+          <div class="stat-value blue" id="statReports">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value green" id="statAccuracy">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Edit</div>
+          <div class="stat-value amber" id="statEdit">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Confirmed</div>
+          <div class="stat-value green" id="statConfirmed">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Wrong</div>
+          <div class="stat-value red" id="statWrong">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Missed</div>
+          <div class="stat-value amber" id="statMissed">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Cost</div>
+          <div class="stat-value" id="statCost">-</div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <input type="text" class="search-bar" id="searchInput" placeholder="Search reports by subject name or content...">
+
+      <!-- Reports table -->
+      <table class="reports-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Date</th>
+            <th>Findings</th>
+            <th>Edit %</th>
+            <th>Review</th>
+          </tr>
+        </thead>
+        <tbody id="reportsBody">
+        </tbody>
+      </table>
+
+      <div class="empty-state" id="emptyState" style="display:none;">
+        No reports yet. Run a screening from the <a href="/" style="color:#4a9eff;">Screening</a> page.
+      </div>
+
+      <!-- Learnings -->
+      <div class="learnings-section" id="learningsSection" style="display:none;">
+        <h2>What DD Owl Has Learned</h2>
+        <div class="learning-grid" id="learningsGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report detail modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="reportModal">
+      <div class="modal-header">
+        <h2 id="modalTitle">Report</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+    // --- API ---
+    async function fetchReports(search = '', offset = 0) {
+      const url = search
+        ? `/api/reports?q=${encodeURIComponent(search)}&limit=50&offset=${offset}`
+        : `/api/reports?limit=50&offset=${offset}`;
+      const res = await fetch(url);
+      return res.json();
+    }
+    async function fetchReport(id) { return (await fetch(`/api/reports/${id}`)).json(); }
+    async function fetchStats() { return (await fetch('/api/reports/stats')).json(); }
+    async function fetchLearnings() { return (await fetch('/api/reports/learnings')).json(); }
+    async function submitVerdict(findingId, verdict, wrongReason) {
+      return fetch(`/api/reports/findings/${findingId}/verdict`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verdict, wrongReason }),
+      });
+    }
+    async function submitMissedFlag(reportId, description, severity, eventType) {
+      return fetch(`/api/reports/${reportId}/missed`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description, severity, eventType }),
+      });
+    }
+    async function submitEditedReport(reportId, editedMarkdown) {
+      return fetch(`/api/reports/${reportId}/edit`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ editedMarkdown }),
+      });
+    }
+
+    // --- State ---
+    let currentReportId = null;
+    let searchTimeout = null;
+
+    // --- Init ---
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+      loadReports();
+      loadLearnings();
+
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => loadReports(e.target.value), 300);
+      });
+
+      document.getElementById('modalClose').addEventListener('click', closeModal);
+      document.getElementById('modalOverlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+      });
+    });
+
+    // --- Stats ---
+    async function loadStats() {
+      try {
+        const s = await fetchStats();
+        document.getElementById('statReports').textContent = s.totalReports;
+        document.getElementById('statAccuracy').textContent =
+          s.confirmed + s.wrong > 0 ? (s.accuracy * 100).toFixed(1) + '%' : '-';
+        document.getElementById('statEdit').textContent =
+          s.avgEditDistance > 0 ? (s.avgEditDistance * 100).toFixed(1) + '%' : '-';
+        document.getElementById('statConfirmed').textContent = s.confirmed;
+        document.getElementById('statWrong').textContent = s.wrong;
+        document.getElementById('statMissed').textContent = s.missed;
+        document.getElementById('statCost').textContent =
+          s.totalCostUsd > 0 ? '$' + s.totalCostUsd.toFixed(2) : '-';
+      } catch (e) {
+        console.error('Failed to load stats:', e);
+      }
+    }
+
+    // --- Reports list ---
+    async function loadReports(search = '') {
+      try {
+        const data = await fetchReports(search);
+        const tbody = document.getElementById('reportsBody');
+        const emptyState = document.getElementById('emptyState');
+
+        if (data.reports.length === 0) {
+          tbody.innerHTML = '';
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        emptyState.style.display = 'none';
+        tbody.innerHTML = data.reports.map(r => {
+          const date = new Date(r.screened_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+          const badges = [];
+          if (r.red_count > 0) badges.push(`<span class="severity-badge red">${r.red_count} RED</span>`);
+          if (r.amber_count > 0) badges.push(`<span class="severity-badge amber">${r.amber_count - r.red_count >= 0 ? r.amber_count : 0} AMBER</span>`);
+          const editPct = r.edit_distance != null ? (r.edit_distance * 100).toFixed(0) + '%' : '-';
+          const reviewClass = r.edited_markdown ? 'reviewed' : (r.edit_distance != null ? 'pending' : 'unreviewed');
+          const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
+
+          return `<tr onclick="openReport(${r.id})">
+            <td><strong>${escapeHtml(r.subject_name)}</strong></td>
+            <td>${date}</td>
+            <td>${badges.join(' ') || '<span style="color:#444">0</span>'}</td>
+            <td>${editPct}</td>
+            <td><span class="review-status ${reviewClass}">${reviewText}</span></td>
+          </tr>`;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load reports:', e);
+      }
+    }
+
+    // --- Report detail modal ---
+    async function openReport(id) {
+      currentReportId = id;
+      const report = await fetchReport(id);
+      if (!report || report.error) return;
+
+      document.getElementById('modalTitle').textContent = report.subject_name;
+
+      const nameVars = JSON.parse(report.name_variations || '[]');
+      const date = new Date(report.screened_at).toLocaleString();
+
+      let html = `
+        <div style="font-size:12px; color:#666; margin-bottom:16px;">
+          ${date} | ${report.finding_count} findings | ${report.queries_executed} queries | $${report.cost_usd.toFixed(2)}
+          ${nameVars.length > 1 ? ' | Variants: ' + nameVars.map(v => escapeHtml(v)).join(', ') : ''}
+        </div>
+      `;
+
+      // Findings
+      html += '<h3 style="font-size:14px; margin-bottom:12px;">Findings</h3>';
+      if (report.findings.length === 0) {
+        html += '<div style="color:#444; font-size:12px; margin-bottom:16px;">No findings</div>';
+      }
+      for (const f of report.findings) {
+        const sources = JSON.parse(f.source_urls || '[]');
+        const verdictClass = f.human_verdict === 'CONFIRMED' ? 'active' : '';
+        const wrongClass = f.human_verdict === 'WRONG' ? 'active' : '';
+        html += `
+          <div class="finding-card" id="finding-${f.id}">
+            <div class="finding-header">
+              <div class="finding-headline">
+                <span class="severity-badge ${f.severity.toLowerCase()}">${f.severity}</span>
+                ${escapeHtml(f.headline)}
+              </div>
+            </div>
+            <div class="finding-summary">${escapeHtml(f.summary)}</div>
+            <div class="finding-meta">
+              ${f.date_range ? f.date_range + ' | ' : ''}${f.event_type} | ${f.source_count} source(s)
+              ${sources.length > 0 ? '<br>' + sources.map(s => `<a href="${escapeHtml(s.url)}" target="_blank" style="color:#4a9eff; font-size:11px;">${escapeHtml(s.title || s.url)}</a>`).join(' ') : ''}
+            </div>
+            <div class="finding-actions">
+              <button class="btn confirm ${verdictClass}" onclick="markVerdict(${f.id}, 'CONFIRMED', this)">Confirmed</button>
+              <button class="btn wrong ${wrongClass}" onclick="showWrongReason(${f.id}, this)">Wrong</button>
+              <select class="wrong-reason-select" id="reason-${f.id}" style="display:${f.human_verdict === 'WRONG' ? 'inline' : 'none'};"
+                onchange="markWrong(${f.id}, this.value)">
+                <option value="">Why wrong?</option>
+                <option value="name_collision" ${f.wrong_reason === 'name_collision' ? 'selected' : ''}>Wrong person</option>
+                <option value="outdated" ${f.wrong_reason === 'outdated' ? 'selected' : ''}>Outdated</option>
+                <option value="not_relevant" ${f.wrong_reason === 'not_relevant' ? 'selected' : ''}>Not relevant</option>
+                <option value="other" ${f.wrong_reason === 'other' ? 'selected' : ''}>Other</option>
+              </select>
+            </div>
+          </div>
+        `;
+      }
+
+      // Missed flags
+      html += `
+        <div class="missed-section">
+          <h3>DD Owl Missed Something?</h3>
+          <div id="missedFlagsList">
+            ${report.missed_flags.map(m => `
+              <div class="missed-item">[${m.severity}] ${escapeHtml(m.description)}${m.event_type ? ' (' + m.event_type + ')' : ''}</div>
+            `).join('')}
+          </div>
+          <div class="missed-input-row">
+            <input class="missed-input" id="missedInput" placeholder="Describe what was missed...">
+            <select class="wrong-reason-select" id="missedSeverity">
+              <option value="RED">RED</option>
+              <option value="AMBER">AMBER</option>
+            </select>
+            <button class="btn" onclick="addMissed()">Add</button>
+          </div>
+        </div>
+      `;
+
+      // Report editor
+      const reportText = report.edited_markdown || report.report_markdown || '';
+      html += `
+        <div class="report-section">
+          <h3>Report${report.edit_distance != null ? ` <span style="color:#666; font-size:12px;">(edit distance: ${(report.edit_distance * 100).toFixed(1)}%)</span>` : ''}</h3>
+          <textarea class="report-editor" id="reportEditor">${escapeHtml(reportText)}</textarea>
+          <div class="save-row">
+            <button class="btn primary" onclick="saveReport()">Save Edited Report</button>
+            <span class="save-status" id="saveStatus"></span>
+          </div>
+          <div class="edit-distance-display" id="editDistanceDisplay"></div>
+        </div>
+      `;
+
+      document.getElementById('modalContent').innerHTML = html;
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('active');
+      currentReportId = null;
+      // Refresh stats and list in case verdicts changed
+      loadStats();
+      loadReports(document.getElementById('searchInput').value);
+      loadLearnings();
+    }
+
+    // --- Verdict actions ---
+    async function markVerdict(findingId, verdict, btn) {
+      await submitVerdict(findingId, verdict);
+      const card = document.getElementById('finding-' + findingId);
+      card.querySelectorAll('.btn.confirm, .btn.wrong').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      card.querySelector('.wrong-reason-select').style.display = 'none';
+    }
+
+    function showWrongReason(findingId, btn) {
+      const select = document.getElementById('reason-' + findingId);
+      select.style.display = 'inline';
+      select.focus();
+      const card = document.getElementById('finding-' + findingId);
+      card.querySelectorAll('.btn.confirm').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    async function markWrong(findingId, reason) {
+      if (!reason) return;
+      await submitVerdict(findingId, 'WRONG', reason);
+    }
+
+    // --- Missed flags ---
+    async function addMissed() {
+      const input = document.getElementById('missedInput');
+      const desc = input.value.trim();
+      if (!desc) return;
+      const severity = document.getElementById('missedSeverity').value;
+      await submitMissedFlag(currentReportId, desc, severity);
+      const list = document.getElementById('missedFlagsList');
+      list.innerHTML += `<div class="missed-item">[${severity}] ${escapeHtml(desc)}</div>`;
+      input.value = '';
+    }
+
+    // --- Save report ---
+    async function saveReport() {
+      const text = document.getElementById('reportEditor').value;
+      const resp = await submitEditedReport(currentReportId, text);
+      const data = await resp.json();
+      document.getElementById('saveStatus').textContent = 'Saved';
+      if (data.editDistance != null) {
+        document.getElementById('editDistanceDisplay').textContent =
+          `Edit distance: ${(data.editDistance * 100).toFixed(1)}%`;
+      }
+      setTimeout(() => { document.getElementById('saveStatus').textContent = ''; }, 3000);
+    }
+
+    // --- Learnings ---
+    async function loadLearnings() {
+      try {
+        const l = await fetchLearnings();
+        const section = document.getElementById('learningsSection');
+        const grid = document.getElementById('learningsGrid');
+
+        const hasData = l.wrongPatterns.length > 0 || l.missedPatterns.length > 0
+          || l.topSources.length > 0 || l.noiseSources.length > 0;
+
+        if (!hasData) { section.style.display = 'none'; return; }
+        section.style.display = 'block';
+
+        let html = '';
+
+        if (l.wrongPatterns.length > 0) {
+          html += `<div class="learning-card">
+            <h3>Wrong Flag Patterns</h3>
+            ${l.wrongPatterns.map(p => {
+              const labels = { name_collision: 'Wrong person', outdated: 'Outdated', not_relevant: 'Not relevant', other: 'Other' };
+              return `<div class="learning-item"><strong>${labels[p.reason] || p.reason}</strong>: ${p.count} times (${p.percentage.toFixed(0)}%)</div>`;
+            }).join('')}
+          </div>`;
+        }
+
+        if (l.missedPatterns.length > 0) {
+          html += `<div class="learning-card">
+            <h3>Commonly Missed</h3>
+            ${l.missedPatterns.map(p => `<div class="learning-item"><strong>${p.eventType}</strong>: ${p.count} times</div>`).join('')}
+          </div>`;
+        }
+
+        if (l.topSources.length > 0) {
+          html += `<div class="learning-card">
+            <h3>Most Reliable Sources</h3>
+            ${l.topSources.map(s => `<div class="learning-item"><strong>${s.domain}</strong>: ${(s.reliability * 100).toFixed(0)}% reliable (${s.sampleSize} reviews)</div>`).join('')}
+          </div>`;
+        }
+
+        if (l.noiseSources.length > 0) {
+          html += `<div class="learning-card">
+            <h3>Noisy Sources</h3>
+            ${l.noiseSources.map(s => `<div class="learning-item"><strong>${s.domain}</strong>: ${s.wrongCount} wrong vs ${s.confirmedCount} confirmed</div>`).join('')}
+          </div>`;
+        }
+
+        if (l.editDistanceTrend.length > 1) {
+          html += `<div class="learning-card">
+            <h3>Edit Distance Trend</h3>
+            ${l.editDistanceTrend.map(t => `<div class="learning-item">${t.month}: <strong>${(t.avg * 100).toFixed(1)}%</strong></div>`).join('')}
+          </div>`;
+        }
+
+        grid.innerHTML = html;
+      } catch (e) {
+        console.error('Failed to load learnings:', e);
+      }
+    }
+
+    // --- Util ---
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
