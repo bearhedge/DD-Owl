@@ -49,6 +49,8 @@ import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, Elim
 import { getChineseVariantsLLM } from './utils/chinese.js';
 import { createSession, getSession, updateSession, deleteSession, ScreeningSession, DetectedCompany } from './session-store.js';
 import { clusterByIncidentLLM, ClusteringResult, ClusterProgressCallback, IncidentCluster } from './deduplicator.js';
+import { initReportsDb, saveReport as saveReportToDb, getReportsDb } from './reports-db.js';
+import { reportsRouter } from './reports-api.js';
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
@@ -279,12 +281,21 @@ async function isSessionPaused(sessionId: string): Promise<boolean> {
   }
 }
 
+// Initialize reports database
+try {
+  initReportsDb();
+  console.log('[REPORTS] Database initialized');
+} catch (err) {
+  console.error('[REPORTS] Failed to initialize database:', err);
+}
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
 // IPO Tracker API routes
 app.use('/api/ipo', ipoRouter);
+app.use('/api/reports', reportsRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -2699,6 +2710,35 @@ If you cannot determine a field with reasonable confidence, use the default empt
       console.error('[V4] Failed to save log:', logError);
     }
 
+    // Auto-save to reports database
+    try {
+      const reportId = saveReportToDb({
+        runId: metrics.runId,
+        subjectName,
+        screenedAt: metrics.startTime,
+        language: language || 'zh',
+        nameVariations: nameVariations || [],
+        findings: consolidatedFindings.map((f: ConsolidatedFinding) => ({
+          severity: f.severity as 'RED' | 'AMBER' | 'REVIEW',
+          headline: f.headline,
+          eventType: f.eventType || 'unknown',
+          summary: f.summary,
+          dateRange: f.dateRange,
+          sourceCount: f.sourceCount,
+          sourceUrls: f.sources,
+        })),
+        costUsd: metrics.totalCostUSD,
+        durationMs: metrics.durationMs || 0,
+        queriesExecuted: metrics.queriesExecuted,
+        totalSearchResults: metrics.totalSearchResults,
+      });
+      console.log(`[REPORTS] Saved report #${reportId} for ${subjectName}`);
+      // Store runId in session so generate-report can find the DB record
+      await updateSession(sessionId, { runId: metrics.runId } as any, connectionId);
+    } catch (reportErr) {
+      console.error('[REPORTS] Failed to save to database:', reportErr);
+    }
+
     // Benchmark evaluation
     const benchmarkResult = evaluateBenchmark(subjectName, consolidatedFindings, metrics.runId);
     if (benchmarkResult) {
@@ -2740,6 +2780,10 @@ app.get('/ipo', (req: Request, res: Response) => {
 
 app.get('/screening', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+app.get('/reports', (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../public/reports.html'));
 });
 
 app.get('/verify-import', (req: Request, res: Response) => {
@@ -3044,6 +3088,21 @@ Return ONLY the paragraph text, no JSON or markdown.`;
     }).join('\n\n---\n\n');
 
     console.log(`[REPORT] Generated ${sections.length} sections, ${fullReport.length} total chars`);
+
+    // Save generated report markdown to reports database
+    try {
+      const session = await getSession(sessionId);
+      if (session) {
+        const runId = (session as any).runId;
+        if (runId) {
+          const reportsDb = getReportsDb();
+          reportsDb.prepare('UPDATE reports SET report_markdown = ? WHERE run_id = ?').run(fullReport, runId);
+          console.log(`[REPORTS] Saved report markdown for run ${runId}`);
+        }
+      }
+    } catch (e) {
+      // Non-critical — don't fail report generation
+    }
 
     res.json({
       success: true,
