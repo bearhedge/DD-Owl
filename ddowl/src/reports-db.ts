@@ -10,6 +10,13 @@ export function initReportsDb(dbPath?: string): void {
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');
   db.exec(SCHEMA);
+
+  // Migration: add clean_results_json column for existing databases
+  try {
+    db.exec('ALTER TABLE reports ADD COLUMN clean_results_json TEXT');
+  } catch {
+    // Column already exists — ignore
+  }
 }
 
 export function getReportsDb(): Database.Database {
@@ -22,6 +29,12 @@ export function closeReportsDb(): void {
 }
 
 // --- Types ---
+
+export interface CleanEntityResult {
+  url: string;
+  title: string;
+  snippet: string;
+}
 
 export interface SaveReportInput {
   runId: string;
@@ -38,6 +51,7 @@ export interface SaveReportInput {
     sourceCount: number;
     sourceUrls: { url: string; title: string }[];
   }[];
+  cleanResults?: Record<string, CleanEntityResult[]>;
   reportMarkdown?: string;
   costUsd: number;
   durationMs: number;
@@ -56,6 +70,7 @@ export interface ReportRow {
   red_count: number;
   amber_count: number;
   report_markdown: string | null;
+  clean_results_json: string | null;
   edited_markdown: string | null;
   edit_distance: number | null;
   cost_usd: number;
@@ -133,9 +148,9 @@ export function saveReport(input: SaveReportInput): number {
 
   const insertReport = d.prepare(`
     INSERT INTO reports (run_id, subject_name, screened_at, language, name_variations,
-      finding_count, red_count, amber_count, report_markdown, cost_usd, duration_ms,
+      finding_count, red_count, amber_count, report_markdown, clean_results_json, cost_usd, duration_ms,
       queries_executed, total_search_results)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const insertFinding = d.prepare(`
@@ -147,7 +162,8 @@ export function saveReport(input: SaveReportInput): number {
     const res = insertReport.run(
       input.runId, input.subjectName, input.screenedAt, input.language,
       JSON.stringify(input.nameVariations), input.findings.length, redCount, amberCount,
-      input.reportMarkdown || null, input.costUsd, input.durationMs,
+      input.reportMarkdown || null, input.cleanResults ? JSON.stringify(input.cleanResults) : null,
+      input.costUsd, input.durationMs,
       input.queriesExecuted, input.totalSearchResults,
     );
     const reportId = res.lastInsertRowid as number;
@@ -406,6 +422,7 @@ const SCHEMA = `
     red_count INTEGER NOT NULL DEFAULT 0,
     amber_count INTEGER NOT NULL DEFAULT 0,
     report_markdown TEXT,
+    clean_results_json TEXT,
     edited_markdown TEXT,
     edit_distance REAL,
     cost_usd REAL NOT NULL DEFAULT 0,

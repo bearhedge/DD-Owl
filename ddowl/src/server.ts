@@ -28,7 +28,7 @@ import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
 import { triageSearchResults, TriageResult, categorizeAll, CategorizedResult } from './triage.js';
 import { consolidateFindings } from './consolidator.js';
-import { generateFullReport } from './reportGenerator.js';
+import { generateFullReport, generateCleanWriteUp } from './reportGenerator.js';
 import { RawFinding, ConsolidatedFinding, SearchResult, SubjectProfile, ProfileFact } from './types.js';
 import { extractFinding, isSameFinding, mergeFindings, Finding } from './extract.js';
 import { detectCategory } from './searchStrings.js';
@@ -49,7 +49,7 @@ import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, Elim
 import { getChineseVariantsLLM } from './utils/chinese.js';
 import { createSession, getSession, updateSession, deleteSession, ScreeningSession, DetectedCompany } from './session-store.js';
 import { clusterByIncidentLLM, ClusteringResult, ClusterProgressCallback, IncidentCluster } from './deduplicator.js';
-import { initReportsDb, saveReport as saveReportToDb, getReportsDb } from './reports-db.js';
+import { initReportsDb, saveReport as saveReportToDb, getReportsDb, CleanEntityResult } from './reports-db.js';
 import { reportsRouter } from './reports-api.js';
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -2638,6 +2638,32 @@ If you cannot determine a field with reasonable confidence, use the default empt
     const amberFindings = consolidatedFindings.filter(f => f.severity === 'AMBER' || f.severity === 'REVIEW');
     const totalDuration = Date.now() - startTime;
 
+    // Build clean results map for entities without findings
+    // Group green categorized results by their query (name variation)
+    const cleanResults: Record<string, CleanEntityResult[]> = {};
+    for (const item of categorized.green) {
+      // Find which name variation this result belongs to
+      const matchedVariation = nameVariations.find(nv =>
+        item.query.toLowerCase().includes(nv.toLowerCase())
+      ) || item.query;
+      if (!cleanResults[matchedVariation]) {
+        cleanResults[matchedVariation] = [];
+      }
+      cleanResults[matchedVariation].push({
+        url: item.url,
+        title: item.title,
+        snippet: item.snippet,
+      });
+    }
+    // Remove entities that have findings (they'll be handled as flagged)
+    const findingSources = new Set(consolidatedFindings.flatMap(f => f.sources.map(s => s.url)));
+    for (const [entity, results] of Object.entries(cleanResults)) {
+      const hasFindings = results.some(r => findingSources.has(r.url));
+      if (hasFindings) {
+        delete cleanResults[entity];
+      }
+    }
+
     // Build summary breakdown
     const eliminatedByDuplicate = urlTracker.eliminated.filter(e => e.reason === 'duplicate').length;
     const eliminatedByInvalid = urlTracker.eliminated.filter(e => e.reason === 'invalid_url').length;
@@ -2690,6 +2716,8 @@ If you cannot determine a field with reasonable confidence, use the default empt
         durationMin: (totalDuration / 60000).toFixed(1),
       },
       findings: consolidatedFindings,
+      nameVariations,
+      cleanResults,
       profile: subjectProfile,
     });
 
@@ -2727,14 +2755,15 @@ If you cannot determine a field with reasonable confidence, use the default empt
           sourceCount: f.sourceCount,
           sourceUrls: f.sources,
         })),
+        cleanResults: Object.keys(cleanResults).length > 0 ? cleanResults : undefined,
         costUsd: metrics.totalCostUSD,
         durationMs: metrics.durationMs || 0,
         queriesExecuted: metrics.queriesExecuted,
         totalSearchResults: metrics.totalSearchResults,
       });
       console.log(`[REPORTS] Saved report #${reportId} for ${subjectName}`);
-      // Store runId in session so generate-report can find the DB record
-      await updateSession(sessionId, { runId: metrics.runId } as any, connectionId);
+      // Store runId and cleanResults in session so generate-report can access them
+      await updateSession(sessionId, { runId: metrics.runId, cleanResults } as any, connectionId);
     } catch (reportErr) {
       console.error('[REPORTS] Failed to save to database:', reportErr);
     }
@@ -2915,7 +2944,7 @@ app.post('/api/session/:sessionId/resume', async (req: Request, res: Response) =
 
 app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Response) => {
   const { sessionId } = req.params;
-  const { findings, subjectName } = req.body;
+  const { findings, subjectName, nameVariations: reqNameVariations } = req.body;
 
   if (!findings || !Array.isArray(findings) || findings.length === 0) {
     res.status(400).json({ error: 'findings array required' });
@@ -2927,12 +2956,45 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
     return;
   }
 
-  console.log(`[REPORT] Generating report for ${subjectName} with ${findings.length} findings (session: ${sessionId})`);
+  console.log(`[REPORT] Generating streaming report for ${subjectName} with ${findings.length} findings (session: ${sessionId})`);
 
-  // Load session to access cached article content
+  // Load session to access cached article content + clean results
   const session = await getSession(sessionId);
   const rawFindings = session?.findings || [];
   const consolidatedFindings = session?.consolidatedFindings || [];
+
+  // Load clean results and name variations from session or DB
+  let cleanResults: Record<string, CleanEntityResult[]> = {};
+  let nameVariations: string[] = reqNameVariations || [];
+
+  if (session) {
+    cleanResults = (session as any).cleanResults || {};
+    if (nameVariations.length === 0) {
+      nameVariations = (session as any).variations || [];
+    }
+  }
+
+  // Fallback to DB if session doesn't have clean results
+  if (Object.keys(cleanResults).length === 0) {
+    try {
+      const runId = (session as any)?.runId;
+      if (runId) {
+        const reportsDb = getReportsDb();
+        const dbRow = reportsDb.prepare('SELECT clean_results_json, name_variations FROM reports WHERE run_id = ?').get(runId) as any;
+        if (dbRow?.clean_results_json) {
+          cleanResults = JSON.parse(dbRow.clean_results_json);
+        }
+        if (nameVariations.length === 0 && dbRow?.name_variations) {
+          nameVariations = JSON.parse(dbRow.name_variations);
+        }
+      }
+    } catch {
+      // Non-critical
+    }
+  }
+
+  const hasCleanEntities = Object.keys(cleanResults).length > 0;
+  console.log(`[REPORT] Name variations: ${nameVariations.length}, clean entities: ${Object.keys(cleanResults).length}`);
 
   // Check LLM configuration
   const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
@@ -2943,10 +3005,56 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
     return;
   }
 
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const sendEvent = (data: any) => {
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+  };
+
+  // Track client disconnect
+  let clientDisconnected = false;
+  req.on('close', () => {
+    clientDisconnected = true;
+    console.log(`[REPORT] Client disconnected mid-stream (session: ${sessionId})`);
+  });
+
   try {
+    // Build clean entity list for report_start
+    const cleanEntityNames = Object.keys(cleanResults);
+    const totalItems = findings.length + cleanEntityNames.length;
+
+    // Send report_start with all finding + clean entity metadata so frontend can render cards
+    sendEvent({
+      type: 'report_start',
+      total: totalItems,
+      findings: findings.map((f: any, i: number) => ({
+        index: i,
+        headline: f.headline || 'Finding',
+        severity: f.severity || 'AMBER',
+        sources: (f.sources || []).map((s: any) => ({ title: s.title, url: s.url })),
+      })),
+      cleanEntities: cleanEntityNames.map((name, i) => ({
+        index: findings.length + i,
+        entityName: name,
+        resultCount: cleanResults[name].length,
+      })),
+    });
+
     const sections: { findingId: string; headline: string; paragraph: string; sources: string[] }[] = [];
 
     for (let i = 0; i < findings.length; i++) {
+      if (clientDisconnected) {
+        console.log(`[REPORT] Aborting — client disconnected at finding ${i + 1}`);
+        break;
+      }
+
       const finding = findings[i];
       const findingId = finding.id || `finding-${i}`;
 
@@ -2956,6 +3064,14 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
       const sources = finding.sources || [];
       const primarySource = sources[0];
       const otherSources = sources.slice(1);
+
+      sendEvent({
+        type: 'finding_start',
+        index: i,
+        headline: finding.headline || 'Finding',
+        severity: finding.severity || 'AMBER',
+        sources: sources.map((s: any) => ({ title: s.title, url: s.url })),
+      });
 
       // Look up cached article content from session
       let articleText = '';
@@ -3036,15 +3152,19 @@ Return ONLY the paragraph text, no JSON or markdown.`;
       ].filter(p => p.key);
 
       let paragraph = '';
+      let streamed = false;
 
       for (const provider of providers) {
+        if (clientDisconnected) break;
         try {
-          const response = await axios.post(
+          // Use streaming LLM call
+          const llmResponse = await axios.post(
             provider.url,
             {
               model: provider.model,
               messages: [{ role: 'user', content: prompt }],
               temperature: 0.3,
+              stream: true,
             },
             {
               headers: {
@@ -3052,12 +3172,53 @@ Return ONLY the paragraph text, no JSON or markdown.`;
                 'Authorization': `Bearer ${provider.key}`,
               },
               timeout: 60000,
+              responseType: 'stream',
             }
           );
 
-          paragraph = response.data.choices?.[0]?.message?.content?.trim() || '';
-          if (paragraph) {
-            console.log(`[REPORT] ✓ ${provider.name} generated ${paragraph.length} chars`);
+          // Parse SSE stream from LLM
+          paragraph = await new Promise<string>((resolve, reject) => {
+            let accumulated = '';
+            let buffer = '';
+
+            llmResponse.data.on('data', (chunk: Buffer) => {
+              if (clientDisconnected) {
+                llmResponse.data.destroy();
+                resolve(accumulated);
+                return;
+              }
+
+              buffer += chunk.toString();
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                const payload = trimmed.slice(6);
+                if (payload === '[DONE]') continue;
+
+                try {
+                  const parsed = JSON.parse(payload);
+                  const token = parsed.choices?.[0]?.delta?.content;
+                  if (token) {
+                    accumulated += token;
+                    sendEvent({ type: 'finding_token', index: i, token });
+                  }
+                } catch {
+                  // Skip unparseable lines
+                }
+              }
+            });
+
+            llmResponse.data.on('end', () => resolve(accumulated));
+            llmResponse.data.on('error', (err: Error) => reject(err));
+          });
+
+          if (paragraph.trim()) {
+            paragraph = paragraph.trim();
+            streamed = true;
+            console.log(`[REPORT] ✓ ${provider.name} streamed ${paragraph.length} chars`);
             break;
           }
         } catch (err: any) {
@@ -3072,7 +3233,12 @@ Return ONLY the paragraph text, no JSON or markdown.`;
         if (finding.sourceCount > 1) {
           paragraph += ` This information was corroborated by ${finding.sourceCount - 1} additional source(s).`;
         }
+        // Send fallback text as a single token event so frontend displays it
+        sendEvent({ type: 'finding_token', index: i, token: paragraph });
+        sendEvent({ type: 'finding_fallback', index: i, paragraph });
       }
+
+      sendEvent({ type: 'finding_complete', index: i, paragraph });
 
       sections.push({
         findingId,
@@ -3082,18 +3248,63 @@ Return ONLY the paragraph text, no JSON or markdown.`;
       });
     }
 
-    // Combine into full report
-    const fullReport = sections.map((s, i) => {
-      return `**Finding ${i + 1}: ${s.headline}**\n\n${s.paragraph}\n\nSources:\n${s.sources.map(url => `- ${url}`).join('\n')}`;
-    }).join('\n\n---\n\n');
+    // Generate clean entity write-ups
+    const cleanSections: { entityName: string; paragraph: string; sources: string[] }[] = [];
 
-    console.log(`[REPORT] Generated ${sections.length} sections, ${fullReport.length} total chars`);
+    for (let ci = 0; ci < cleanEntityNames.length; ci++) {
+      if (clientDisconnected) break;
+
+      const entityName = cleanEntityNames[ci];
+      const entityResults = cleanResults[entityName] || [];
+      const cleanIndex = findings.length + ci;
+
+      console.log(`[REPORT] Processing clean entity ${ci + 1}/${cleanEntityNames.length}: "${entityName}" (${entityResults.length} results)`);
+
+      sendEvent({
+        type: 'clean_entity_start',
+        index: cleanIndex,
+        entityName,
+        resultCount: entityResults.length,
+      });
+
+      // Use generateCleanWriteUp from reportGenerator
+      let paragraph = '';
+      try {
+        paragraph = await generateCleanWriteUp(entityName, entityResults, subjectName, (chunk) => {
+          sendEvent({ type: 'finding_token', index: cleanIndex, token: chunk });
+        });
+      } catch (err: any) {
+        console.log(`[REPORT] Clean write-up failed for "${entityName}": ${err.message}`);
+        const sourceList = entityResults.map(r => r.url).join('\n');
+        paragraph = `Media and online coverage of ${entityName} is mainly neutral. Online and media references to ${entityName} primarily relate to its business operations and corporate filings.[1]\nOnline and media research found no significant negative issues with the subject.\n\n[1]  ${sourceList}`;
+        sendEvent({ type: 'finding_token', index: cleanIndex, token: paragraph });
+      }
+
+      sendEvent({ type: 'finding_complete', index: cleanIndex, paragraph });
+
+      cleanSections.push({
+        entityName,
+        paragraph,
+        sources: entityResults.map(r => r.url),
+      });
+    }
+
+    // Combine into full report (flagged findings + clean entities)
+    const flaggedParts = sections.map((s) => {
+      return `${s.paragraph}\n\nSources:\n${s.sources.map(url => `- ${url}`).join('\n')}`;
+    });
+    const cleanParts = cleanSections.map((s) => {
+      return s.paragraph;
+    });
+    const fullReport = [...flaggedParts, ...cleanParts].join('\n\n');
+
+    console.log(`[REPORT] Generated ${sections.length} flagged + ${cleanSections.length} clean sections, ${fullReport.length} total chars`);
 
     // Save generated report markdown to reports database
     try {
-      const session = await getSession(sessionId);
-      if (session) {
-        const runId = (session as any).runId;
+      const sessionForSave = await getSession(sessionId);
+      if (sessionForSave) {
+        const runId = (sessionForSave as any).runId;
         if (runId) {
           const reportsDb = getReportsDb();
           reportsDb.prepare('UPDATE reports SET report_markdown = ? WHERE run_id = ?').run(fullReport, runId);
@@ -3104,15 +3315,24 @@ Return ONLY the paragraph text, no JSON or markdown.`;
       // Non-critical — don't fail report generation
     }
 
-    res.json({
-      success: true,
+    // Send final report_complete event with full assembled markdown
+    sendEvent({
+      type: 'report_complete',
       report: fullReport,
       sections,
+      cleanSections,
     });
+
+    if (!res.writableEnded) {
+      res.end();
+    }
 
   } catch (error: any) {
     console.error('[REPORT] Error generating report:', error);
-    res.status(500).json({ error: error.message || 'Failed to generate report' });
+    sendEvent({ type: 'error', message: error.message || 'Failed to generate report' });
+    if (!res.writableEnded) {
+      res.end();
+    }
   }
 });
 
@@ -3270,12 +3490,15 @@ app.get('/api/report/person', async (req: Request, res: Response) => {
 
 // API endpoint to generate DD write-up report with streaming
 app.post('/api/report/generate', async (req: Request, res: Response) => {
-  const { subjectName, findings } = req.body;
+  const { subjectName, findings, cleanResults: reqCleanResults, nameVariations: reqNameVariations } = req.body;
 
   if (!subjectName || !findings || !Array.isArray(findings)) {
     res.status(400).json({ error: 'subjectName and findings array required' });
     return;
   }
+
+  const cleanResults: Record<string, CleanEntityResult[]> = reqCleanResults || {};
+  const nameVariations: string[] = reqNameVariations || [subjectName];
 
   // Set up SSE for streaming
   res.setHeader('Content-Type', 'text/event-stream');
@@ -3303,9 +3526,9 @@ app.post('/api/report/generate', async (req: Request, res: Response) => {
   }, 1000);
 
   try {
-    console.log(`[REPORT] Starting report generation for ${subjectName} with ${findings.length} findings`);
+    console.log(`[REPORT] Starting report generation for ${subjectName} with ${findings.length} findings, ${Object.keys(cleanResults).length} clean entities`);
 
-    await generateFullReport(subjectName, findings as ConsolidatedFinding[], sendChunk);
+    await generateFullReport(subjectName, findings as ConsolidatedFinding[], cleanResults, nameVariations, sendChunk);
 
     clearInterval(heartbeat);
     res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);

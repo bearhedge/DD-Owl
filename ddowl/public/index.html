@@ -1272,6 +1272,66 @@
       line-height: 1.6;
     }
 
+    /* Streaming report card states */
+    .detail-finding.waiting {
+      opacity: 0.5;
+    }
+
+    .detail-finding.active {
+      opacity: 1;
+      border-left: 3px solid #4a9eff;
+      animation: pulse-border 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-left-color: #4a9eff; }
+      50% { border-left-color: #1a6fdf; }
+    }
+
+    .detail-finding.complete {
+      opacity: 1;
+      border-left: 3px solid #2ed573;
+    }
+
+    .detail-finding.error {
+      opacity: 1;
+      border-left: 3px solid #ff4757;
+    }
+
+    .detail-finding .finding-status-icon {
+      float: right;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+
+    .detail-finding .severity-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .severity-badge.RED { background: #ff4757; color: #fff; }
+    .severity-badge.AMBER { background: #f5a623; color: #000; }
+
+    .detail-finding .finding-paragraph {
+      min-height: 24px;
+      line-height: 1.8;
+      text-align: justify;
+      color: #ccc;
+    }
+
+    .detail-finding .finding-sources {
+      font-size: 12px;
+      color: #888;
+      margin-top: 12px;
+    }
+    .detail-finding .finding-sources a {
+      color: #4a9eff;
+    }
+
     /* Progress Card - handles running, paused, complete states */
     .progress-card {
       background: #111;
@@ -3543,6 +3603,8 @@
 
             currentSubjectName = savedName;
             currentFindings = data.findings || [];
+            currentNameVariations = data.nameVariations || [];
+            currentCleanResults = data.cleanResults || {};
 
             if (data.findings && data.findings.length > 0) {
               document.getElementById('redFlagsList').innerHTML = '';
@@ -3908,6 +3970,8 @@
       currentReport = null;
       currentFindings = [];
       currentSubjectName = '';
+      currentNameVariations = [];
+      currentCleanResults = {};
       furtherLinks = [];
 
       // Reset profile state
@@ -4963,6 +5027,8 @@
 
     let currentFindings = [];
     let currentSubjectName = '';
+    let currentNameVariations = [];
+    let currentCleanResults = {};
     let reportContent = '';
     let reportGenerating = false;
 
@@ -5010,7 +5076,9 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             subjectName: currentSubjectName,
-            findings: currentFindings
+            findings: currentFindings,
+            nameVariations: currentNameVariations,
+            cleanResults: currentCleanResults,
           })
         });
 
@@ -5098,6 +5166,11 @@
     let detailReportContent = '';
 
     function closeDetailReportModal() {
+      // Abort any in-progress stream
+      if (reportAbortController) {
+        reportAbortController.abort();
+        reportAbortController = null;
+      }
       document.getElementById('detailReportModal').classList.remove('active');
     }
 
@@ -5109,6 +5182,9 @@
         setTimeout(() => btn.textContent = originalText, 2000);
       });
     }
+
+    // Active report stream abort controller (for cleanup on modal close)
+    let reportAbortController = null;
 
     async function generateDetailedReport() {
       if (selectedFindings.size === 0) {
@@ -5125,68 +5201,177 @@
       const content = document.getElementById('detailReportContent');
       const status = document.getElementById('detailReportStatus');
 
-      content.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Generating professional due diligence report...</div>';
+      content.innerHTML = '<div style="color: #666; text-align: center; padding: 40px;">Connecting to report generator...</div>';
       detailReportContent = '';
       status.classList.remove('complete');
-      status.querySelector('span').textContent = `Generating report for ${selected.length} finding(s)...`;
+      status.querySelector('span').textContent = `Preparing ${selected.length} finding(s)...`;
       document.getElementById('copyDetailReportBtn').disabled = true;
 
       modal.classList.add('active');
 
+      // Abort controller for cleanup on modal close
+      reportAbortController = new AbortController();
+
       try {
-        // Use new batch report generation endpoint
         const response = await fetch(`/api/session/${sessionId || 'default'}/generate-report`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             findings: selected,
             subjectName: currentSubjectName,
-          })
+            nameVariations: currentNameVariations,
+          }),
+          signal: reportAbortController.signal,
         });
 
-        const data = await response.json();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let sseBuffer = '';
 
-        if (data.success && data.sections) {
-          let reportHtml = '';
-          let reportText = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-          for (const section of data.sections) {
-            // HTML for display (with formatting)
-            reportHtml += `
-              <div class="detail-finding">
-                <div class="detail-finding-header">${escapeHtml(section.headline)}</div>
-                <div class="detail-finding-section">
-                  <p style="line-height: 1.8; text-align: justify;">${escapeHtml(section.paragraph)}</p>
+          sseBuffer += decoder.decode(value, { stream: true });
+          const parts = sseBuffer.split('\n\n');
+          sseBuffer = parts.pop() || '';
+
+          for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed.startsWith('data: ')) continue;
+            const payload = trimmed.slice(6);
+
+            let event;
+            try { event = JSON.parse(payload); } catch { continue; }
+
+            if (event.type === 'report_start') {
+              // Render empty cards for all findings + clean entities
+              let cardsHtml = '';
+              for (const f of event.findings) {
+                const sourcesHtml = f.sources.map(s =>
+                  `<a href="${escapeHtml(s.url)}" target="_blank">${escapeHtml(s.title || s.url)}</a>`
+                ).join('<br>') || 'N/A';
+
+                cardsHtml += `
+                  <div class="detail-finding waiting" id="report-card-${f.index}">
+                    <div class="detail-finding-header">
+                      <span class="finding-status-icon" id="report-icon-${f.index}"></span>
+                      ${escapeHtml(f.headline)}
+                      <span class="severity-badge ${f.severity}">${f.severity}</span>
+                    </div>
+                    <div class="detail-finding-section">
+                      <p class="finding-paragraph" id="report-para-${f.index}"></p>
+                    </div>
+                    <div class="detail-finding-section finding-sources">
+                      <h4>Sources</h4>
+                      <p>${sourcesHtml}</p>
+                    </div>
+                  </div>
+                `;
+              }
+              // Render clean entity cards
+              if (event.cleanEntities) {
+                for (const ce of event.cleanEntities) {
+                  cardsHtml += `
+                    <div class="detail-finding waiting" id="report-card-${ce.index}" style="border-left: 3px solid #2ed573;">
+                      <div class="detail-finding-header">
+                        <span class="finding-status-icon" id="report-icon-${ce.index}"></span>
+                        ${escapeHtml(ce.entityName)}
+                        <span class="severity-badge" style="background: #2ed573; color: #fff;">CLEAN</span>
+                      </div>
+                      <div class="detail-finding-section">
+                        <p class="finding-paragraph" id="report-para-${ce.index}"></p>
+                      </div>
+                    </div>
+                  `;
+                }
+              }
+              content.innerHTML = cardsHtml;
+              status.querySelector('span').textContent = `Writing 0/${event.total}...`;
+            }
+
+            else if (event.type === 'finding_start' || event.type === 'clean_entity_start') {
+              const card = document.getElementById(`report-card-${event.index}`);
+              if (card) {
+                card.classList.remove('waiting');
+                card.classList.add('active');
+                // Scroll card into view
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+              const totalItems = event.type === 'clean_entity_start'
+                ? `Writing clean entity: ${event.entityName || (event.index + 1)}...`
+                : `Writing ${event.index + 1}/${event.total || selected.length}...`;
+              status.querySelector('span').textContent = totalItems;
+            }
+
+            else if (event.type === 'finding_token') {
+              const para = document.getElementById(`report-para-${event.index}`);
+              if (para) {
+                para.textContent += event.token;
+              }
+            }
+
+            else if (event.type === 'finding_complete') {
+              const card = document.getElementById(`report-card-${event.index}`);
+              const icon = document.getElementById(`report-icon-${event.index}`);
+              if (card) {
+                card.classList.remove('active');
+                card.classList.add('complete');
+              }
+              if (icon) {
+                icon.textContent = '\u2713';
+                icon.style.color = '#2ed573';
+              }
+            }
+
+            else if (event.type === 'finding_fallback') {
+              // Fallback text already sent as finding_token — just mark with a note
+              const icon = document.getElementById(`report-icon-${event.index}`);
+              if (icon) {
+                icon.textContent = '\u26A0';
+                icon.style.color = '#f5a623';
+                icon.title = 'Generated with fallback text';
+              }
+            }
+
+            else if (event.type === 'report_complete') {
+              detailReportContent = '';
+              // Flagged entity sections
+              for (const section of event.sections) {
+                detailReportContent += `${section.paragraph}\n\nSources:\n${section.sources?.map(url => '- ' + url).join('\n') || 'N/A'}\n\n`;
+              }
+              // Clean entity sections
+              if (event.cleanSections) {
+                for (const section of event.cleanSections) {
+                  detailReportContent += `${section.paragraph}\n\n`;
+                }
+              }
+              status.classList.add('complete');
+              status.querySelector('span').textContent = 'Complete';
+              document.getElementById('copyDetailReportBtn').disabled = false;
+            }
+
+            else if (event.type === 'error') {
+              content.innerHTML += `
+                <div class="detail-finding error">
+                  <div class="detail-finding-header">Error</div>
+                  <div class="detail-finding-section">
+                    <p style="color: #ff4757;">${escapeHtml(event.message || 'Report generation failed')}</p>
+                  </div>
                 </div>
-                <div class="detail-finding-section">
-                  <h4>Sources</h4>
-                  <p style="font-size: 12px; color: #888;">${section.sources?.map(url => `<a href="${escapeHtml(url)}" target="_blank" style="color: #4a9eff;">${escapeHtml(url)}</a>`).join('<br>') || 'N/A'}</p>
-                </div>
-              </div>
-            `;
-
-            // Plain text for clipboard
-            reportText += `## ${section.headline}\n\n${section.paragraph}\n\nSources:\n${section.sources?.map(url => '- ' + url).join('\n') || 'N/A'}\n\n---\n\n`;
+              `;
+              status.querySelector('span').textContent = 'Failed';
+            }
           }
-
-          content.innerHTML = reportHtml;
-          detailReportContent = reportText;
-          status.classList.add('complete');
-          status.querySelector('span').textContent = 'Complete';
-          document.getElementById('copyDetailReportBtn').disabled = false;
-        } else {
-          content.innerHTML = `
-            <div class="detail-finding">
-              <div class="detail-finding-header">Error</div>
-              <div class="detail-finding-section">
-                <p style="color: #ff4757;">${escapeHtml(data.error || 'Failed to generate report')}</p>
-              </div>
-            </div>
-          `;
         }
+
       } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('[REPORT] Stream aborted by user');
+          return;
+        }
         content.innerHTML = `
-          <div class="detail-finding">
+          <div class="detail-finding error">
             <div class="detail-finding-header">Error</div>
             <div class="detail-finding-section">
               <p style="color: #ff4757;">Error: ${escapeHtml(err.message)}</p>
@@ -5194,6 +5379,8 @@
           </div>
         `;
         status.querySelector('span').textContent = 'Failed';
+      } finally {
+        reportAbortController = null;
       }
     }
 

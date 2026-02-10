@@ -3,6 +3,7 @@
 
 import axios from 'axios';
 import { ConsolidatedFinding } from './types.js';
+import { CleanEntityResult } from './reports-db.js';
 
 // LLM Configuration (same fallback chain as other modules)
 const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
@@ -225,43 +226,152 @@ Now write the finding for the issue described above:`;
 }
 
 /**
- * Generate full report with streaming
+ * Generate clean entity write-up using template language
+ * LLM writes ONLY the descriptive clause; template wrapper is added programmatically
+ */
+export async function generateCleanWriteUp(
+  entityName: string,
+  searchResults: CleanEntityResult[],
+  subjectName: string,
+  onChunk: StreamCallback
+): Promise<string> {
+  const resultsText = searchResults.slice(0, 20).map(r =>
+    `- ${r.title} (${r.url})\n  ${r.snippet}`
+  ).join('\n');
+
+  const prompt = `Given these search results for "${entityName}" (a subject in a due diligence screening for "${subjectName}"), write ONE sentence describing what the search results primarily relate to.
+
+SEARCH RESULTS:
+${resultsText}
+
+Write ONLY the descriptive clause. Examples:
+- "its operations as a subsidiary of Hainan Jinpan, as recorded by the company's Shanghai stock exchange filings"
+- "its business registration records and corporate filings on mainstream aggregator websites"
+- "his role as chairman of ABC Corp, as recorded by stock exchange announcements and corporate media"
+
+Rules:
+- One sentence only, no period at end
+- Describe what the sources ARE ABOUT, not what they say
+- Reference source types (stock filings, media, corporate records, etc.)
+- Include relationship to parent subject if evident
+- Neutral tone, professional English`;
+
+  const providers = getProviders();
+
+  for (const provider of providers) {
+    try {
+      console.log(`[REPORT] Generating clean write-up for "${entityName}" with ${provider.name}...`);
+      const response = await axios.post(
+        provider.url,
+        {
+          model: provider.model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${provider.apiKey}`,
+          },
+          timeout: 30000,
+        }
+      );
+
+      const clause = response.data.choices?.[0]?.message?.content?.trim();
+      if (clause) {
+        console.log(`[REPORT] ✓ Clean write-up for "${entityName}" via ${provider.name}`);
+        // Build the full template block
+        const sourceList = searchResults.map(r => r.url).join('\n');
+        const block = `Media and online coverage of ${entityName} is mainly neutral. Online and media references to ${entityName} primarily relate to ${clause}.[1]\nOnline and media research found no significant negative issues with the subject.\n\n[1]  ${sourceList}`;
+        onChunk(block);
+        return block;
+      }
+    } catch (err: any) {
+      console.log(`[REPORT] ✗ ${provider.name} clean write-up failed: ${err.message}`);
+      continue;
+    }
+  }
+
+  // Fallback: generic clause
+  const sourceList = searchResults.map(r => r.url).join('\n');
+  const fallback = `Media and online coverage of ${entityName} is mainly neutral. Online and media references to ${entityName} primarily relate to its business operations and corporate filings.[1]\nOnline and media research found no significant negative issues with the subject.\n\n[1]  ${sourceList}`;
+  onChunk(fallback);
+  return fallback;
+}
+
+/**
+ * Generate full report with streaming — covers all entities (flagged + clean)
  */
 export async function generateFullReport(
   subjectName: string,
   findings: ConsolidatedFinding[],
+  cleanResults: Record<string, CleanEntityResult[]>,
+  nameVariations: string[],
   onChunk: StreamCallback
 ): Promise<void> {
-  // Simple header - just subject name
-  const header = `# ${subjectName}\n\n`;
-  onChunk(header);
+  // Determine which name variations have findings
+  const flaggedEntities = new Set<string>();
+  const findingsByEntity = new Map<string, ConsolidatedFinding[]>();
 
-  // Collect all sources for footer
-  let allSources: { url: string; title: string }[] = [];
+  for (const finding of findings) {
+    // Match finding to name variation via source query or headline
+    let matched = false;
+    for (const nv of nameVariations) {
+      const nvLower = nv.toLowerCase();
+      // Check if any source relates to this name variation
+      const relatesTo = finding.sources.some(s =>
+        s.title.toLowerCase().includes(nvLower) || s.url.toLowerCase().includes(nvLower)
+      ) || finding.headline.toLowerCase().includes(nvLower) || finding.summary.toLowerCase().includes(nvLower);
 
-  // Generate write-up for each finding (no identity grouping headers)
-  for (let i = 0; i < findings.length; i++) {
-    const finding = findings[i];
-
-    // Add separator between findings
-    if (i > 0) {
-      onChunk('\n---\n\n');
+      if (relatesTo) {
+        flaggedEntities.add(nv);
+        if (!findingsByEntity.has(nv)) findingsByEntity.set(nv, []);
+        findingsByEntity.get(nv)!.push(finding);
+        matched = true;
+      }
     }
-
-    // Generate the write-up
-    await generateWriteUp(finding, subjectName, onChunk);
-    onChunk('\n\n');
-
-    // Collect sources
-    for (const source of finding.sources) {
-      allSources.push(source);
+    // If no match found, attribute to the first (primary) name variation
+    if (!matched && nameVariations.length > 0) {
+      const primary = nameVariations[0];
+      flaggedEntities.add(primary);
+      if (!findingsByEntity.has(primary)) findingsByEntity.set(primary, []);
+      findingsByEntity.get(primary)!.push(finding);
     }
   }
 
-  // Footer with all sources
-  onChunk('---\n\n**Sources:**\n');
-  const uniqueSources = [...new Map(allSources.map(s => [s.url, s])).values()];
-  for (let i = 0; i < uniqueSources.length; i++) {
-    onChunk(`${i + 1}. ${uniqueSources[i].url}\n`);
+  let blockIndex = 0;
+
+  // Process each name variation in order
+  for (const nv of nameVariations) {
+    if (blockIndex > 0) {
+      onChunk('\n\n');
+    }
+
+    if (flaggedEntities.has(nv)) {
+      // Flagged entity: generate write-up from findings
+      const entityFindings = findingsByEntity.get(nv) || [];
+      for (let i = 0; i < entityFindings.length; i++) {
+        if (i > 0) onChunk('\n\n');
+        await generateWriteUp(entityFindings[i], subjectName, onChunk);
+      }
+    } else if (cleanResults[nv] && cleanResults[nv].length > 0) {
+      // Clean entity: generate template-based write-up
+      await generateCleanWriteUp(nv, cleanResults[nv], subjectName, onChunk);
+    } else {
+      // Entity with no results at all — still include with generic template
+      const block = `Media and online coverage of ${nv} is mainly neutral. Online and media references to ${nv} primarily relate to its business operations and corporate filings.\nOnline and media research found no significant negative issues with the subject.`;
+      onChunk(block);
+    }
+
+    blockIndex++;
+  }
+
+  // Also process any clean entities not in nameVariations (edge case)
+  for (const [entity, results] of Object.entries(cleanResults)) {
+    if (!nameVariations.includes(entity) && results.length > 0) {
+      onChunk('\n\n');
+      await generateCleanWriteUp(entity, results, subjectName, onChunk);
+      blockIndex++;
+    }
   }
 }
