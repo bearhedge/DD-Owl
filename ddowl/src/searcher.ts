@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { SearchResult } from './types.js';
 import { searchBaidu, isBaiduAvailable } from './baiduSearcher.js';
+import { getSerperKeyManager } from './serperKeyManager.js';
 
-const SERPER_API_KEY = process.env.SERPER_API_KEY || '';
 const SERPER_URL = 'https://google.serper.dev/search';
 
 export interface SerperResponse {
@@ -27,24 +27,28 @@ export async function searchGoogle(
   resultsPerPage: number = 10,
   signal?: AbortSignal
 ): Promise<SearchResult[]> {
-  try {
+  const manager = getSerperKeyManager();
+
+  const attemptSearch = async (apiKey: string): Promise<SearchResult[]> => {
     const response = await axios.post<SerperResponse>(
       SERPER_URL,
       {
         q: query,
-        hl: 'zh-cn', // Chinese language preference
+        hl: 'zh-cn',
         num: resultsPerPage,
         page: page,
       },
       {
         headers: {
-          'X-API-KEY': SERPER_API_KEY,
+          'X-API-KEY': apiKey,
           'Content-Type': 'application/json',
         },
         timeout: 30000,
         signal,
       }
     );
+
+    manager.recordUsage();
 
     if (!response.data.organic) {
       return [];
@@ -55,12 +59,30 @@ export async function searchGoogle(
       link: result.link,
       snippet: result.snippet || '',
     }));
+  };
+
+  try {
+    return await attemptSearch(manager.getActiveKey());
   } catch (error: any) {
     if (error.name === 'CanceledError' || signal?.aborted) {
       console.log(`Search cancelled for query "${query}" page ${page}`);
       return [];
     }
-    console.error(`Search error for query "${query}" page ${page}:`, error);
+
+    // On 403/429, rotate and retry once
+    const status = error.response?.status;
+    if (status === 403 || status === 429) {
+      try {
+        const newKey = manager.rotateOnError();
+        console.log(`[SERPER] Retrying query "${query}" with next key`);
+        return await attemptSearch(newKey);
+      } catch (retryError: any) {
+        console.error(`[SERPER] Retry also failed for "${query}":`, retryError.message);
+        return [];
+      }
+    }
+
+    console.error(`Search error for query "${query}" page ${page}:`, error.message);
     return [];
   }
 }
