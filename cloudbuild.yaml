@@ -34,6 +34,7 @@ steps:
       - --allow-unauthenticated
       - --timeout=3600
       - --session-affinity
+      - --update-secrets=SERPER_API_KEYS=SERPER_API_KEYS:latest
       - --quiet
 
 images:
