@@ -3,6 +3,7 @@ import {
   initReportsDb, getReportsDb, closeReportsDb,
   saveReport, getReport, listReports,
   updateFindingVerdict, addMissedFlag, saveEditedReport,
+  setQualityRating, listChangelog, addChangelogEntry,
   getStats, getSourceRanking, getLearnings,
   type SaveReportInput,
 } from '../reports-db.js';
@@ -190,5 +191,41 @@ describe('Reports Database', () => {
     expect(learnings.wrongPatterns.length).toBeGreaterThan(0);
     expect(learnings.wrongPatterns[0].reason).toBe('name_collision');
     expect(learnings.wrongPatterns[0].count).toBe(5);
+  });
+
+  // --- Quality rating ---
+
+  it('should set and retrieve quality rating', () => {
+    const reportId = saveReport(sampleReport);
+    setQualityRating(reportId, 7);
+    const report = getReport(reportId)!;
+    expect(report.quality_rating).toBe(7);
+  });
+
+  it('should include avgQualityRating in stats', () => {
+    const id1 = saveReport(sampleReport);
+    const id2 = saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'Test 2' });
+    setQualityRating(id1, 6);
+    setQualityRating(id2, 8);
+    const stats = getStats();
+    expect(stats.avgQualityRating).toBe(7);
+  });
+
+  // --- Changelog ---
+
+  it('should create changelog table on init', () => {
+    const db = getReportsDb();
+    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[];
+    expect(tables.map(t => t.name)).toContain('changelog');
+  });
+
+  it('should add and list changelog entries', () => {
+    const id = addChangelogEntry('2026-02-15', 'Improved report prompt specificity', 'prompt');
+    expect(id).toBeGreaterThan(0);
+
+    const entries = listChangelog();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].description).toContain('specificity');
+    expect(entries[0].category).toBe('prompt');
   });
 });

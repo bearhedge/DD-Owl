@@ -398,7 +398,39 @@ export function calculateSimilarity(fp1: FindingFingerprint, fp2: FindingFingerp
     score += 0.08;
   }
 
+  // === Proper noun overlap bonus (+0.25) ===
+  // Catches same-entity same-event from different outlets
+  const text1 = contentWords1.join(' ');
+  const text2 = contentWords2.join(' ');
+  const nouns1 = extractProperNouns(text1);
+  const nouns2 = extractProperNouns(text2);
+  if (nouns1.size > 0 && nouns2.size > 0) {
+    const overlap = [...nouns1].filter(n => nouns2.has(n)).length;
+    const union = new Set([...nouns1, ...nouns2]).size;
+    if (union > 0 && overlap / union > 0.3) {
+      score += 0.25;
+    }
+  }
+
   return Math.min(score, 1);
+}
+
+/**
+ * Extract proper nouns from text — capitalized multi-word sequences and CJK character runs
+ */
+function extractProperNouns(text: string): Set<string> {
+  const nouns = new Set<string>();
+  // Capitalized multi-word sequences (e.g., "Bonitas Research", "H World Group")
+  const capitalizedMatches = text.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/g) || [];
+  for (const m of capitalizedMatches) {
+    if (m.length > 3) nouns.add(m.toLowerCase());
+  }
+  // CJK character runs (2+ chars) — entity names in Chinese
+  const cjkMatches = text.match(/[\u4e00-\u9fff]{2,}/g) || [];
+  for (const m of cjkMatches) {
+    nouns.add(m);
+  }
+  return nouns;
 }
 
 /**
@@ -489,6 +521,10 @@ Create ONE consolidated finding that:
 3. Creates a comprehensive headline (one sentence)
 4. Writes a detailed professional summary combining all information
 5. Identifies the date range of the incident
+
+When merging findings from multiple sources about the same incident, combine ALL specific
+details. Extract the MOST specific numbers, dates, and names from each source. If one source
+says "fined" and another gives the exact amount "fined CNY 40,000", use the specific version.
 
 Return JSON only:
 {

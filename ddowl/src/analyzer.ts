@@ -500,6 +500,13 @@ SEVERITY GUIDE:
 - AMBER: Regulatory investigation, civil litigation, allegations, historical issues
 - GREEN: No adverse information, or name not actually mentioned
 
+NOT ADVERSE — always mark as GREEN regardless of keywords:
+- Business revenue, growth metrics, room rates, market share
+- Bond or stock price movements (unless fraud-related)
+- Annual/sustainability report keyword matches without specific allegations
+- Industry rankings or competitive comparisons
+- Corporate announcements (joint ventures, partnerships, executive appointments)
+
 REGULATORY FILING DETECTION:
 If this article appears to be a stock exchange regulatory filing (prospectus/招股書, listing document/上市文件, annual report/年報, circular/通函, 配股說明書, 債券募集說明書):
 - Standard legal language in "Risk Factors"/"風險因素", "Regulatory Overview"/"監管概覽", or "Statutory Information"/"法定資料" sections is TEMPLATE BOILERPLATE — not actual adverse events

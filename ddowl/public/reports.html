@@ -155,6 +155,63 @@
     }
     .modal-close:hover { color: #fff; }
 
+    /* Quality rating widget */
+    .quality-rating { display: flex; gap: 6px; align-items: center; margin-bottom: 16px; }
+    .quality-rating-label { font-size: 11px; color: #666; text-transform: uppercase; margin-right: 8px; }
+    .rating-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 2px solid #333;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #555;
+      transition: all 0.2s;
+    }
+    .rating-dot:hover { border-color: #4a9eff; color: #4a9eff; }
+    .rating-dot.active { background: #4a9eff; border-color: #4a9eff; color: #fff; }
+
+    /* Tab system */
+    .tab-bar { display: flex; gap: 4px; margin-bottom: 12px; }
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 6px 6px 0 0;
+      border: 1px solid #222;
+      border-bottom: none;
+      background: #0a0a0a;
+      color: #666;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .tab-btn.active { background: #111; color: #e0e0e0; border-color: #333; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Diff view */
+    .diff-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .diff-panel {
+      background: #0a0a0a;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .diff-panel-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+    .diff-add { background: rgba(46,213,115,0.15); color: #2ed573; }
+    .diff-del { background: rgba(255,71,87,0.15); color: #ff4757; text-decoration: line-through; }
+
     /* Finding cards */
     .finding-card {
       background: #0a0a0a;
@@ -283,6 +340,59 @@
     .learning-item { font-size: 12px; color: #888; margin-bottom: 4px; }
     .learning-item strong { color: #e0e0e0; }
 
+    /* Changelog section */
+    .changelog-section {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #222;
+    }
+    .changelog-section h2 { font-size: 16px; margin-bottom: 16px; }
+    .changelog-entry {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .changelog-date {
+      background: #222;
+      color: #888;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .changelog-category {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .changelog-category.prompt { background: rgba(74,158,255,0.15); color: #4a9eff; }
+    .changelog-category.pipeline { background: rgba(46,213,115,0.15); color: #2ed573; }
+    .changelog-category.filtering { background: rgba(255,165,2,0.15); color: #ffa502; }
+    .changelog-category.dedup { background: rgba(255,71,87,0.15); color: #ff4757; }
+    .changelog-desc { color: #e0e0e0; flex: 1; }
+    .changelog-form { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .changelog-form input, .changelog-form select {
+      background: #0a0a0a;
+      border: 1px solid #222;
+      color: #e0e0e0;
+      font-family: inherit;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      outline: none;
+    }
+    .changelog-form input:focus { border-color: #4a9eff; }
+    .changelog-form input[type="text"] { flex: 1; min-width: 200px; }
+
     .empty-state {
       text-align: center;
       color: #444;
@@ -294,6 +404,7 @@
       .learning-grid { grid-template-columns: 1fr; }
       .stats-ribbon { gap: 8px; }
       .stat-card { min-width: 90px; padding: 8px 12px; }
+      .diff-container { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -325,6 +436,10 @@
           <div class="stat-value amber" id="statEdit">-</div>
         </div>
         <div class="stat-card">
+          <div class="stat-label">Avg Quality</div>
+          <div class="stat-value blue" id="statQuality">-</div>
+        </div>
+        <div class="stat-card">
           <div class="stat-label">Confirmed</div>
           <div class="stat-value green" id="statConfirmed">-</div>
         </div>
@@ -353,6 +468,7 @@
             <th>Date</th>
             <th>Findings</th>
             <th>Edit %</th>
+            <th>Quality</th>
             <th>Review</th>
           </tr>
         </thead>
@@ -368,6 +484,23 @@
       <div class="learnings-section" id="learningsSection" style="display:none;">
         <h2>What DD Owl Has Learned</h2>
         <div class="learning-grid" id="learningsGrid"></div>
+      </div>
+
+      <!-- Changelog -->
+      <div class="changelog-section" id="changelogSection">
+        <h2>Improvement Changelog</h2>
+        <div id="changelogList"></div>
+        <div class="changelog-form">
+          <input type="date" id="changelogDate">
+          <select id="changelogCategory">
+            <option value="prompt">Prompt</option>
+            <option value="pipeline">Pipeline</option>
+            <option value="filtering">Filtering</option>
+            <option value="dedup">Dedup</option>
+          </select>
+          <input type="text" id="changelogDesc" placeholder="Describe the improvement...">
+          <button class="btn primary" onclick="addChangelog()">Add Entry</button>
+        </div>
       </div>
     </div>
   </div>
@@ -395,6 +528,7 @@
     async function fetchReport(id) { return (await fetch(`/api/reports/${id}`)).json(); }
     async function fetchStats() { return (await fetch('/api/reports/stats')).json(); }
     async function fetchLearnings() { return (await fetch('/api/reports/learnings')).json(); }
+    async function fetchChangelog() { return (await fetch('/api/reports/changelog')).json(); }
     async function submitVerdict(findingId, verdict, wrongReason) {
       return fetch(`/api/reports/findings/${findingId}/verdict`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -413,6 +547,18 @@
         body: JSON.stringify({ editedMarkdown }),
       });
     }
+    async function submitRating(reportId, rating) {
+      return fetch(`/api/reports/${reportId}/rating`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating }),
+      });
+    }
+    async function submitChangelog(date, description, category) {
+      return fetch('/api/reports/changelog', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, description, category }),
+      });
+    }
 
     // --- State ---
     let currentReportId = null;
@@ -423,6 +569,10 @@
       loadStats();
       loadReports();
       loadLearnings();
+      loadChangelog();
+
+      // Default changelog date to today
+      document.getElementById('changelogDate').valueAsDate = new Date();
 
       document.getElementById('searchInput').addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
@@ -447,6 +597,8 @@
           s.confirmed + s.wrong > 0 ? (s.accuracy * 100).toFixed(1) + '%' : '-';
         document.getElementById('statEdit').textContent =
           s.avgEditDistance > 0 ? (s.avgEditDistance * 100).toFixed(1) + '%' : '-';
+        document.getElementById('statQuality').textContent =
+          s.avgQualityRating > 0 ? s.avgQualityRating.toFixed(1) + '/10' : '-';
         document.getElementById('statConfirmed').textContent = s.confirmed;
         document.getElementById('statWrong').textContent = s.wrong;
         document.getElementById('statMissed').textContent = s.missed;
@@ -474,6 +626,7 @@
         tbody.innerHTML = data.reports.map(r => {
           const date = new Date(r.screened_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
           const editPct = r.edit_distance != null ? (r.edit_distance * 100).toFixed(0) + '%' : '-';
+          const qualityText = r.quality_rating != null ? r.quality_rating + '/10' : '\u2014';
           const reviewClass = r.edited_markdown ? 'reviewed' : (r.edit_distance != null ? 'pending' : 'unreviewed');
           const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
 
@@ -489,7 +642,7 @@
               const redAmber = [];
               if (r.red_count > 0) redAmber.push(`${r.red_count}R`);
               if (r.amber_count > 0) redAmber.push(`${r.amber_count}A`);
-              funnelText = `${gathered} → ${flagged} flagged → ${analyzed} analyzed → ${findings} findings` +
+              funnelText = `${gathered} \u2192 ${flagged} flagged \u2192 ${analyzed} analyzed \u2192 ${findings} findings` +
                 (redAmber.length > 0 ? ` (${redAmber.join(' ')})` : '');
             } catch { /* ignore */ }
           }
@@ -506,6 +659,7 @@
             <td>${date}</td>
             <td>${funnelText}</td>
             <td>${editPct}</td>
+            <td>${qualityText}</td>
             <td><span class="review-status ${reviewClass}">${reviewText}</span></td>
           </tr>`;
         }).join('');
@@ -535,20 +689,20 @@
               <div style="color:#888; margin-bottom:8px; font-size:11px; text-transform:uppercase;">Screening Funnel</div>
               <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
                 <span style="color:#4a9eff;">${s.gathered || 0} gathered</span>
-                <span style="color:#555;">→</span>
+                <span style="color:#555;">\u2192</span>
                 <span style="color:#e0e0e0;">${s.programmaticElimination?.after || 0} after filter</span>
-                <span style="color:#555;">→</span>
+                <span style="color:#555;">\u2192</span>
                 <span><span style="color:#ff4757;">${s.categorized?.red || 0} RED</span> <span style="color:#ffa502;">${s.categorized?.amber || 0} AMBER</span> <span style="color:#2ed573;">${s.categorized?.green || 0} GREEN</span></span>
-                <span style="color:#555;">→</span>
+                <span style="color:#555;">\u2192</span>
                 <span style="color:#e0e0e0;">${s.processed?.total || 0} analyzed</span>
-                <span style="color:#555;">→</span>
+                <span style="color:#555;">\u2192</span>
                 <span style="color:#e0e0e0;">${s.consolidated?.after || report.finding_count} findings</span>
               </div>
               <div style="color:#555; margin-top:6px; font-size:11px;">
                 Eliminated: ${s.programmaticElimination?.eliminated || 0} noise
                 ${s.programmaticElimination?.govBypassed ? ' | ' + s.programmaticElimination.govBypassed + ' gov bypassed' : ''}
                 | Processed: ${s.processed?.adverse || 0} adverse, ${s.processed?.cleared || 0} cleared, ${s.processed?.failed || 0} failed
-                ${s.consolidated ? ' | Consolidated: ' + s.consolidated.before + ' → ' + s.consolidated.after : ''}
+                ${s.consolidated ? ' | Consolidated: ' + s.consolidated.before + ' \u2192 ' + s.consolidated.after : ''}
               </div>
             </div>`;
         } catch { /* ignore */ }
@@ -561,6 +715,15 @@
         </div>
         ${statsHtml}
       `;
+
+      // Quality rating widget
+      const currentRating = report.quality_rating || 0;
+      html += `<div class="quality-rating">
+        <span class="quality-rating-label">Quality</span>
+        ${Array.from({length: 10}, (_, i) => i + 1).map(n =>
+          `<div class="rating-dot ${n <= currentRating ? 'active' : ''}" onclick="setRating(${id}, ${n})">${n}</div>`
+        ).join('')}
+      </div>`;
 
       // Findings
       html += '<h3 style="font-size:14px; margin-bottom:12px;">Findings</h3>';
@@ -620,17 +783,30 @@
         </div>
       `;
 
-      // Report editor
+      // Report editor with tab system (Editor + Diff)
       const reportText = report.edited_markdown || report.report_markdown || '';
+      const aiText = report.report_markdown || '';
+      const humanText = report.edited_markdown || '';
+      const hasDiff = aiText && humanText && aiText !== humanText;
+
       html += `
         <div class="report-section">
           <h3>Report${report.edit_distance != null ? ` <span style="color:#666; font-size:12px;">(edit distance: ${(report.edit_distance * 100).toFixed(1)}%)</span>` : ''}</h3>
-          <textarea class="report-editor" id="reportEditor">${escapeHtml(reportText)}</textarea>
-          <div class="save-row">
-            <button class="btn primary" onclick="saveReport()">Save Edited Report</button>
-            <span class="save-status" id="saveStatus"></span>
+          <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('editor', this)">Editor</button>
+            <button class="tab-btn" onclick="switchTab('diff', this)" ${!hasDiff ? 'disabled style="opacity:0.3"' : ''}>Diff</button>
           </div>
-          <div class="edit-distance-display" id="editDistanceDisplay"></div>
+          <div class="tab-content active" id="tab-editor">
+            <textarea class="report-editor" id="reportEditor">${escapeHtml(reportText)}</textarea>
+            <div class="save-row">
+              <button class="btn primary" onclick="saveReport()">Save Edited Report</button>
+              <span class="save-status" id="saveStatus"></span>
+            </div>
+            <div class="edit-distance-display" id="editDistanceDisplay"></div>
+          </div>
+          <div class="tab-content" id="tab-diff">
+            ${hasDiff ? buildDiffView(aiText, humanText) : '<div style="color:#444; font-size:12px;">No diff available — edit the report first.</div>'}
+          </div>
         </div>
       `;
 
@@ -645,6 +821,58 @@
       loadStats();
       loadReports(document.getElementById('searchInput').value);
       loadLearnings();
+    }
+
+    // --- Tab switching ---
+    function switchTab(tabId, btn) {
+      if (btn.disabled) return;
+      const section = btn.closest('.report-section');
+      section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      section.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
+    }
+
+    // --- Quality rating ---
+    async function setRating(reportId, rating) {
+      await submitRating(reportId, rating);
+      // Update dots
+      document.querySelectorAll('.quality-rating .rating-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i < rating);
+      });
+    }
+
+    // --- Word-level diff ---
+    function buildDiffView(original, edited) {
+      const origWords = original.split(/(\s+)/);
+      const editWords = edited.split(/(\s+)/);
+
+      // Simple LCS-based word diff
+      const origHtml = wordDiff(origWords, editWords, 'del');
+      const editHtml = wordDiff(editWords, origWords, 'add');
+
+      return `<div class="diff-container">
+        <div>
+          <div class="diff-panel-label">AI Generated</div>
+          <div class="diff-panel">${origHtml}</div>
+        </div>
+        <div>
+          <div class="diff-panel-label">Human Edited</div>
+          <div class="diff-panel">${editHtml}</div>
+        </div>
+      </div>`;
+    }
+
+    function wordDiff(words, otherWords, mode) {
+      const otherSet = new Set(otherWords);
+      return words.map(w => {
+        if (/^\s+$/.test(w)) return w;
+        const escaped = escapeHtml(w);
+        if (!otherSet.has(w)) {
+          return `<span class="diff-${mode}">${escaped}</span>`;
+        }
+        return escaped;
+      }).join('');
     }
 
     // --- Verdict actions ---
@@ -693,6 +921,37 @@
           `Edit distance: ${(data.editDistance * 100).toFixed(1)}%`;
       }
       setTimeout(() => { document.getElementById('saveStatus').textContent = ''; }, 3000);
+    }
+
+    // --- Changelog ---
+    async function loadChangelog() {
+      try {
+        const entries = await fetchChangelog();
+        const list = document.getElementById('changelogList');
+        if (entries.length === 0) {
+          list.innerHTML = '<div style="color:#444; font-size:12px; margin-bottom:12px;">No entries yet.</div>';
+          return;
+        }
+        list.innerHTML = entries.map(e => `
+          <div class="changelog-entry">
+            <span class="changelog-date">${e.date}</span>
+            <span class="changelog-category ${e.category}">${e.category}</span>
+            <span class="changelog-desc">${escapeHtml(e.description)}</span>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load changelog:', e);
+      }
+    }
+
+    async function addChangelog() {
+      const date = document.getElementById('changelogDate').value;
+      const category = document.getElementById('changelogCategory').value;
+      const desc = document.getElementById('changelogDesc').value.trim();
+      if (!date || !desc) return;
+      await submitChangelog(date, desc, category);
+      document.getElementById('changelogDesc').value = '';
+      loadChangelog();
     }
 
     // --- Learnings ---

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import {
   saveReport, getReport, listReports,
   updateFindingVerdict, addMissedFlag, saveEditedReport,
+  setQualityRating, listChangelog, addChangelogEntry,
   getStats, getSourceRanking, getLearnings,
   type SaveReportInput,
 } from './reports-db.js';
@@ -52,6 +53,19 @@ reportsRouter.get('/stats/summary', (_req: Request, res: Response) => {
   res.type('text/plain').send(text);
 });
 
+// GET /api/reports/changelog — list all changelog entries
+reportsRouter.get('/changelog', (_req: Request, res: Response) => {
+  res.json(listChangelog());
+});
+
+// POST /api/reports/changelog — add new changelog entry
+reportsRouter.post('/changelog', (req: Request, res: Response) => {
+  const { date, description, category } = req.body;
+  if (!date || !description) { res.status(400).json({ error: 'date and description required' }); return; }
+  const id = addChangelogEntry(date, description, category || 'prompt');
+  res.json({ success: true, id });
+});
+
 // GET /api/reports/:id — single report with findings + missed flags
 reportsRouter.get('/:id', (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
@@ -68,6 +82,15 @@ reportsRouter.patch('/:id/edit', (req: Request, res: Response) => {
   saveEditedReport(id, editedMarkdown);
   const report = getReport(id);
   res.json({ success: true, editDistance: report?.edit_distance });
+});
+
+// PATCH /api/reports/:id/rating — set quality rating
+reportsRouter.patch('/:id/rating', (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  const { rating } = req.body;
+  if (!rating || rating < 1 || rating > 10) { res.status(400).json({ error: 'rating must be 1-10' }); return; }
+  setQualityRating(id, rating);
+  res.json({ success: true });
 });
 
 // PATCH /api/reports/findings/:id/verdict — mark finding as CONFIRMED or WRONG

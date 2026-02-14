@@ -18,6 +18,20 @@ export function initReportsDb(dbPath?: string): void {
   try {
     db.exec('ALTER TABLE reports ADD COLUMN screening_stats_json TEXT');
   } catch { /* Column already exists */ }
+  try {
+    db.exec('ALTER TABLE reports ADD COLUMN quality_rating INTEGER');
+  } catch { /* Column already exists */ }
+
+  // Changelog table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS changelog (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'prompt',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 export function getReportsDb(): Database.Database {
@@ -84,6 +98,7 @@ export interface ReportRow {
   screening_stats_json: string | null;
   edited_markdown: string | null;
   edit_distance: number | null;
+  quality_rating: number | null;
   cost_usd: number;
   duration_ms: number;
   queries_executed: number;
@@ -135,6 +150,7 @@ export interface Stats {
   missRate: number;
   avgEditDistance: number;
   avgFindingsPerReport: number;
+  avgQualityRating: number;
   totalCostUsd: number;
   topWrongReasons: { reason: string; count: number }[];
   topMissedTypes: { eventType: string; count: number }[];
@@ -292,6 +308,29 @@ export function saveEditedReport(reportId: number, editedMarkdown: string): void
     .run(editedMarkdown, distance, reportId);
 }
 
+export function setQualityRating(id: number, rating: number): void {
+  getReportsDb().prepare('UPDATE reports SET quality_rating = ? WHERE id = ?').run(rating, id);
+}
+
+// --- Changelog ---
+
+export interface ChangelogEntry {
+  id: number;
+  date: string;
+  description: string;
+  category: string;
+  created_at: string;
+}
+
+export function listChangelog(): ChangelogEntry[] {
+  return getReportsDb().prepare('SELECT * FROM changelog ORDER BY date DESC, id DESC').all() as ChangelogEntry[];
+}
+
+export function addChangelogEntry(date: string, description: string, category: string): number {
+  const res = getReportsDb().prepare('INSERT INTO changelog (date, description, category) VALUES (?, ?, ?)').run(date, description, category);
+  return res.lastInsertRowid as number;
+}
+
 // --- Stats ---
 
 export function getStats(): Stats {
@@ -305,6 +344,7 @@ export function getStats(): Stats {
       (SELECT count(*) FROM findings WHERE human_verdict = 'WRONG') as wrong,
       (SELECT count(*) FROM missed_flags) as missed,
       (SELECT avg(edit_distance) FROM reports WHERE edit_distance IS NOT NULL) as avgEditDistance,
+      (SELECT avg(quality_rating) FROM reports WHERE quality_rating IS NOT NULL) as avgQualityRating,
       (SELECT sum(cost_usd) FROM reports) as totalCostUsd
   `).get() as any;
 
@@ -340,6 +380,7 @@ export function getStats(): Stats {
     missRate,
     avgEditDistance: totals.avgEditDistance || 0,
     avgFindingsPerReport: totals.totalReports > 0 ? totals.totalFindings / totals.totalReports : 0,
+    avgQualityRating: totals.avgQualityRating || 0,
     totalCostUsd: totals.totalCostUsd || 0,
     topWrongReasons,
     topMissedTypes,

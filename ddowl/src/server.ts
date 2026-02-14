@@ -3137,7 +3137,7 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
       // Use unified generateWriteUp from reportGenerator (streams via SSE)
       let paragraph = '';
       try {
-        paragraph = await generateWriteUp(
+        const result = await generateWriteUp(
           consolidatedFinding,
           subjectName,
           (chunk: string) => {
@@ -3145,6 +3145,7 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
           },
           articleText || undefined
         );
+        paragraph = result.text;
       } catch (err: any) {
         console.log(`[REPORT] generateWriteUp failed: ${err.message}`);
       }
