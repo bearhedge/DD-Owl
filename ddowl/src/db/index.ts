@@ -27,6 +27,9 @@ export const db = drizzle(pool, { schema });
 // Export schema for easy access
 export * from './schema.js';
 
+// Export pool for raw queries (used by reports-db)
+export { pool };
+
 // Helper to close pool on shutdown
 export async function closeDb() {
   await pool.end();

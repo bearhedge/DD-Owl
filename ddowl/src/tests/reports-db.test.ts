@@ -1,16 +1,35 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { newDb } from 'pg-mem';
+import type { Pool as PgPool } from 'pg';
+
+// Create pg-mem database and mock pool before importing reports-db
+let memPool: PgPool;
+
+function createMemPool() {
+  const db = newDb();
+  // pg-mem adaptor that mimics pg.Pool
+  const pool = db.adapters.createPg().Pool;
+  return new pool() as unknown as PgPool;
+}
+
+// Mock the db/index.js module to use pg-mem pool
+vi.mock('../db/index.js', () => {
+  return {
+    get pool() {
+      return memPool;
+    },
+  };
+});
+
+// Import after mock is set up
 import {
-  initReportsDb, getReportsDb, closeReportsDb,
+  initReportsDb,
   saveReport, getReport, listReports,
   updateFindingVerdict, addMissedFlag, saveEditedReport,
   setQualityRating, listChangelog, addChangelogEntry,
   getStats, getSourceRanking, getLearnings,
   type SaveReportInput,
 } from '../reports-db.js';
-import fs from 'fs';
-import path from 'path';
-
-const TEST_DB_PATH = path.join(import.meta.dirname, '../../data/test-reports.db');
 
 const sampleReport: SaveReportInput = {
   runId: 'test-run-1',
@@ -29,48 +48,36 @@ const sampleReport: SaveReportInput = {
   totalSearchResults: 487,
 };
 
-describe('Reports Database', () => {
-  beforeEach(() => {
-    if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
-    initReportsDb(TEST_DB_PATH);
+describe('Reports Database (PostgreSQL)', () => {
+  beforeEach(async () => {
+    // Create a fresh in-memory Postgres for each test
+    memPool = createMemPool();
+    await initReportsDb();
   });
 
-  afterEach(() => {
-    closeReportsDb();
-    if (fs.existsSync(TEST_DB_PATH)) fs.unlinkSync(TEST_DB_PATH);
-    // Clean up WAL files
-    for (const ext of ['-wal', '-shm']) {
-      const p = TEST_DB_PATH + ext;
-      if (fs.existsSync(p)) fs.unlinkSync(p);
+  afterEach(async () => {
+    if (memPool) {
+      await memPool.end();
     }
   });
 
   // --- Schema ---
 
-  it('should create all tables on init', () => {
-    const db = getReportsDb();
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[];
-    const names = tables.map(t => t.name);
-    expect(names).toContain('reports');
-    expect(names).toContain('findings');
-    expect(names).toContain('missed_flags');
-    expect(names).toContain('sources');
-    expect(names).toContain('learning_rules');
-  });
-
-  it('should enable WAL mode', () => {
-    const db = getReportsDb();
-    const result = db.pragma('journal_mode') as { journal_mode: string }[];
-    expect(result[0].journal_mode).toBe('wal');
+  it('should create all tables on init', async () => {
+    // Verify tables exist by querying them (pg-mem doesn't support pg_tables)
+    for (const table of ['dd_reports', 'dd_findings', 'dd_missed_flags', 'dd_sources', 'dd_learning_rules', 'dd_changelog']) {
+      const { rows } = await memPool.query(`SELECT count(*) as c FROM ${table}`);
+      expect(parseInt(rows[0].c)).toBe(0);
+    }
   });
 
   // --- CRUD ---
 
-  it('should save and retrieve a report', () => {
-    const id = saveReport(sampleReport);
+  it('should save and retrieve a report', async () => {
+    const id = await saveReport(sampleReport);
     expect(id).toBeGreaterThan(0);
 
-    const report = getReport(id);
+    const report = await getReport(id);
     expect(report).not.toBeNull();
     expect(report!.subject_name).toBe('許楚家');
     expect(report!.finding_count).toBe(2);
@@ -79,86 +86,86 @@ describe('Reports Database', () => {
     expect(report!.report_markdown).toContain('許楚家');
   });
 
-  it('should save findings linked to report', () => {
-    const id = saveReport(sampleReport);
-    const report = getReport(id)!;
-    expect(report.findings).toHaveLength(2);
-    expect(report.findings[0].headline).toBe('ICAC Investigation');
-    expect(report.findings[0].severity).toBe('RED');
+  it('should save findings linked to report', async () => {
+    const id = await saveReport(sampleReport);
+    const report = await getReport(id);
+    expect(report!.findings).toHaveLength(2);
+    expect(report!.findings[0].headline).toBe('ICAC Investigation');
+    expect(report!.findings[0].severity).toBe('RED');
   });
 
-  it('should list reports with pagination', () => {
-    saveReport(sampleReport);
-    saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'John Smith' });
+  it('should list reports with pagination', async () => {
+    await saveReport(sampleReport);
+    await saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'John Smith' });
 
-    const result = listReports({ limit: 10, offset: 0 });
+    const result = await listReports({ limit: 10, offset: 0 });
     expect(result.reports).toHaveLength(2);
     expect(result.total).toBe(2);
   });
 
-  it('should search reports via FTS', () => {
-    saveReport(sampleReport);
-    saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'John Smith', reportMarkdown: '# John Smith\nNo issues found.' });
+  it('should search reports via ILIKE', async () => {
+    await saveReport(sampleReport);
+    await saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'John Smith', reportMarkdown: '# John Smith\nNo issues found.' });
 
-    const results = listReports({ search: '許楚家' });
+    const results = await listReports({ search: '許楚家' });
     expect(results.reports).toHaveLength(1);
     expect(results.reports[0].subject_name).toBe('許楚家');
   });
 
   // --- Review operations ---
 
-  it('should update finding verdict to CONFIRMED', () => {
-    const reportId = saveReport(sampleReport);
-    const report = getReport(reportId)!;
-    const findingId = report.findings[0].id;
+  it('should update finding verdict to CONFIRMED', async () => {
+    const reportId = await saveReport(sampleReport);
+    const report = await getReport(reportId);
+    const findingId = report!.findings[0].id;
 
-    updateFindingVerdict(findingId, 'CONFIRMED');
-    const updated = getReport(reportId)!;
-    expect(updated.findings[0].human_verdict).toBe('CONFIRMED');
+    await updateFindingVerdict(findingId, 'CONFIRMED');
+    const updated = await getReport(reportId);
+    expect(updated!.findings[0].human_verdict).toBe('CONFIRMED');
   });
 
-  it('should update finding verdict to WRONG with reason', () => {
-    const reportId = saveReport(sampleReport);
-    const report = getReport(reportId)!;
-    const findingId = report.findings[0].id;
+  it('should update finding verdict to WRONG with reason', async () => {
+    const reportId = await saveReport(sampleReport);
+    const report = await getReport(reportId);
+    const findingId = report!.findings[0].id;
 
-    updateFindingVerdict(findingId, 'WRONG', 'name_collision');
-    const updated = getReport(reportId)!;
-    expect(updated.findings[0].human_verdict).toBe('WRONG');
-    expect(updated.findings[0].wrong_reason).toBe('name_collision');
+    await updateFindingVerdict(findingId, 'WRONG', 'name_collision');
+    const updated = await getReport(reportId);
+    expect(updated!.findings[0].human_verdict).toBe('WRONG');
+    expect(updated!.findings[0].wrong_reason).toBe('name_collision');
   });
 
-  it('should add a missed flag', () => {
-    const reportId = saveReport(sampleReport);
-    addMissedFlag(reportId, { description: 'Subject is on OFAC sanctions list', severity: 'RED', eventType: 'sanctions' });
+  it('should add a missed flag', async () => {
+    const reportId = await saveReport(sampleReport);
+    await addMissedFlag(reportId, { description: 'Subject is on OFAC sanctions list', severity: 'RED', eventType: 'sanctions' });
 
-    const report = getReport(reportId)!;
-    expect(report.missed_flags).toHaveLength(1);
-    expect(report.missed_flags[0].description).toContain('OFAC');
+    const report = await getReport(reportId);
+    expect(report!.missed_flags).toHaveLength(1);
+    expect(report!.missed_flags[0].description).toContain('OFAC');
   });
 
-  it('should save edited report and compute edit distance', () => {
-    const reportId = saveReport(sampleReport);
+  it('should save edited report and compute edit distance', async () => {
+    const reportId = await saveReport(sampleReport);
     const editedMarkdown = '# 許楚家\n\nAccording to Caixin, the subject was investigated by ICAC. Additional context here.';
 
-    saveEditedReport(reportId, editedMarkdown);
-    const report = getReport(reportId)!;
-    expect(report.edited_markdown).toBe(editedMarkdown);
-    expect(report.edit_distance).toBeGreaterThan(0);
-    expect(report.edit_distance).toBeLessThan(1);
+    await saveEditedReport(reportId, editedMarkdown);
+    const report = await getReport(reportId);
+    expect(report!.edited_markdown).toBe(editedMarkdown);
+    expect(report!.edit_distance).toBeGreaterThan(0);
+    expect(report!.edit_distance).toBeLessThan(1);
   });
 
   // --- Stats ---
 
-  it('should compute accuracy stats', () => {
-    const reportId = saveReport(sampleReport);
-    const report = getReport(reportId)!;
+  it('should compute accuracy stats', async () => {
+    const reportId = await saveReport(sampleReport);
+    const report = await getReport(reportId);
 
-    updateFindingVerdict(report.findings[0].id, 'CONFIRMED');
-    updateFindingVerdict(report.findings[1].id, 'WRONG', 'name_collision');
-    addMissedFlag(reportId, { description: 'Missed sanctions', severity: 'RED' });
+    await updateFindingVerdict(report!.findings[0].id, 'CONFIRMED');
+    await updateFindingVerdict(report!.findings[1].id, 'WRONG', 'name_collision');
+    await addMissedFlag(reportId, { description: 'Missed sanctions', severity: 'RED' });
 
-    const stats = getStats();
+    const stats = await getStats();
     expect(stats.totalReports).toBe(1);
     expect(stats.totalFindings).toBe(2);
     expect(stats.confirmed).toBe(1);
@@ -167,27 +174,27 @@ describe('Reports Database', () => {
     expect(stats.accuracy).toBeCloseTo(0.5);
   });
 
-  it('should rank sources by reliability', () => {
-    saveReport(sampleReport);
-    const report = getReport(1)!;
-    updateFindingVerdict(report.findings[0].id, 'CONFIRMED');
-    updateFindingVerdict(report.findings[1].id, 'WRONG');
+  it('should rank sources by reliability', async () => {
+    await saveReport(sampleReport);
+    const report = await getReport(1);
+    await updateFindingVerdict(report!.findings[0].id, 'CONFIRMED');
+    await updateFindingVerdict(report!.findings[1].id, 'WRONG');
 
-    const ranking = getSourceRanking(10);
+    const ranking = await getSourceRanking(10);
     expect(ranking.length).toBeGreaterThan(0);
     const caixin = ranking.find(s => s.domain === 'caixin.com');
     expect(caixin).toBeDefined();
     expect(caixin!.reliability_score).toBe(1.0);
   });
 
-  it('should generate learnings from feedback patterns', () => {
+  it('should generate learnings from feedback patterns', async () => {
     for (let i = 0; i < 5; i++) {
-      const id = saveReport({ ...sampleReport, runId: `run-${i}` });
-      const r = getReport(id)!;
-      updateFindingVerdict(r.findings[1].id, 'WRONG', 'name_collision');
+      const id = await saveReport({ ...sampleReport, runId: `run-${i}` });
+      const r = await getReport(id);
+      await updateFindingVerdict(r!.findings[1].id, 'WRONG', 'name_collision');
     }
 
-    const learnings = getLearnings();
+    const learnings = await getLearnings();
     expect(learnings.wrongPatterns.length).toBeGreaterThan(0);
     expect(learnings.wrongPatterns[0].reason).toBe('name_collision');
     expect(learnings.wrongPatterns[0].count).toBe(5);
@@ -195,37 +202,49 @@ describe('Reports Database', () => {
 
   // --- Quality rating ---
 
-  it('should set and retrieve quality rating', () => {
-    const reportId = saveReport(sampleReport);
-    setQualityRating(reportId, 7);
-    const report = getReport(reportId)!;
-    expect(report.quality_rating).toBe(7);
+  it('should set and retrieve quality rating', async () => {
+    const reportId = await saveReport(sampleReport);
+    await setQualityRating(reportId, 7);
+    const report = await getReport(reportId);
+    expect(report!.quality_rating).toBe(7);
   });
 
-  it('should include avgQualityRating in stats', () => {
-    const id1 = saveReport(sampleReport);
-    const id2 = saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'Test 2' });
-    setQualityRating(id1, 6);
-    setQualityRating(id2, 8);
-    const stats = getStats();
+  it('should include avgQualityRating in stats', async () => {
+    const id1 = await saveReport(sampleReport);
+    const id2 = await saveReport({ ...sampleReport, runId: 'test-run-2', subjectName: 'Test 2' });
+    await setQualityRating(id1, 6);
+    await setQualityRating(id2, 8);
+    const stats = await getStats();
     expect(stats.avgQualityRating).toBe(7);
   });
 
   // --- Changelog ---
 
-  it('should create changelog table on init', () => {
-    const db = getReportsDb();
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[];
-    expect(tables.map(t => t.name)).toContain('changelog');
+  it('should create changelog table on init', async () => {
+    const { rows } = await memPool.query('SELECT count(*) as c FROM dd_changelog');
+    expect(parseInt(rows[0].c)).toBe(0);
   });
 
-  it('should add and list changelog entries', () => {
-    const id = addChangelogEntry('2026-02-15', 'Improved report prompt specificity', 'prompt');
+  it('should add and list changelog entries', async () => {
+    const id = await addChangelogEntry('2026-02-15', 'Improved report prompt specificity', 'prompt');
     expect(id).toBeGreaterThan(0);
 
-    const entries = listChangelog();
+    const entries = await listChangelog();
     expect(entries).toHaveLength(1);
     expect(entries[0].description).toContain('specificity');
     expect(entries[0].category).toBe('prompt');
+  });
+
+  // --- Upsert ---
+
+  it('should upsert on duplicate run_id', async () => {
+    await saveReport(sampleReport);
+    // Same runId, updated data
+    await saveReport({ ...sampleReport, costUsd: 0.99 });
+
+    const result = await listReports();
+    expect(result.total).toBe(1);
+    const report = await getReport(result.reports[0].id);
+    expect(report!.cost_usd).toBe(0.99);
   });
 });

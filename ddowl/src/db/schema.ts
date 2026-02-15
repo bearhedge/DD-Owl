@@ -4,7 +4,7 @@
  * IPO Tracker Tables + DD Screening Tables
  */
 
-import { pgTable, serial, varchar, text, timestamp, integer, boolean, decimal, date, jsonb, index, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, text, timestamp, integer, boolean, decimal, date, jsonb, index, pgEnum, doublePrecision } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================
@@ -28,6 +28,8 @@ export const companies = pgTable('companies', {
   nameEn: varchar('name_en', { length: 300 }).notNull(),
   nameCn: varchar('name_cn', { length: 200 }),
   sector: varchar('sector', { length: 100 }),
+  industry: varchar('industry', { length: 200 }),
+  subIndustry: varchar('sub_industry', { length: 200 }),
   incorporationPlace: varchar('incorporation_place', { length: 100 }),
   stockCode: varchar('stock_code', { length: 20 }),
   createdAt: timestamp('created_at').defaultNow(),
@@ -67,7 +69,12 @@ export const deals = pgTable('deals', {
   filingDate: date('filing_date'),
   listingDate: date('listing_date'),
   withdrawnDate: date('withdrawn_date'),
-  hkexAppId: varchar('hkex_app_id', { length: 50 }),  // e.g., "108051"
+  hkexAppId: varchar('hkex_app_id', { length: 50 }),
+  dealType: varchar('deal_type', { length: 100 }),
+  sharesOffered: decimal('shares_offered', { precision: 15, scale: 0 }),
+  priceHkd: decimal('price_hkd', { precision: 10, scale: 2 }),
+  sizeHkdm: decimal('size_hkdm', { precision: 12, scale: 3 }),
+  isDualListing: boolean('is_dual_listing').default(false),
   prospectusUrl: varchar('prospectus_url', { length: 500 }),
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -135,6 +142,17 @@ export const scrapeRuns = pgTable('scrape_runs', {
   status: varchar('status', { length: 20 }).default('running'),
 });
 
+/**
+ * Deal Validations - Manual validation tracking
+ */
+export const dealValidations = pgTable('deal_validations', {
+  id: serial('id').primaryKey(),
+  dealId: integer('deal_id').references(() => deals.id).notNull().unique(),
+  isCorrect: boolean('is_correct'),
+  notes: text('notes'),
+  validatedAt: timestamp('validated_at').defaultNow(),
+});
+
 // ============================================================
 // RELATIONS
 // ============================================================
@@ -192,3 +210,95 @@ export type NewDealAppointment = typeof dealAppointments.$inferInsert;
 
 export type OCAnnouncement = typeof ocAnnouncements.$inferSelect;
 export type NewOCAnnouncement = typeof ocAnnouncements.$inferInsert;
+
+// ============================================================
+// DD SCREENING REPORT TABLES
+// ============================================================
+
+export const ddReports = pgTable('dd_reports', {
+  id: serial('id').primaryKey(),
+  runId: text('run_id').unique().notNull(),
+  subjectName: text('subject_name').notNull(),
+  screenedAt: text('screened_at').notNull(),
+  language: text('language').notNull().default('zh'),
+  nameVariations: text('name_variations').notNull().default('[]'),
+  findingCount: integer('finding_count').notNull().default(0),
+  redCount: integer('red_count').notNull().default(0),
+  amberCount: integer('amber_count').notNull().default(0),
+  reportMarkdown: text('report_markdown'),
+  cleanResultsJson: text('clean_results_json'),
+  screeningStatsJson: text('screening_stats_json'),
+  editedMarkdown: text('edited_markdown'),
+  editDistance: doublePrecision('edit_distance'),
+  qualityRating: integer('quality_rating'),
+  costUsd: doublePrecision('cost_usd').notNull().default(0),
+  durationMs: integer('duration_ms').notNull().default(0),
+  queriesExecuted: integer('queries_executed').notNull().default(0),
+  totalSearchResults: integer('total_search_results').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  subjectIdx: index('dd_reports_subject_idx').on(table.subjectName),
+  screenedAtIdx: index('dd_reports_screened_at_idx').on(table.screenedAt),
+}));
+
+export const ddFindings = pgTable('dd_findings', {
+  id: serial('id').primaryKey(),
+  reportId: integer('report_id').references(() => ddReports.id, { onDelete: 'cascade' }).notNull(),
+  severity: text('severity').notNull(),
+  headline: text('headline').notNull(),
+  eventType: text('event_type').notNull().default('unknown'),
+  summary: text('summary').notNull().default(''),
+  dateRange: text('date_range'),
+  sourceCount: integer('source_count').notNull().default(1),
+  sourceUrls: text('source_urls').notNull().default('[]'),
+  includedInReport: integer('included_in_report').notNull().default(1),
+  humanVerdict: text('human_verdict'),
+  wrongReason: text('wrong_reason'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  reportIdx: index('dd_findings_report_idx').on(table.reportId),
+  verdictIdx: index('dd_findings_verdict_idx').on(table.humanVerdict),
+}));
+
+export const ddMissedFlags = pgTable('dd_missed_flags', {
+  id: serial('id').primaryKey(),
+  reportId: integer('report_id').references(() => ddReports.id, { onDelete: 'cascade' }).notNull(),
+  description: text('description').notNull(),
+  severity: text('severity').notNull().default('RED'),
+  eventType: text('event_type'),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  reportIdx: index('dd_missed_flags_report_idx').on(table.reportId),
+}));
+
+export const ddSources = pgTable('dd_sources', {
+  id: serial('id').primaryKey(),
+  domain: text('domain').unique().notNull(),
+  timesSeen: integer('times_seen').notNull().default(0),
+  timesInFinding: integer('times_in_finding').notNull().default(0),
+  timesConfirmed: integer('times_confirmed').notNull().default(0),
+  timesWrong: integer('times_wrong').notNull().default(0),
+  reliabilityScore: doublePrecision('reliability_score'),
+  firstSeen: timestamp('first_seen').defaultNow(),
+  lastSeen: timestamp('last_seen').defaultNow(),
+}, (table) => ({
+  domainIdx: index('dd_sources_domain_idx').on(table.domain),
+  reliabilityIdx: index('dd_sources_reliability_idx').on(table.reliabilityScore),
+}));
+
+export const ddLearningRules = pgTable('dd_learning_rules', {
+  id: serial('id').primaryKey(),
+  ruleType: text('rule_type').notNull(),
+  ruleText: text('rule_text').notNull(),
+  sourceFeedbackCount: integer('source_feedback_count').notNull().default(0),
+  active: integer('active').notNull().default(1),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const ddChangelog = pgTable('dd_changelog', {
+  id: serial('id').primaryKey(),
+  date: text('date').notNull(),
+  description: text('description').notNull(),
+  category: text('category').notNull().default('prompt'),
+  createdAt: timestamp('created_at').defaultNow(),
+});

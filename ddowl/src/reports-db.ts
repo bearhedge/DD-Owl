@@ -1,46 +1,19 @@
-import Database from 'better-sqlite3';
+import { pool } from './db/index.js';
 
-let db: Database.Database | null = null;
+// --- Init ---
 
-// --- Init / Access / Close ---
+export async function initReportsDb(): Promise<void> {
+  await pool.query(SCHEMA);
 
-export function initReportsDb(dbPath?: string): void {
-  const resolvedPath = dbPath || process.env.REPORTS_DB_PATH || './data/ddowl-reports.db';
-  db = new Database(resolvedPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-  db.exec(SCHEMA);
-
-  // Migrations for existing databases
-  try {
-    db.exec('ALTER TABLE reports ADD COLUMN clean_results_json TEXT');
-  } catch { /* Column already exists */ }
-  try {
-    db.exec('ALTER TABLE reports ADD COLUMN screening_stats_json TEXT');
-  } catch { /* Column already exists */ }
-  try {
-    db.exec('ALTER TABLE reports ADD COLUMN quality_rating INTEGER');
-  } catch { /* Column already exists */ }
-
-  // Changelog table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS changelog (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      date TEXT NOT NULL,
-      description TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT 'prompt',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
-}
-
-export function getReportsDb(): Database.Database {
-  if (!db) throw new Error('Reports database not initialized. Call initReportsDb() first.');
-  return db;
-}
-
-export function closeReportsDb(): void {
-  if (db) { db.close(); db = null; }
+  // Migrations for existing databases (safe to run repeatedly)
+  const migrations = [
+    'ALTER TABLE dd_reports ADD COLUMN IF NOT EXISTS clean_results_json TEXT',
+    'ALTER TABLE dd_reports ADD COLUMN IF NOT EXISTS screening_stats_json TEXT',
+    'ALTER TABLE dd_reports ADD COLUMN IF NOT EXISTS quality_rating INTEGER',
+  ];
+  for (const sql of migrations) {
+    await pool.query(sql);
+  }
 }
 
 // --- Types ---
@@ -168,54 +141,52 @@ export interface Learnings {
 
 // --- CRUD ---
 
-export function saveReport(input: SaveReportInput): number {
-  const d = getReportsDb();
+export async function saveReport(input: SaveReportInput): Promise<number> {
   const redCount = input.findings.filter(f => f.severity === 'RED').length;
   const amberCount = input.findings.filter(f => f.severity === 'AMBER').length;
   const statsJson = input.screeningStats ? JSON.stringify(input.screeningStats) : null;
 
-  // Upsert: if run_id already exists (reconnection), update instead of creating duplicate
-  const upsertReport = d.prepare(`
-    INSERT INTO reports (run_id, subject_name, screened_at, language, name_variations,
-      finding_count, red_count, amber_count, report_markdown, clean_results_json, screening_stats_json,
-      cost_usd, duration_ms, queries_executed, total_search_results)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(run_id) DO UPDATE SET
-      finding_count = excluded.finding_count,
-      red_count = excluded.red_count,
-      amber_count = excluded.amber_count,
-      clean_results_json = excluded.clean_results_json,
-      screening_stats_json = excluded.screening_stats_json,
-      cost_usd = excluded.cost_usd,
-      duration_ms = excluded.duration_ms,
-      queries_executed = excluded.queries_executed,
-      total_search_results = excluded.total_search_results
-  `);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const insertFinding = d.prepare(`
-    INSERT INTO findings (report_id, severity, headline, event_type, summary, date_range, source_count, source_urls)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const result = d.transaction(() => {
-    upsertReport.run(
+    // Upsert report
+    await client.query(`
+      INSERT INTO dd_reports (run_id, subject_name, screened_at, language, name_variations,
+        finding_count, red_count, amber_count, report_markdown, clean_results_json, screening_stats_json,
+        cost_usd, duration_ms, queries_executed, total_search_results)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT(run_id) DO UPDATE SET
+        finding_count = EXCLUDED.finding_count,
+        red_count = EXCLUDED.red_count,
+        amber_count = EXCLUDED.amber_count,
+        clean_results_json = EXCLUDED.clean_results_json,
+        screening_stats_json = EXCLUDED.screening_stats_json,
+        cost_usd = EXCLUDED.cost_usd,
+        duration_ms = EXCLUDED.duration_ms,
+        queries_executed = EXCLUDED.queries_executed,
+        total_search_results = EXCLUDED.total_search_results
+    `, [
       input.runId, input.subjectName, input.screenedAt, input.language,
       JSON.stringify(input.nameVariations), input.findings.length, redCount, amberCount,
       input.reportMarkdown || null, input.cleanResults ? JSON.stringify(input.cleanResults) : null,
       statsJson, input.costUsd, input.durationMs,
       input.queriesExecuted, input.totalSearchResults,
-    );
+    ]);
 
-    // Get the report id (works for both insert and update)
-    const row = d.prepare('SELECT id FROM reports WHERE run_id = ?').get(input.runId) as { id: number };
+    // Get the report id
+    const { rows: [row] } = await client.query('SELECT id FROM dd_reports WHERE run_id = $1', [input.runId]);
     const reportId = row.id;
 
     // Delete old findings before re-inserting (for upsert case)
-    d.prepare('DELETE FROM findings WHERE report_id = ?').run(reportId);
+    await client.query('DELETE FROM dd_findings WHERE report_id = $1', [reportId]);
 
     for (const f of input.findings) {
-      insertFinding.run(reportId, f.severity, f.headline, f.eventType, f.summary,
-        f.dateRange || null, f.sourceCount, JSON.stringify(f.sourceUrls));
+      await client.query(`
+        INSERT INTO dd_findings (report_id, severity, headline, event_type, summary, date_range, source_count, source_urls)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `, [reportId, f.severity, f.headline, f.eventType, f.summary,
+          f.dateRange || null, f.sourceCount, JSON.stringify(f.sourceUrls)]);
     }
 
     // Track source domains
@@ -223,93 +194,100 @@ export function saveReport(input: SaveReportInput): number {
       for (const s of f.sourceUrls) {
         try {
           const domain = new URL(s.url).hostname;
-          trackSource(domain, 'in_finding');
+          await trackSourceWithClient(client, domain, 'in_finding');
         } catch { /* invalid URL */ }
       }
     }
 
+    await client.query('COMMIT');
     return reportId;
-  })();
-
-  return result as number;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
-export function getReport(id: number): ReportRow | null {
-  const d = getReportsDb();
-  const report = d.prepare('SELECT * FROM reports WHERE id = ?').get(id) as ReportRow | undefined;
+export async function getReport(id: number): Promise<ReportRow | null> {
+  const { rows: [report] } = await pool.query('SELECT * FROM dd_reports WHERE id = $1', [id]);
   if (!report) return null;
 
-  report.findings = d.prepare('SELECT * FROM findings WHERE report_id = ? ORDER BY id').all(id) as FindingRow[];
-  report.missed_flags = d.prepare('SELECT * FROM missed_flags WHERE report_id = ? ORDER BY id').all(id) as MissedFlagRow[];
+  const { rows: findings } = await pool.query('SELECT * FROM dd_findings WHERE report_id = $1 ORDER BY id', [id]);
+  const { rows: missedFlags } = await pool.query('SELECT * FROM dd_missed_flags WHERE report_id = $1 ORDER BY id', [id]);
+
+  report.findings = findings;
+  report.missed_flags = missedFlags;
   return report;
 }
 
-export function listReports(opts: { limit?: number; offset?: number; search?: string } = {}): { reports: ReportRow[]; total: number } {
-  const d = getReportsDb();
+export async function listReports(opts: { limit?: number; offset?: number; search?: string } = {}): Promise<{ reports: ReportRow[]; total: number }> {
   const limit = opts.limit || 50;
   const offset = opts.offset || 0;
 
   if (opts.search) {
-    const ids = d.prepare('SELECT rowid FROM reports_fts WHERE reports_fts MATCH ? ORDER BY rank LIMIT ? OFFSET ?')
-      .all(opts.search, limit, offset) as { rowid: number }[];
-    const total = (d.prepare('SELECT count(*) as c FROM reports_fts WHERE reports_fts MATCH ?').get(opts.search) as { c: number }).c;
+    const pattern = `%${opts.search}%`;
+    const { rows: reports } = await pool.query(
+      'SELECT * FROM dd_reports WHERE subject_name ILIKE $1 OR report_markdown ILIKE $1 ORDER BY screened_at DESC LIMIT $2 OFFSET $3',
+      [pattern, limit, offset]
+    );
+    const { rows: [{ c: total }] } = await pool.query(
+      'SELECT count(*) as c FROM dd_reports WHERE subject_name ILIKE $1 OR report_markdown ILIKE $1',
+      [pattern]
+    );
 
-    const reports = ids.map(r => {
-      const report = d.prepare('SELECT * FROM reports WHERE id = ?').get(r.rowid) as ReportRow;
-      report.findings = [];
-      report.missed_flags = [];
-      return report;
-    });
-    return { reports, total };
+    for (const r of reports) { r.findings = []; r.missed_flags = []; }
+    return { reports, total: parseInt(total) };
   }
 
-  const reports = d.prepare('SELECT * FROM reports ORDER BY screened_at DESC LIMIT ? OFFSET ?')
-    .all(limit, offset) as ReportRow[];
-  const total = (d.prepare('SELECT count(*) as c FROM reports').get() as { c: number }).c;
+  const { rows: reports } = await pool.query(
+    'SELECT * FROM dd_reports ORDER BY screened_at DESC LIMIT $1 OFFSET $2',
+    [limit, offset]
+  );
+  const { rows: [{ c: total }] } = await pool.query('SELECT count(*) as c FROM dd_reports');
 
   for (const r of reports) { r.findings = []; r.missed_flags = []; }
-  return { reports, total };
+  return { reports, total: parseInt(total) };
 }
 
 // --- Review operations ---
 
-export function updateFindingVerdict(findingId: number, verdict: 'CONFIRMED' | 'WRONG', wrongReason?: string): void {
-  const d = getReportsDb();
-  d.prepare('UPDATE findings SET human_verdict = ?, wrong_reason = ? WHERE id = ?')
-    .run(verdict, wrongReason || null, findingId);
+export async function updateFindingVerdict(findingId: number, verdict: 'CONFIRMED' | 'WRONG', wrongReason?: string): Promise<void> {
+  await pool.query('UPDATE dd_findings SET human_verdict = $1, wrong_reason = $2 WHERE id = $3',
+    [verdict, wrongReason || null, findingId]);
 
   // Update source reliability based on verdict
-  const finding = d.prepare('SELECT source_urls FROM findings WHERE id = ?').get(findingId) as { source_urls: string } | undefined;
+  const { rows: [finding] } = await pool.query('SELECT source_urls FROM dd_findings WHERE id = $1', [findingId]);
   if (finding) {
     const urls = JSON.parse(finding.source_urls) as { url: string }[];
     for (const s of urls) {
       try {
         const domain = new URL(s.url).hostname;
-        trackSource(domain, verdict === 'CONFIRMED' ? 'confirmed' : 'wrong');
+        await trackSource(domain, verdict === 'CONFIRMED' ? 'confirmed' : 'wrong');
       } catch { /* invalid URL */ }
     }
   }
 }
 
-export function addMissedFlag(reportId: number, data: { description: string; severity: 'RED' | 'AMBER'; eventType?: string }): number {
-  const d = getReportsDb();
-  const res = d.prepare('INSERT INTO missed_flags (report_id, description, severity, event_type) VALUES (?, ?, ?, ?)')
-    .run(reportId, data.description, data.severity, data.eventType || null);
-  return res.lastInsertRowid as number;
+export async function addMissedFlag(reportId: number, data: { description: string; severity: 'RED' | 'AMBER'; eventType?: string }): Promise<number> {
+  const { rows: [row] } = await pool.query(
+    'INSERT INTO dd_missed_flags (report_id, description, severity, event_type) VALUES ($1, $2, $3, $4) RETURNING id',
+    [reportId, data.description, data.severity, data.eventType || null]
+  );
+  return row.id;
 }
 
-export function saveEditedReport(reportId: number, editedMarkdown: string): void {
-  const d = getReportsDb();
-  const report = d.prepare('SELECT report_markdown FROM reports WHERE id = ?').get(reportId) as { report_markdown: string | null } | undefined;
+export async function saveEditedReport(reportId: number, editedMarkdown: string): Promise<void> {
+  const { rows: [report] } = await pool.query('SELECT report_markdown FROM dd_reports WHERE id = $1', [reportId]);
   if (!report) return;
 
   const distance = computeEditDistance(report.report_markdown || '', editedMarkdown);
-  d.prepare('UPDATE reports SET edited_markdown = ?, edit_distance = ? WHERE id = ?')
-    .run(editedMarkdown, distance, reportId);
+  await pool.query('UPDATE dd_reports SET edited_markdown = $1, edit_distance = $2 WHERE id = $3',
+    [editedMarkdown, distance, reportId]);
 }
 
-export function setQualityRating(id: number, rating: number): void {
-  getReportsDb().prepare('UPDATE reports SET quality_rating = ? WHERE id = ?').run(rating, id);
+export async function setQualityRating(id: number, rating: number): Promise<void> {
+  await pool.query('UPDATE dd_reports SET quality_rating = $1 WHERE id = $2', [rating, id]);
 }
 
 // --- Changelog ---
@@ -322,138 +300,157 @@ export interface ChangelogEntry {
   created_at: string;
 }
 
-export function listChangelog(): ChangelogEntry[] {
-  return getReportsDb().prepare('SELECT * FROM changelog ORDER BY date DESC, id DESC').all() as ChangelogEntry[];
+export async function listChangelog(): Promise<ChangelogEntry[]> {
+  const { rows } = await pool.query('SELECT * FROM dd_changelog ORDER BY date DESC, id DESC');
+  return rows;
 }
 
-export function addChangelogEntry(date: string, description: string, category: string): number {
-  const res = getReportsDb().prepare('INSERT INTO changelog (date, description, category) VALUES (?, ?, ?)').run(date, description, category);
-  return res.lastInsertRowid as number;
+export async function addChangelogEntry(date: string, description: string, category: string): Promise<number> {
+  const { rows: [row] } = await pool.query(
+    'INSERT INTO dd_changelog (date, description, category) VALUES ($1, $2, $3) RETURNING id',
+    [date, description, category]
+  );
+  return row.id;
 }
 
 // --- Stats ---
 
-export function getStats(): Stats {
-  const d = getReportsDb();
-
-  const totals = d.prepare(`
+export async function getStats(): Promise<Stats> {
+  const { rows: [totals] } = await pool.query(`
     SELECT
-      (SELECT count(*) FROM reports) as totalReports,
-      (SELECT count(*) FROM findings) as totalFindings,
-      (SELECT count(*) FROM findings WHERE human_verdict = 'CONFIRMED') as confirmed,
-      (SELECT count(*) FROM findings WHERE human_verdict = 'WRONG') as wrong,
-      (SELECT count(*) FROM missed_flags) as missed,
-      (SELECT avg(edit_distance) FROM reports WHERE edit_distance IS NOT NULL) as avgEditDistance,
-      (SELECT avg(quality_rating) FROM reports WHERE quality_rating IS NOT NULL) as avgQualityRating,
-      (SELECT sum(cost_usd) FROM reports) as totalCostUsd
-  `).get() as any;
+      (SELECT count(*) FROM dd_reports) as "totalReports",
+      (SELECT count(*) FROM dd_findings) as "totalFindings",
+      (SELECT count(*) FROM dd_findings WHERE human_verdict = 'CONFIRMED') as confirmed,
+      (SELECT count(*) FROM dd_findings WHERE human_verdict = 'WRONG') as wrong,
+      (SELECT count(*) FROM dd_missed_flags) as missed,
+      (SELECT avg(edit_distance) FROM dd_reports WHERE edit_distance IS NOT NULL) as "avgEditDistance",
+      (SELECT avg(quality_rating) FROM dd_reports WHERE quality_rating IS NOT NULL) as "avgQualityRating",
+      (SELECT sum(cost_usd) FROM dd_reports) as "totalCostUsd"
+  `);
 
-  const reviewed = totals.confirmed + totals.wrong;
-  const accuracy = reviewed > 0 ? totals.confirmed / reviewed : 0;
-  const missRate = (totals.confirmed + totals.missed) > 0 ? totals.missed / (totals.confirmed + totals.missed) : 0;
+  const totalReports = parseInt(totals.totalReports);
+  const totalFindings = parseInt(totals.totalFindings);
+  const confirmed = parseInt(totals.confirmed);
+  const wrong = parseInt(totals.wrong);
+  const missed = parseInt(totals.missed);
+  const reviewed = confirmed + wrong;
+  const accuracy = reviewed > 0 ? confirmed / reviewed : 0;
+  const missRate = (confirmed + missed) > 0 ? missed / (confirmed + missed) : 0;
 
-  const topWrongReasons = d.prepare(`
-    SELECT wrong_reason as reason, count(*) as count FROM findings
+  const { rows: topWrongReasons } = await pool.query(`
+    SELECT wrong_reason as reason, count(*)::int as count FROM dd_findings
     WHERE human_verdict = 'WRONG' AND wrong_reason IS NOT NULL
     GROUP BY wrong_reason ORDER BY count DESC LIMIT 10
-  `).all() as { reason: string; count: number }[];
+  `);
 
-  const topMissedTypes = d.prepare(`
-    SELECT event_type as eventType, count(*) as count FROM missed_flags
+  const { rows: topMissedTypes } = await pool.query(`
+    SELECT event_type as "eventType", count(*)::int as count FROM dd_missed_flags
     WHERE event_type IS NOT NULL
     GROUP BY event_type ORDER BY count DESC LIMIT 10
-  `).all() as { eventType: string; count: number }[];
+  `);
 
-  const topConfirmedTypes = d.prepare(`
-    SELECT event_type as eventType, count(*) as count FROM findings
+  const { rows: topConfirmedTypes } = await pool.query(`
+    SELECT event_type as "eventType", count(*)::int as count FROM dd_findings
     WHERE human_verdict = 'CONFIRMED'
     GROUP BY event_type ORDER BY count DESC LIMIT 10
-  `).all() as { eventType: string; count: number }[];
+  `);
 
   return {
-    totalReports: totals.totalReports,
-    totalFindings: totals.totalFindings,
-    confirmed: totals.confirmed,
-    wrong: totals.wrong,
-    missed: totals.missed,
+    totalReports,
+    totalFindings,
+    confirmed,
+    wrong,
+    missed,
     accuracy,
     missRate,
-    avgEditDistance: totals.avgEditDistance || 0,
-    avgFindingsPerReport: totals.totalReports > 0 ? totals.totalFindings / totals.totalReports : 0,
-    avgQualityRating: totals.avgQualityRating || 0,
-    totalCostUsd: totals.totalCostUsd || 0,
+    avgEditDistance: parseFloat(totals.avgEditDistance) || 0,
+    avgFindingsPerReport: totalReports > 0 ? totalFindings / totalReports : 0,
+    avgQualityRating: parseFloat(totals.avgQualityRating) || 0,
+    totalCostUsd: parseFloat(totals.totalCostUsd) || 0,
     topWrongReasons,
     topMissedTypes,
     topConfirmedTypes,
   };
 }
 
-export function getSourceRanking(limit: number = 20): SourceRow[] {
-  const d = getReportsDb();
-  return d.prepare(`
+export async function getSourceRanking(limit: number = 20): Promise<SourceRow[]> {
+  const { rows } = await pool.query(`
     SELECT domain, times_seen, times_in_finding, times_confirmed, times_wrong, reliability_score
-    FROM sources WHERE (times_confirmed + times_wrong) > 0
+    FROM dd_sources WHERE (times_confirmed + times_wrong) > 0
     ORDER BY reliability_score DESC, (times_confirmed + times_wrong) DESC
-    LIMIT ?
-  `).all(limit) as SourceRow[];
+    LIMIT $1
+  `, [limit]);
+  return rows;
 }
 
-export function getLearnings(): Learnings {
-  const d = getReportsDb();
+export async function getLearnings(): Promise<Learnings> {
+  const { rows: [{ c: totalWrong }] } = await pool.query("SELECT count(*) as c FROM dd_findings WHERE human_verdict = 'WRONG'");
+  const totalWrongNum = parseInt(totalWrong);
 
-  const totalWrong = (d.prepare("SELECT count(*) as c FROM findings WHERE human_verdict = 'WRONG'").get() as { c: number }).c;
-  const wrongPatterns = d.prepare(`
-    SELECT wrong_reason as reason, count(*) as count FROM findings
+  const { rows: wrongPatterns } = await pool.query(`
+    SELECT wrong_reason as reason, count(*)::int as count FROM dd_findings
     WHERE human_verdict = 'WRONG' AND wrong_reason IS NOT NULL
     GROUP BY wrong_reason ORDER BY count DESC
-  `).all() as { reason: string; count: number }[];
+  `);
 
-  const missedPatterns = d.prepare(`
-    SELECT event_type as eventType, count(*) as count FROM missed_flags
+  const { rows: missedPatterns } = await pool.query(`
+    SELECT event_type as "eventType", count(*)::int as count FROM dd_missed_flags
     WHERE event_type IS NOT NULL GROUP BY event_type ORDER BY count DESC
-  `).all() as { eventType: string; count: number }[];
+  `);
 
-  const topSources = d.prepare(`
-    SELECT domain, reliability_score as reliability, (times_confirmed + times_wrong) as sampleSize
-    FROM sources WHERE reliability_score IS NOT NULL AND (times_confirmed + times_wrong) >= 3
+  const { rows: topSources } = await pool.query(`
+    SELECT domain, reliability_score as reliability, (times_confirmed + times_wrong) as "sampleSize"
+    FROM dd_sources WHERE reliability_score IS NOT NULL AND (times_confirmed + times_wrong) >= 3
     ORDER BY reliability_score DESC LIMIT 10
-  `).all() as { domain: string; reliability: number; sampleSize: number }[];
+  `);
 
-  const noiseSources = d.prepare(`
-    SELECT domain, times_wrong as wrongCount, times_confirmed as confirmedCount
-    FROM sources WHERE times_wrong > times_confirmed AND (times_confirmed + times_wrong) >= 3
+  const { rows: noiseSources } = await pool.query(`
+    SELECT domain, times_wrong as "wrongCount", times_confirmed as "confirmedCount"
+    FROM dd_sources WHERE times_wrong > times_confirmed AND (times_confirmed + times_wrong) >= 3
     ORDER BY times_wrong DESC LIMIT 10
-  `).all() as { domain: string; wrongCount: number; confirmedCount: number }[];
+  `);
 
-  const avgEditDistance = (d.prepare("SELECT avg(edit_distance) as a FROM reports WHERE edit_distance IS NOT NULL").get() as { a: number | null }).a || 0;
+  const { rows: [{ a: avgEditDistance }] } = await pool.query("SELECT avg(edit_distance) as a FROM dd_reports WHERE edit_distance IS NOT NULL");
 
-  const editDistanceTrend = d.prepare(`
-    SELECT strftime('%Y-%m', screened_at) as month, avg(edit_distance) as avg
-    FROM reports WHERE edit_distance IS NOT NULL
+  const { rows: editDistanceTrend } = await pool.query(`
+    SELECT substring(screened_at from 1 for 7) as month, avg(edit_distance) as avg
+    FROM dd_reports WHERE edit_distance IS NOT NULL
     GROUP BY month ORDER BY month
-  `).all() as { month: string; avg: number }[];
+  `);
 
   return {
-    wrongPatterns: wrongPatterns.map(p => ({ ...p, percentage: totalWrong > 0 ? (p.count / totalWrong) * 100 : 0 })),
+    wrongPatterns: wrongPatterns.map((p: any) => ({ ...p, percentage: totalWrongNum > 0 ? (p.count / totalWrongNum) * 100 : 0 })),
     missedPatterns,
     topSources,
     noiseSources,
-    avgEditDistance,
+    avgEditDistance: parseFloat(avgEditDistance) || 0,
     editDistanceTrend,
   };
 }
 
 // --- Source tracking ---
 
-export function trackSource(domain: string, action: 'seen' | 'in_finding' | 'confirmed' | 'wrong'): void {
-  const d = getReportsDb();
-  d.prepare('INSERT OR IGNORE INTO sources (domain) VALUES (?)').run(domain);
+async function trackSourceWithClient(client: any, domain: string, action: 'seen' | 'in_finding' | 'confirmed' | 'wrong'): Promise<void> {
+  await client.query(
+    'INSERT INTO dd_sources (domain) VALUES ($1) ON CONFLICT (domain) DO NOTHING',
+    [domain]
+  );
 
   const col = action === 'seen' ? 'times_seen' : action === 'in_finding' ? 'times_in_finding' : action === 'confirmed' ? 'times_confirmed' : 'times_wrong';
-  d.prepare(`UPDATE sources SET ${col} = ${col} + 1, last_seen = datetime('now') WHERE domain = ?`).run(domain);
+  await client.query(
+    `UPDATE dd_sources SET ${col} = ${col} + 1, last_seen = NOW() WHERE domain = $1`,
+    [domain]
+  );
 
   // Recompute reliability
-  d.prepare(`UPDATE sources SET reliability_score = CASE WHEN (times_confirmed + times_wrong) = 0 THEN NULL ELSE CAST(times_confirmed AS REAL) / (times_confirmed + times_wrong) END WHERE domain = ?`).run(domain);
+  await client.query(
+    `UPDATE dd_sources SET reliability_score = CASE WHEN (times_confirmed + times_wrong) = 0 THEN NULL ELSE times_confirmed::float / (times_confirmed + times_wrong) END WHERE domain = $1`,
+    [domain]
+  );
+}
+
+export async function trackSource(domain: string, action: 'seen' | 'in_finding' | 'confirmed' | 'wrong'): Promise<void> {
+  await trackSourceWithClient(pool, domain, action);
 }
 
 // --- Edit distance ---
@@ -478,11 +475,11 @@ function computeEditDistance(original: string, edited: string): number {
   return 1 - (shared / totalUnique);
 }
 
-// --- Schema ---
+// --- Schema DDL ---
 
 const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS reports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+  CREATE TABLE IF NOT EXISTS dd_reports (
+    id SERIAL PRIMARY KEY,
     run_id TEXT UNIQUE NOT NULL,
     subject_name TEXT NOT NULL,
     screened_at TEXT NOT NULL,
@@ -495,18 +492,19 @@ const SCHEMA = `
     clean_results_json TEXT,
     screening_stats_json TEXT,
     edited_markdown TEXT,
-    edit_distance REAL,
-    cost_usd REAL NOT NULL DEFAULT 0,
+    edit_distance DOUBLE PRECISION,
+    quality_rating INTEGER,
+    cost_usd DOUBLE PRECISION NOT NULL DEFAULT 0,
     duration_ms INTEGER NOT NULL DEFAULT 0,
     queries_executed INTEGER NOT NULL DEFAULT 0,
     total_search_results INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE TABLE IF NOT EXISTS findings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    report_id INTEGER NOT NULL,
-    severity TEXT NOT NULL CHECK(severity IN ('RED', 'AMBER', 'REVIEW')),
+  CREATE TABLE IF NOT EXISTS dd_findings (
+    id SERIAL PRIMARY KEY,
+    report_id INTEGER NOT NULL REFERENCES dd_reports(id) ON DELETE CASCADE,
+    severity TEXT NOT NULL,
     headline TEXT NOT NULL,
     event_type TEXT NOT NULL DEFAULT 'unknown',
     summary TEXT NOT NULL DEFAULT '',
@@ -514,70 +512,54 @@ const SCHEMA = `
     source_count INTEGER NOT NULL DEFAULT 1,
     source_urls TEXT NOT NULL DEFAULT '[]',
     included_in_report INTEGER NOT NULL DEFAULT 1,
-    human_verdict TEXT CHECK(human_verdict IN ('CONFIRMED', 'WRONG')),
-    wrong_reason TEXT CHECK(wrong_reason IN ('name_collision', 'outdated', 'not_relevant', 'other')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+    human_verdict TEXT,
+    wrong_reason TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE TABLE IF NOT EXISTS missed_flags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    report_id INTEGER NOT NULL,
+  CREATE TABLE IF NOT EXISTS dd_missed_flags (
+    id SERIAL PRIMARY KEY,
+    report_id INTEGER NOT NULL REFERENCES dd_reports(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
-    severity TEXT NOT NULL DEFAULT 'RED' CHECK(severity IN ('RED', 'AMBER')),
+    severity TEXT NOT NULL DEFAULT 'RED',
     event_type TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE TABLE IF NOT EXISTS sources (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+  CREATE TABLE IF NOT EXISTS dd_sources (
+    id SERIAL PRIMARY KEY,
     domain TEXT UNIQUE NOT NULL,
     times_seen INTEGER NOT NULL DEFAULT 0,
     times_in_finding INTEGER NOT NULL DEFAULT 0,
     times_confirmed INTEGER NOT NULL DEFAULT 0,
     times_wrong INTEGER NOT NULL DEFAULT 0,
-    reliability_score REAL,
-    first_seen TEXT NOT NULL DEFAULT (datetime('now')),
-    last_seen TEXT NOT NULL DEFAULT (datetime('now'))
+    reliability_score DOUBLE PRECISION,
+    first_seen TIMESTAMP DEFAULT NOW(),
+    last_seen TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE TABLE IF NOT EXISTS learning_rules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    rule_type TEXT NOT NULL CHECK(rule_type IN ('triage_instruction', 'domain_depriority', 'search_query', 'filter_rule')),
+  CREATE TABLE IF NOT EXISTS dd_learning_rules (
+    id SERIAL PRIMARY KEY,
+    rule_type TEXT NOT NULL,
     rule_text TEXT NOT NULL,
     source_feedback_count INTEGER NOT NULL DEFAULT 0,
     active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE INDEX IF NOT EXISTS idx_reports_subject ON reports(subject_name);
-  CREATE INDEX IF NOT EXISTS idx_reports_screened_at ON reports(screened_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_findings_report_id ON findings(report_id);
-  CREATE INDEX IF NOT EXISTS idx_findings_verdict ON findings(human_verdict);
-  CREATE INDEX IF NOT EXISTS idx_missed_flags_report_id ON missed_flags(report_id);
-  CREATE INDEX IF NOT EXISTS idx_sources_domain ON sources(domain);
-  CREATE INDEX IF NOT EXISTS idx_sources_reliability ON sources(reliability_score DESC);
-
-  CREATE VIRTUAL TABLE IF NOT EXISTS reports_fts USING fts5(
-    subject_name,
-    report_markdown,
-    content=reports,
-    content_rowid=id
+  CREATE TABLE IF NOT EXISTS dd_changelog (
+    id SERIAL PRIMARY KEY,
+    date TEXT NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'prompt',
+    created_at TIMESTAMP DEFAULT NOW()
   );
 
-  CREATE TRIGGER IF NOT EXISTS reports_fts_ai AFTER INSERT ON reports BEGIN
-    INSERT INTO reports_fts(rowid, subject_name, report_markdown)
-    VALUES (new.id, new.subject_name, new.report_markdown);
-  END;
-
-  CREATE TRIGGER IF NOT EXISTS reports_fts_au AFTER UPDATE OF subject_name, report_markdown ON reports BEGIN
-    DELETE FROM reports_fts WHERE rowid = old.id;
-    INSERT INTO reports_fts(rowid, subject_name, report_markdown)
-    VALUES (new.id, new.subject_name, new.report_markdown);
-  END;
-
-  CREATE TRIGGER IF NOT EXISTS reports_fts_ad AFTER DELETE ON reports BEGIN
-    DELETE FROM reports_fts WHERE rowid = old.id;
-  END;
+  CREATE INDEX IF NOT EXISTS idx_dd_reports_subject ON dd_reports(subject_name);
+  CREATE INDEX IF NOT EXISTS idx_dd_reports_screened_at ON dd_reports(screened_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_dd_findings_report_id ON dd_findings(report_id);
+  CREATE INDEX IF NOT EXISTS idx_dd_findings_verdict ON dd_findings(human_verdict);
+  CREATE INDEX IF NOT EXISTS idx_dd_missed_flags_report_id ON dd_missed_flags(report_id);
+  CREATE INDEX IF NOT EXISTS idx_dd_sources_domain ON dd_sources(domain);
+  CREATE INDEX IF NOT EXISTS idx_dd_sources_reliability ON dd_sources(reliability_score DESC);
 `;

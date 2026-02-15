@@ -49,7 +49,7 @@ import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, Elim
 import { getChineseVariantsLLM } from './utils/chinese.js';
 import { createSession, getSession, updateSession, deleteSession, ScreeningSession, DetectedCompany } from './session-store.js';
 import { clusterByIncidentLLM, ClusteringResult, ClusterProgressCallback, IncidentCluster } from './deduplicator.js';
-import { initReportsDb, saveReport as saveReportToDb, getReportsDb, CleanEntityResult } from './reports-db.js';
+import { initReportsDb, saveReport as saveReportToDb, type CleanEntityResult } from './reports-db.js';
 import { reportsRouter } from './reports-api.js';
 // URL validation to filter out corrupted URLs (e.g., Baidu tracking URLs)
 function isValidUrl(url: string): boolean {
@@ -282,12 +282,9 @@ async function isSessionPaused(sessionId: string): Promise<boolean> {
 }
 
 // Initialize reports database
-try {
-  initReportsDb();
-  console.log('[REPORTS] Database initialized');
-} catch (err) {
-  console.error('[REPORTS] Failed to initialize database:', err);
-}
+initReportsDb()
+  .then(() => console.log('[REPORTS] Database initialized'))
+  .catch((err) => console.error('[REPORTS] Failed to initialize database:', err));
 
 app.use(cors());
 app.use(express.json());
@@ -2742,7 +2739,7 @@ If you cannot determine a field with reasonable confidence, use the default empt
     try {
       // Use sessionId as runId so reconnections upsert instead of creating duplicates
       const stableRunId = sessionId;
-      const reportId = saveReportToDb({
+      const reportId = await saveReportToDb({
         runId: stableRunId,
         subjectName,
         screenedAt: metrics.startTime,
@@ -3005,8 +3002,8 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
     try {
       const runId = (session as any)?.runId;
       if (runId) {
-        const reportsDb = getReportsDb();
-        const dbRow = reportsDb.prepare('SELECT clean_results_json, name_variations FROM reports WHERE run_id = ?').get(runId) as any;
+        const { pool: pgPool } = await import('./db/index.js');
+        const { rows: [dbRow] } = await pgPool.query('SELECT clean_results_json, name_variations FROM dd_reports WHERE run_id = $1', [runId]);
         if (dbRow?.clean_results_json) {
           cleanResults = JSON.parse(dbRow.clean_results_json);
         }
@@ -3227,8 +3224,8 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
       if (sessionForSave) {
         const runId = (sessionForSave as any).runId;
         if (runId) {
-          const reportsDb = getReportsDb();
-          reportsDb.prepare('UPDATE reports SET report_markdown = ? WHERE run_id = ?').run(fullReport, runId);
+          const { pool: pgPool } = await import('./db/index.js');
+          await pgPool.query('UPDATE dd_reports SET report_markdown = $1 WHERE run_id = $2', [fullReport, runId]);
           console.log(`[REPORTS] Saved report markdown for run ${runId}`);
         }
       }
