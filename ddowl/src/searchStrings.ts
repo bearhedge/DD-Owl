@@ -3,6 +3,11 @@
 // Uses Google OR operator (|) to search multiple terms
 // Consolidated from 16 queries → 10 queries (37% API cost reduction)
 
+// Script detection: returns true if the name contains CJK characters
+export function isChineseName(name: string): boolean {
+  return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(name);
+}
+
 // Category names for logging (maps template index to human-readable name)
 export const TEMPLATE_CATEGORIES: Record<number, string> = {
   0: 'Criminal Violence (犯罪暴力)',
@@ -15,7 +20,14 @@ export const TEMPLATE_CATEGORIES: Record<number, string> = {
   7: 'Labor & Human Rights (劳工人权)',
   8: 'Drugs, Vice & Extremism (毒品色情极端)',
   9: 'Civil & Commercial Disputes (民商纠纷)',
-  10: 'Official Sites (官方来源)',
+  10: 'Official Sites CN (官方来源)',
+  11: 'EN Criminal Violence & Arrests',
+  12: 'EN Fraud, Financial Crime & Corruption',
+  13: 'EN Legal, Regulatory & Sanctions',
+  14: 'EN Misconduct, Scandal & Investigations',
+  15: 'EN Drugs, Vice, Extremism & Human Rights',
+  16: 'EN Civil & Commercial Disputes',
+  17: 'Official Sites EN',
 };
 
 // Chinese search templates (9 thematic queries)
@@ -51,16 +63,39 @@ export const CHINESE_TEMPLATES = [
   `"{NAME}" 民事|仲裁|債務|债务|欠款|拖欠|違約|违约|清盤|清盘|破產|破产|執行|执行|查封|失信|被執行人|被执行人|老賴|老赖|追債|追债|催收|擔保|担保|抵押|逾期|壞帳|坏账|重組|重组|債務重組|债务重组`,
 ];
 
-// English search templates (deferred to later phase)
-export const ENGLISH_TEMPLATES: string[] = [];
+// English search templates (6 consolidated from 16 groups)
+export const ENGLISH_TEMPLATES: string[] = [
+  // EQ1: Criminal Violence & Arrests
+  `"{NAME}" crime|criminal|murder|manslaughter|assault|robbery|kidnap|kill|stab|rape|arson|weapon|violent|triad|felon|arrest|imprison|jail|prison|incarcerate|detain|bail|parole|convict|probation|fugitive`,
 
-// Archive site searches (1 query)
+  // EQ2: Fraud, Financial Crime & Corruption
+  `"{NAME}" fraud|scam|swindle|cheat|conned|deceive|defraud|embezzle|misappropriate|counterfeit|ponzi|launder|"money laundering"|"insider trading"|"market manipulation"|bankrupt|insolvency|corrupt|bribe|kickback|extort|racketeer|graft`,
+
+  // EQ3: Legal, Regulatory & Sanctions
+  `"{NAME}" prosecute|indict|lawsuit|litigate|sue|verdict|judgment|court|tribunal|arraign|defendant|plaintiff|"class action"|warrant|sanction|penalty|fine|banned|OFAC|blacklist|"asset freeze"|suspend|disqualify|revoke|prohibit|SFC|ICAC`,
+
+  // EQ4: Misconduct, Scandal & Investigations
+  `"{NAME}" misconduct|scandal|controversy|abuse|harass|violate|breach|negligence|mismanage|misrepresent|discipline|disgrace|illegal|unlawful|investigate|probe|allege|accuse|charge|scheme|infamous|outlaw`,
+
+  // EQ5: Drugs, Vice, Extremism & Human Rights
+  `"{NAME}" drug|narcotics|trafficking|smuggle|terrorist|extremism|porn|gambling|slave|servitude|exploitation|"forced labor"|"forced labour"|"child labor"|"child labour"`,
+
+  // EQ6: Civil & Commercial Disputes
+  `"{NAME}" bankrupt|"chapter 7"|"chapter 11"|insolvency|foreclose|dissolution|dissolve|liquidate|libel|slander|trespass|"debt recovery"|arbitration|default|sabotage|strike|espionage`,
+];
+
+// Chinese archive site searches (1 query)
 export const SITE_TEMPLATES = [
   `site:gov.cn OR site:hkexnews.hk OR site:sfc.hk OR site:caixin.com "{NAME}"`,
 ];
 
+// English archive site searches (1 query)
+export const ENGLISH_SITE_TEMPLATES = [
+  `site:sec.gov OR site:justice.gov OR site:fbi.gov OR site:ofac.treasury.gov OR site:interpol.int "{NAME}"`,
+];
+
 // Combined for backwards compatibility
-export const SEARCH_TEMPLATES = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
+export const SEARCH_TEMPLATES = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES, ...ENGLISH_SITE_TEMPLATES];
 
 // Category mapping for clearer reporting
 export const CATEGORY_KEYWORDS: Record<string, string[]> = {

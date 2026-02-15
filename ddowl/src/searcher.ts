@@ -25,7 +25,8 @@ export async function searchGoogle(
   query: string,
   page: number = 1,
   resultsPerPage: number = 10,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  hl: string = 'zh-cn'
 ): Promise<SearchResult[]> {
   const manager = getSerperKeyManager();
 
@@ -34,7 +35,7 @@ export async function searchGoogle(
       SERPER_URL,
       {
         q: query,
-        hl: 'zh-cn',
+        hl,
         num: resultsPerPage,
         page: page,
       },

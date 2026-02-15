@@ -22,7 +22,7 @@ import cors from 'cors';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery } from './searchStrings.js';
+import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, isChineseName } from './searchStrings.js';
 import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult, searchGoogle } from './searcher.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
@@ -1150,8 +1150,9 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
   // For Chinese language: auto-generate Simplified/Traditional variants using DeepSeek LLM
   // Skip on reconnect — variants are already stored in the session
+  // Only run LLM on Chinese names (not English name variations)
   if (!existingSession && (language === 'chinese' || language === 'both')) {
-    const currentNames = [...nameVariations];
+    const currentNames = [...nameVariations].filter(n => isChineseName(n));
     for (const name of currentNames) {
       const variants = await getChineseVariantsLLM(name);
       for (const variant of variants) {
@@ -1167,16 +1168,35 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     nameVariations.push(...existingSession.variations);
   }
 
-  // Build search templates based on language selection
-  let selectedTemplates: string[] = [];
-  if (language === 'chinese') {
-    selectedTemplates = [...CHINESE_TEMPLATES, ...SITE_TEMPLATES];
-  } else if (language === 'english') {
-    selectedTemplates = [...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
-  } else {
-    // 'both' - all templates
-    selectedTemplates = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES];
+  // Split name variants by script (Chinese vs English)
+  const chineseNames = nameVariations.filter(n => isChineseName(n));
+  const englishNames = nameVariations.filter(n => !isChineseName(n));
+
+  // Build per-language template entries: each entry has template, names, and hl
+  interface TemplateEntry {
+    template: string;
+    names: string[];
+    hl: string;
   }
+
+  const templateEntries: TemplateEntry[] = [];
+
+  // Chinese templates with Chinese name variants
+  if (chineseNames.length > 0) {
+    for (const t of [...CHINESE_TEMPLATES, ...SITE_TEMPLATES]) {
+      templateEntries.push({ template: t, names: chineseNames, hl: 'zh-cn' });
+    }
+  }
+
+  // English templates with English name variants
+  if (englishNames.length > 0) {
+    for (const t of [...ENGLISH_TEMPLATES, ...ENGLISH_SITE_TEMPLATES]) {
+      templateEntries.push({ template: t, names: englishNames, hl: 'en' });
+    }
+  }
+
+  // Derive selectedTemplates for progress tracking / session compat
+  const selectedTemplates = templateEntries.map(e => e.template);
 
   try {
     const tracker = new MetricsTracker(subjectName);
@@ -1449,9 +1469,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       console.log(`[V4] Skipped gather phase, using ${allResults.length} restored results`);
     } else {
       const totalSearches = selectedTemplates.length - gatherStartIndex;
-      const nameVariantsDisplay = nameVariations.length > 1
-        ? `${nameVariations.length} name variants using OR (${nameVariations.join(', ')})`
-        : nameVariations[0];
+      const nameDisplay: string[] = [];
+      if (chineseNames.length > 0) nameDisplay.push(`${chineseNames.length} Chinese (${chineseNames.join(', ')})`);
+      if (englishNames.length > 0) nameDisplay.push(`${englishNames.length} English (${englishNames.join(', ')})`);
+      const nameVariantsDisplay = nameDisplay.length > 0 ? nameDisplay.join(' + ') : nameVariations[0];
       const resumeInfo = gatherStartIndex > 0 ? ` (resuming from query ${gatherStartIndex + 1})` : '';
       sendEvent({
         type: 'phase',
@@ -1477,18 +1498,20 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         return;
       }
 
-      const template = selectedTemplates[i];
+      const entry = templateEntries[i];
+      const template = entry.template;
+      const entryNames = entry.names;
 
-      // Build query with all name variants using OR
+      // Build query with per-template name variants using OR
       let query: string;
-      if (nameVariations.length === 1) {
-        query = template.replace('{NAME}', nameVariations[0]);
+      if (entryNames.length === 1) {
+        query = template.replace('{NAME}', entryNames[0]);
       } else {
-        const orClause = '(' + nameVariations.map(n => `"${n}"`).join(' OR ') + ')';
+        const orClause = '(' + entryNames.map(n => `"${n}"`).join(' OR ') + ')';
         query = template.replace('"{NAME}"', orClause);
       }
 
-      // Search Google (Serper) - up to 5 pages
+      // Search Google (Serper) - up to 10 pages
       const MAX_PAGES = 10;
       const googleResults: SearchResult[] = [];
 
@@ -1500,7 +1523,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           return;
         }
 
-        const pageResults = await searchGoogle(query, page, 10, signal);
+        const pageResults = await searchGoogle(query, page, 10, signal, entry.hl);
 
         sendEvent({
           type: 'search_page',
