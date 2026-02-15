@@ -428,16 +428,8 @@
           <div class="stat-value blue" id="statReports">-</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Accuracy</div>
-          <div class="stat-value green" id="statAccuracy">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Avg Edit</div>
-          <div class="stat-value amber" id="statEdit">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Avg Quality</div>
-          <div class="stat-value blue" id="statQuality">-</div>
+          <div class="stat-label">% Reviewed</div>
+          <div class="stat-value blue" id="statReviewed">-</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Confirmed</div>
@@ -452,8 +444,20 @@
           <div class="stat-value amber" id="statMissed">-</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Total Cost</div>
-          <div class="stat-value" id="statCost">-</div>
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value green" id="statAccuracy">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Miss Rate</div>
+          <div class="stat-value amber" id="statMissRate">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Edit</div>
+          <div class="stat-value amber" id="statEdit">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Quality</div>
+          <div class="stat-value blue" id="statQuality">-</div>
         </div>
       </div>
 
@@ -466,10 +470,8 @@
           <tr>
             <th>Subject</th>
             <th>Date</th>
-            <th>Findings</th>
-            <th>Edit %</th>
-            <th>Quality</th>
-            <th>Review</th>
+            <th>Summary</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="reportsBody">
@@ -593,17 +595,19 @@
       try {
         const s = await fetchStats();
         document.getElementById('statReports').textContent = s.totalReports;
+        document.getElementById('statReviewed').textContent =
+          s.totalReports > 0 ? (s.reviewedReports / s.totalReports * 100).toFixed(0) + '%' : '-';
+        document.getElementById('statConfirmed').textContent = s.confirmed;
+        document.getElementById('statWrong').textContent = s.wrong;
+        document.getElementById('statMissed').textContent = s.missed;
         document.getElementById('statAccuracy').textContent =
           s.confirmed + s.wrong > 0 ? (s.accuracy * 100).toFixed(1) + '%' : '-';
+        document.getElementById('statMissRate').textContent =
+          s.confirmed + s.missed > 0 ? (s.missRate * 100).toFixed(1) + '%' : '-';
         document.getElementById('statEdit').textContent =
           s.avgEditDistance > 0 ? (s.avgEditDistance * 100).toFixed(1) + '%' : '-';
         document.getElementById('statQuality').textContent =
           s.avgQualityRating > 0 ? s.avgQualityRating.toFixed(1) + '/10' : '-';
-        document.getElementById('statConfirmed').textContent = s.confirmed;
-        document.getElementById('statWrong').textContent = s.wrong;
-        document.getElementById('statMissed').textContent = s.missed;
-        document.getElementById('statCost').textContent =
-          s.totalCostUsd > 0 ? '$' + s.totalCostUsd.toFixed(2) : '-';
       } catch (e) {
         console.error('Failed to load stats:', e);
       }
@@ -625,41 +629,27 @@
         emptyState.style.display = 'none';
         tbody.innerHTML = data.reports.map(r => {
           const date = new Date(r.screened_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-          const editPct = r.edit_distance != null ? (r.edit_distance * 100).toFixed(0) + '%' : '-';
-          const qualityText = r.quality_rating != null ? r.quality_rating + '/10' : '\u2014';
           const reviewClass = r.edited_markdown ? 'reviewed' : (r.edit_distance != null ? 'pending' : 'unreviewed');
           const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
 
-          // Build funnel string from screening stats
-          let funnelText = '';
-          if (r.screening_stats_json) {
-            try {
-              const s = JSON.parse(r.screening_stats_json);
-              const gathered = s.gathered || 0;
-              const flagged = (s.categorized?.red || 0) + (s.categorized?.amber || 0);
-              const analyzed = s.processed?.total || 0;
-              const findings = r.finding_count || 0;
-              const redAmber = [];
-              if (r.red_count > 0) redAmber.push(`${r.red_count}R`);
-              if (r.amber_count > 0) redAmber.push(`${r.amber_count}A`);
-              funnelText = `${gathered} \u2192 ${flagged} flagged \u2192 ${analyzed} analyzed \u2192 ${findings} findings` +
-                (redAmber.length > 0 ? ` (${redAmber.join(' ')})` : '');
-            } catch { /* ignore */ }
-          }
-          if (!funnelText) {
-            // Fallback: just show badges
-            const badges = [];
-            if (r.red_count > 0) badges.push(`<span class="severity-badge red">${r.red_count} RED</span>`);
-            if (r.amber_count > 0) badges.push(`<span class="severity-badge amber">${r.amber_count} AMBER</span>`);
-            funnelText = badges.join(' ') || '<span style="color:#444">0</span>';
+          // Build summary: "{scanned} scanned · {count} flags: headline1, headline2, ..."
+          const scanned = (r.total_search_results || 0).toLocaleString();
+          const count = r.finding_count || 0;
+          const headlines = r.headlines || [];
+          let summaryText = `${scanned} scanned · ${count} flag${count !== 1 ? 's' : ''}`;
+          if (count === 0) {
+            summaryText += ': Clean';
+          } else if (headlines.length > 0) {
+            const shown = headlines.slice(0, 3).map(h => escapeHtml(h));
+            const extra = headlines.length - 3;
+            summaryText += ': ' + shown.join(', ');
+            if (extra > 0) summaryText += `, +${extra} more`;
           }
 
           return `<tr onclick="openReport(${r.id})">
             <td><strong>${escapeHtml(r.subject_name)}</strong></td>
-            <td>${date}</td>
-            <td>${funnelText}</td>
-            <td>${editPct}</td>
-            <td>${qualityText}</td>
+            <td style="white-space:nowrap;">${date}</td>
+            <td style="color:#888;">${summaryText}</td>
             <td><span class="review-status ${reviewClass}">${reviewText}</span></td>
           </tr>`;
         }).join('');

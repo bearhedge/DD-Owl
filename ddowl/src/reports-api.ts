@@ -66,7 +66,6 @@ reportsRouter.get('/stats/summary', async (_req: Request, res: Response) => {
       `Accuracy: ${(s.accuracy * 100).toFixed(1)}%`,
       `Miss rate: ${(s.missRate * 100).toFixed(1)}%`,
       `Avg edit distance: ${(s.avgEditDistance * 100).toFixed(1)}%`,
-      `Total cost: $${s.totalCostUsd.toFixed(2)}`,
       s.topConfirmedTypes.length > 0
         ? `Top flag types: ${s.topConfirmedTypes.map(t => t.eventType).join(', ')}`
         : '',

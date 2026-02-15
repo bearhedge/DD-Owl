@@ -115,6 +115,7 @@ export interface SourceRow {
 
 export interface Stats {
   totalReports: number;
+  reviewedReports: number;
   totalFindings: number;
   confirmed: number;
   wrong: number;
@@ -124,7 +125,6 @@ export interface Stats {
   avgEditDistance: number;
   avgFindingsPerReport: number;
   avgQualityRating: number;
-  totalCostUsd: number;
   topWrongReasons: { reason: string; count: number }[];
   topMissedTypes: { eventType: string; count: number }[];
   topConfirmedTypes: { eventType: string; count: number }[];
@@ -236,7 +236,7 @@ export async function listReports(opts: { limit?: number; offset?: number; searc
       [pattern]
     );
 
-    for (const r of reports) { r.findings = []; r.missed_flags = []; }
+    await attachHeadlines(reports);
     return { reports, total: parseInt(total) };
   }
 
@@ -246,8 +246,27 @@ export async function listReports(opts: { limit?: number; offset?: number; searc
   );
   const { rows: [{ c: total }] } = await pool.query('SELECT count(*) as c FROM dd_reports');
 
-  for (const r of reports) { r.findings = []; r.missed_flags = []; }
+  await attachHeadlines(reports);
   return { reports, total: parseInt(total) };
+}
+
+async function attachHeadlines(reports: any[]): Promise<void> {
+  if (reports.length === 0) return;
+  const ids = reports.map(r => r.id);
+  const { rows: headlineRows } = await pool.query(
+    'SELECT report_id, headline FROM dd_findings WHERE report_id = ANY($1::int[]) ORDER BY report_id, id',
+    [ids]
+  );
+  const headlineMap = new Map<number, string[]>();
+  for (const row of headlineRows) {
+    if (!headlineMap.has(row.report_id)) headlineMap.set(row.report_id, []);
+    headlineMap.get(row.report_id)!.push(row.headline);
+  }
+  for (const r of reports) {
+    r.headlines = headlineMap.get(r.id) || [];
+    r.findings = [];
+    r.missed_flags = [];
+  }
 }
 
 // --- Review operations ---
@@ -319,16 +338,17 @@ export async function getStats(): Promise<Stats> {
   const { rows: [totals] } = await pool.query(`
     SELECT
       (SELECT count(*) FROM dd_reports) as "totalReports",
+      (SELECT count(DISTINCT r.id) FROM dd_reports r JOIN dd_findings f ON f.report_id = r.id WHERE f.human_verdict IS NOT NULL) as "reviewedReports",
       (SELECT count(*) FROM dd_findings) as "totalFindings",
       (SELECT count(*) FROM dd_findings WHERE human_verdict = 'CONFIRMED') as confirmed,
       (SELECT count(*) FROM dd_findings WHERE human_verdict = 'WRONG') as wrong,
       (SELECT count(*) FROM dd_missed_flags) as missed,
       (SELECT avg(edit_distance) FROM dd_reports WHERE edit_distance IS NOT NULL) as "avgEditDistance",
-      (SELECT avg(quality_rating) FROM dd_reports WHERE quality_rating IS NOT NULL) as "avgQualityRating",
-      (SELECT sum(cost_usd) FROM dd_reports) as "totalCostUsd"
+      (SELECT avg(quality_rating) FROM dd_reports WHERE quality_rating IS NOT NULL) as "avgQualityRating"
   `);
 
   const totalReports = parseInt(totals.totalReports);
+  const reviewedReports = parseInt(totals.reviewedReports);
   const totalFindings = parseInt(totals.totalFindings);
   const confirmed = parseInt(totals.confirmed);
   const wrong = parseInt(totals.wrong);
@@ -357,6 +377,7 @@ export async function getStats(): Promise<Stats> {
 
   return {
     totalReports,
+    reviewedReports,
     totalFindings,
     confirmed,
     wrong,
@@ -366,7 +387,6 @@ export async function getStats(): Promise<Stats> {
     avgEditDistance: parseFloat(totals.avgEditDistance) || 0,
     avgFindingsPerReport: totalReports > 0 ? totalFindings / totalReports : 0,
     avgQualityRating: parseFloat(totals.avgQualityRating) || 0,
-    totalCostUsd: parseFloat(totals.totalCostUsd) || 0,
     topWrongReasons,
     topMissedTypes,
     topConfirmedTypes,
