@@ -24,6 +24,7 @@ import http from 'http';
 import { fileURLToPath } from 'url';
 import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, isChineseName } from './searchStrings.js';
 import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult, searchGoogle } from './searcher.js';
+import { getSerperKeyManager } from './serperKeyManager.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
 import { fetchPageContent, analyzeWithLLM, closeBrowser, quickScan } from './analyzer.js';
 import { triageSearchResults, TriageResult, categorizeAll, CategorizedResult } from './triage.js';
@@ -4209,12 +4210,41 @@ app.get('/api/benchmarks/case/:subject', (req: Request, res: Response) => {
   res.json(benchmarkCase);
 });
 
-server.listen(PORT, () => {
+// Serper key status endpoint
+app.get('/api/serper-status', (_req: Request, res: Response) => {
+  const manager = getSerperKeyManager();
+  res.json({
+    keys: manager.getStatus(),
+    totalCredits: manager.getTotalCredits(),
+  });
+});
+
+// Refresh Serper key balances (brings reset keys back into rotation)
+app.post('/api/serper-refresh', async (_req: Request, res: Response) => {
+  const manager = getSerperKeyManager();
+  await manager.refreshAll();
+  res.json({
+    keys: manager.getStatus(),
+    totalCredits: manager.getTotalCredits(),
+  });
+});
+
+server.listen(PORT, async () => {
   console.log(`DD Owl running on port ${PORT}`);
   console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
   console.log(`Search templates loaded: ${SEARCH_TEMPLATES.length}`);
   console.log(`Search engines: Serper (Google)${isBaiduAvailable() ? ' + SerpAPI (Baidu)' : ''}`);
   console.log(`Scraping: axios-first with Puppeteer fallback (100% coverage)`);
+
+  // Fetch real Serper key balances on startup
+  const manager = getSerperKeyManager();
+  await manager.init();
+
+  // Re-check balances every 6 hours (picks up key resets automatically)
+  setInterval(() => {
+    console.log('[SERPER] Periodic balance refresh...');
+    manager.refreshAll();
+  }, 6 * 60 * 60 * 1000);
 });
 
 // Cleanup browser on shutdown

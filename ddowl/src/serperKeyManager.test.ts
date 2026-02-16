@@ -1,6 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { SerperKeyManager } from './serperKeyManager.js';
 
+// Mock axios so init() doesn't make real HTTP calls
+vi.mock('axios', () => ({
+  default: {
+    get: vi.fn().mockResolvedValue({ data: { balance: 100 } }),
+    post: vi.fn(),
+  },
+}));
+
 describe('SerperKeyManager', () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
@@ -26,37 +34,42 @@ describe('SerperKeyManager', () => {
     expect(() => new SerperKeyManager()).toThrow();
   });
 
-  it('rotates when credits drop below threshold', () => {
+  it('rotates when balance drops below threshold after init', async () => {
     vi.stubEnv('SERPER_API_KEYS', 'key1,key2');
-    const mgr = new SerperKeyManager(100); // 100 max credits for testing
-    // Use 51 credits on key1 (100 - 51 = 49, below threshold of 50)
-    for (let i = 0; i < 51; i++) mgr.recordUsage();
+    const mgr = new SerperKeyManager();
+    await mgr.init(); // Sets both keys to 100 credits (mocked)
+    // Burn 96 credits on key1 (100 → 4, below MIN_REMAINING=5)
+    for (let i = 0; i < 96; i++) mgr.recordUsage();
     expect(mgr.getActiveKey()).toBe('key2');
   });
 
-  it('rotateOnError moves to next key immediately', () => {
+  it('rotateOnError moves to next key immediately', async () => {
     vi.stubEnv('SERPER_API_KEYS', 'key1,key2,key3');
     const mgr = new SerperKeyManager();
+    await mgr.init();
     expect(mgr.getActiveKey()).toBe('key1');
     mgr.rotateOnError();
     expect(mgr.getActiveKey()).toBe('key2');
   });
 
-  it('throws when all keys exhausted', () => {
+  it('throws when all keys exhausted', async () => {
     vi.stubEnv('SERPER_API_KEYS', 'key1,key2');
-    const mgr = new SerperKeyManager(60); // 60 max
-    for (let i = 0; i < 11; i++) mgr.recordUsage(); // key1: 49 left → rotates
-    for (let i = 0; i < 11; i++) mgr.recordUsage(); // key2: 49 left → rotates
+    const mgr = new SerperKeyManager();
+    await mgr.init(); // 100 credits each
+    for (let i = 0; i < 96; i++) mgr.recordUsage(); // key1 exhausted
+    for (let i = 0; i < 96; i++) mgr.recordUsage(); // key2 exhausted
     expect(() => mgr.getActiveKey()).toThrow(/all.*exhausted/i);
   });
 
-  it('getStatus returns all keys with remaining credits', () => {
+  it('getStatus returns all keys with balances', async () => {
     vi.stubEnv('SERPER_API_KEYS', 'key1,key2');
-    const mgr = new SerperKeyManager(2500);
+    const mgr = new SerperKeyManager();
+    await mgr.init();
     mgr.recordUsage();
     const status = mgr.getStatus();
     expect(status).toHaveLength(2);
-    expect(status[0].remaining).toBe(2499);
+    expect(status[0].balance).toBe(99);
     expect(status[0].masked).toBe('key1...');
+    expect(status[0].active).toBe(true);
   });
 });
