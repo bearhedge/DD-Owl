@@ -70,9 +70,10 @@ export async function searchGoogle(
       return [];
     }
 
-    // On 403/429, rotate and retry once
+    // On 400/403/429 or "Not enough credits", rotate and retry once
     const status = error.response?.status;
-    if (status === 403 || status === 429) {
+    const message = error.response?.data?.message || '';
+    if (status === 400 || status === 403 || status === 429 || message.includes('Not enough credits')) {
       try {
         const newKey = manager.rotateOnError();
         console.log(`[SERPER] Retrying query "${query}" with next key`);
