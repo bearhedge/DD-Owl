@@ -58,6 +58,10 @@ const NOISE_DOMAINS = [
   // Wikipedia/Encyclopedia sites (general reference, not adverse media sources)
   'wikipedia.org', 'baike.baidu.com', 'baike.com', 'zh.wikipedia.org',
   'en.wikipedia.org', 'hudong.com', 'sogou.com/lemma',
+  // SEC filing domains (routine filings pollute results, enforcement covered by news)
+  'sec.gov', 'edgar.sec.gov',
+  // Corporate registries (additional — like existing qichacha/tianyancha)
+  'qcc.com',
 ];
 
 // ============================================================
@@ -83,6 +87,8 @@ const TRASH_DOMAIN_PATTERNS: RegExp[] = [
   /buy[-_]?domain|domain[-_]?sale|expired[-_]?domain|parked[-_]?domain/i,
   // Fake news/data leak impersonators
   /fake[-_]?news|leak[-_]?data|hack[-_]?data/i,
+  // Numeric-heavy spam domains
+  /^\d{3,}[a-z]*\.(com|cn|net)$/,
 ];
 
 // Noise title patterns - job posting keywords
