@@ -22,7 +22,7 @@ import cors from 'cors';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, isChineseName } from './searchStrings.js';
+import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, isChineseName, LANGUAGE_CONFIG } from './searchStrings.js';
 import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult, searchGoogle } from './searcher.js';
 import { getSerperKeyManager } from './serperKeyManager.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
@@ -1226,17 +1226,38 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
 
   const templateEntries: TemplateEntry[] = [];
 
-  // Chinese templates with Chinese name variants
-  if (chineseNames.length > 0) {
-    for (const t of [...CHINESE_TEMPLATES, ...SITE_TEMPLATES]) {
-      templateEntries.push({ template: t, names: chineseNames, hl: 'zh-cn' });
+  if (language === 'both' || language === 'chinese') {
+    // Legacy behavior: split by script, Chinese names → Chinese templates, English names → English templates
+    if (chineseNames.length > 0) {
+      const cfg = LANGUAGE_CONFIG['chinese'];
+      for (const t of [...cfg.templates, ...cfg.siteTemplates]) {
+        templateEntries.push({ template: t, names: chineseNames, hl: cfg.hl });
+      }
     }
-  }
-
-  // English templates with English name variants
-  if (englishNames.length > 0) {
-    for (const t of [...ENGLISH_TEMPLATES, ...ENGLISH_SITE_TEMPLATES]) {
-      templateEntries.push({ template: t, names: englishNames, hl: 'en' });
+    if (englishNames.length > 0) {
+      const cfg = LANGUAGE_CONFIG['english'];
+      for (const t of [...cfg.templates, ...cfg.siteTemplates]) {
+        templateEntries.push({ template: t, names: englishNames, hl: cfg.hl });
+      }
+    }
+  } else {
+    // Specific language selected: use that language's templates for all names
+    const cfg = LANGUAGE_CONFIG[language];
+    if (cfg) {
+      for (const t of [...cfg.templates, ...cfg.siteTemplates]) {
+        templateEntries.push({ template: t, names: nameVariations, hl: cfg.hl });
+      }
+    }
+    // Also add English templates if the selected language isn't English
+    // (subjects often have English-language media coverage too)
+    if (language !== 'english') {
+      const engNames = nameVariations.filter(n => !isChineseName(n));
+      if (engNames.length > 0) {
+        const engCfg = LANGUAGE_CONFIG['english'];
+        for (const t of [...engCfg.templates, ...engCfg.siteTemplates]) {
+          templateEntries.push({ template: t, names: engNames, hl: 'en' });
+        }
+      }
     }
   }
 
@@ -3301,17 +3322,16 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
 
     // Save generated report markdown to reports database
     try {
-      const sessionForSave = await getSession(sessionId);
-      if (sessionForSave) {
-        const runId = (sessionForSave as any).runId;
-        if (runId) {
-          const { pool: pgPool } = await import('./db/index.js');
-          await pgPool.query('UPDATE dd_reports SET report_markdown = $1 WHERE run_id = $2', [fullReport, runId]);
-          console.log(`[REPORTS] Saved report markdown for run ${runId}`);
-        }
+      const { pool: pgPool } = await import('./db/index.js');
+      // sessionId IS the runId (set at line 2822: const stableRunId = sessionId)
+      const result = await pgPool.query('UPDATE dd_reports SET report_markdown = $1 WHERE run_id = $2', [fullReport, sessionId]);
+      if (result.rowCount && result.rowCount > 0) {
+        console.log(`[REPORTS] Saved report markdown for run ${sessionId}`);
+      } else {
+        console.warn(`[REPORTS] No report found with run_id=${sessionId} — markdown not saved`);
       }
     } catch (e) {
-      // Non-critical — don't fail report generation
+      console.error('[REPORTS] Failed to save report markdown:', e);
     }
 
     // Send final report_complete event with full assembled markdown

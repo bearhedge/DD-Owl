@@ -2732,29 +2732,34 @@
     const LANGUAGES = [
       // East Asia
       { code: 'chinese', name: '中文', enabled: true },
-      { code: 'japanese', name: '日本語', enabled: false },
-      { code: 'korean', name: '한국어', enabled: false },
+      { code: 'japanese', name: '日本語', enabled: true },
+      { code: 'korean', name: '한국어', enabled: true },
       // Southeast Asia
-      { code: 'thai', name: 'ไทย', enabled: false },
-      { code: 'vietnamese', name: 'Tiếng Việt', enabled: false },
-      { code: 'indonesian', name: 'Bahasa Indonesia', enabled: false },
-      { code: 'malay', name: 'Bahasa Melayu', enabled: false },
-      { code: 'khmer', name: 'ខ្មែរ', enabled: false },
-      { code: 'burmese', name: 'မြန်မာ', enabled: false },
-      { code: 'tagalog', name: 'Tagalog', enabled: false },
-      { code: 'lao', name: 'ລາວ', enabled: false },
+      { code: 'thai', name: 'ไทย', enabled: true },
+      { code: 'vietnamese', name: 'Tiếng Việt', enabled: true },
+      { code: 'indonesian', name: 'Bahasa Indonesia', enabled: true },
+      { code: 'malay', name: 'Bahasa Melayu', enabled: true },
+      { code: 'khmer', name: 'ខ្មែរ', enabled: true },
+      { code: 'burmese', name: 'မြန်မာ', enabled: true },
+      { code: 'tagalog', name: 'Tagalog', enabled: true },
+      { code: 'lao', name: 'ລາວ', enabled: true },
       // South Asia
-      { code: 'hindi', name: 'हिन्दी', enabled: false },
-      { code: 'tamil', name: 'தமிழ்', enabled: false },
+      { code: 'hindi', name: 'हिन्दी', enabled: true },
+      { code: 'tamil', name: 'தமிழ்', enabled: true },
       // Europe
-      { code: 'english', name: 'English', enabled: false },
-      { code: 'german', name: 'Deutsch', enabled: false },
-      { code: 'french', name: 'Français', enabled: false },
-      { code: 'spanish', name: 'Español', enabled: false },
-      { code: 'portuguese', name: 'Português', enabled: false },
-      { code: 'russian', name: 'Русский', enabled: false },
+      { code: 'english', name: 'English', enabled: true },
+      { code: 'dutch', name: 'Nederlands', enabled: true },
+      { code: 'german', name: 'Deutsch', enabled: true },
+      { code: 'french', name: 'Français', enabled: true },
+      { code: 'italian', name: 'Italiano', enabled: true },
+      { code: 'polish', name: 'Polski', enabled: true },
+      { code: 'spanish', name: 'Español', enabled: true },
+      { code: 'portuguese', name: 'Português', enabled: true },
+      { code: 'swedish', name: 'Svenska', enabled: true },
+      { code: 'russian', name: 'Русский', enabled: true },
+      { code: 'turkish', name: 'Türkçe', enabled: true },
       // Middle East
-      { code: 'arabic', name: 'العربية', enabled: false },
+      { code: 'arabic', name: 'العربية', enabled: true },
     ];
 
     let selectedLanguage = 'chinese';
@@ -4545,6 +4550,16 @@
             } else {
               // No findings - disable report generation
               document.getElementById('generateReportBtn').disabled = true;
+            }
+
+            // Render unverified findings (content unavailable — flagged but not confirmed)
+            if (data.unverifiedFindings && data.unverifiedFindings.length > 0) {
+              addLogEntry('info', `━━━ UNVERIFIED (${data.unverifiedFindings.length}) ━━━`);
+              addLogEntry('info', 'Flagged but page unavailable — click to check manually:');
+              for (const item of data.unverifiedFindings) {
+                const tag = item.originalCategory ? `[${item.originalCategory}]` : '';
+                addLogEntry('info', `${tag} ${item.title}`, item.url);
+              }
             }
 
             document.getElementById('statusDot').classList.remove('active');

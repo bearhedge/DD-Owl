@@ -3,12 +3,39 @@
 // Uses Google OR operator (|) to search multiple terms
 // Consolidated from 16 queries → 10 queries (37% API cost reduction)
 
+import {
+  ARABIC_TEMPLATES, ARABIC_SITE_TEMPLATES,
+  DUTCH_TEMPLATES, DUTCH_SITE_TEMPLATES,
+  FRENCH_TEMPLATES, FRENCH_SITE_TEMPLATES,
+  GERMAN_TEMPLATES, GERMAN_SITE_TEMPLATES,
+  ITALIAN_TEMPLATES, ITALIAN_SITE_TEMPLATES,
+  JAPANESE_TEMPLATES, JAPANESE_SITE_TEMPLATES,
+  MALAY_TEMPLATES, MALAY_SITE_TEMPLATES,
+  POLISH_TEMPLATES, POLISH_SITE_TEMPLATES,
+  PORTUGUESE_TEMPLATES, PORTUGUESE_SITE_TEMPLATES,
+  RUSSIAN_TEMPLATES, RUSSIAN_SITE_TEMPLATES,
+  SPANISH_TEMPLATES, SPANISH_SITE_TEMPLATES,
+  SWEDISH_TEMPLATES, SWEDISH_SITE_TEMPLATES,
+  TURKISH_TEMPLATES, TURKISH_SITE_TEMPLATES,
+  KOREAN_TEMPLATES, KOREAN_SITE_TEMPLATES,
+  THAI_TEMPLATES, THAI_SITE_TEMPLATES,
+  VIETNAMESE_TEMPLATES, VIETNAMESE_SITE_TEMPLATES,
+  INDONESIAN_TEMPLATES, INDONESIAN_SITE_TEMPLATES,
+  KHMER_TEMPLATES, KHMER_SITE_TEMPLATES,
+  BURMESE_TEMPLATES, BURMESE_SITE_TEMPLATES,
+  TAGALOG_TEMPLATES, TAGALOG_SITE_TEMPLATES,
+  LAO_TEMPLATES, LAO_SITE_TEMPLATES,
+  HINDI_TEMPLATES, HINDI_SITE_TEMPLATES,
+  TAMIL_TEMPLATES, TAMIL_SITE_TEMPLATES,
+} from './languageTemplates.js';
+
 // Script detection: returns true if the name contains CJK characters
 export function isChineseName(name: string): boolean {
   return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(name);
 }
 
 // Category names for logging (maps template index to human-readable name)
+// Legacy mapping for Chinese+English (backwards compat with existing logs)
 export const TEMPLATE_CATEGORIES: Record<number, string> = {
   0: 'Criminal Violence (犯罪暴力)',
   1: 'Fraud & Deception (欺诈欺骗)',
@@ -96,6 +123,42 @@ export const ENGLISH_SITE_TEMPLATES = [
 
 // Combined for backwards compatibility
 export const SEARCH_TEMPLATES = [...CHINESE_TEMPLATES, ...ENGLISH_TEMPLATES, ...SITE_TEMPLATES, ...ENGLISH_SITE_TEMPLATES];
+
+// Multi-language template registry
+export interface LanguageConfig {
+  templates: string[];
+  siteTemplates: string[];
+  hl: string;
+  label: string;
+}
+
+export const LANGUAGE_CONFIG: Record<string, LanguageConfig> = {
+  chinese:    { templates: CHINESE_TEMPLATES, siteTemplates: SITE_TEMPLATES, hl: 'zh-cn', label: '中文' },
+  english:    { templates: ENGLISH_TEMPLATES, siteTemplates: ENGLISH_SITE_TEMPLATES, hl: 'en', label: 'English' },
+  arabic:     { templates: ARABIC_TEMPLATES, siteTemplates: ARABIC_SITE_TEMPLATES, hl: 'ar', label: 'العربية' },
+  dutch:      { templates: DUTCH_TEMPLATES, siteTemplates: DUTCH_SITE_TEMPLATES, hl: 'nl', label: 'Nederlands' },
+  french:     { templates: FRENCH_TEMPLATES, siteTemplates: FRENCH_SITE_TEMPLATES, hl: 'fr', label: 'Français' },
+  german:     { templates: GERMAN_TEMPLATES, siteTemplates: GERMAN_SITE_TEMPLATES, hl: 'de', label: 'Deutsch' },
+  italian:    { templates: ITALIAN_TEMPLATES, siteTemplates: ITALIAN_SITE_TEMPLATES, hl: 'it', label: 'Italiano' },
+  japanese:   { templates: JAPANESE_TEMPLATES, siteTemplates: JAPANESE_SITE_TEMPLATES, hl: 'ja', label: '日本語' },
+  korean:     { templates: KOREAN_TEMPLATES, siteTemplates: KOREAN_SITE_TEMPLATES, hl: 'ko', label: '한국어' },
+  malay:      { templates: MALAY_TEMPLATES, siteTemplates: MALAY_SITE_TEMPLATES, hl: 'ms', label: 'Bahasa Melayu' },
+  polish:     { templates: POLISH_TEMPLATES, siteTemplates: POLISH_SITE_TEMPLATES, hl: 'pl', label: 'Polski' },
+  portuguese: { templates: PORTUGUESE_TEMPLATES, siteTemplates: PORTUGUESE_SITE_TEMPLATES, hl: 'pt', label: 'Português' },
+  russian:    { templates: RUSSIAN_TEMPLATES, siteTemplates: RUSSIAN_SITE_TEMPLATES, hl: 'ru', label: 'Русский' },
+  spanish:    { templates: SPANISH_TEMPLATES, siteTemplates: SPANISH_SITE_TEMPLATES, hl: 'es', label: 'Español' },
+  swedish:    { templates: SWEDISH_TEMPLATES, siteTemplates: SWEDISH_SITE_TEMPLATES, hl: 'sv', label: 'Svenska' },
+  turkish:    { templates: TURKISH_TEMPLATES, siteTemplates: TURKISH_SITE_TEMPLATES, hl: 'tr', label: 'Türkçe' },
+  thai:       { templates: THAI_TEMPLATES, siteTemplates: THAI_SITE_TEMPLATES, hl: 'th', label: 'ไทย' },
+  vietnamese: { templates: VIETNAMESE_TEMPLATES, siteTemplates: VIETNAMESE_SITE_TEMPLATES, hl: 'vi', label: 'Tiếng Việt' },
+  indonesian: { templates: INDONESIAN_TEMPLATES, siteTemplates: INDONESIAN_SITE_TEMPLATES, hl: 'id', label: 'Bahasa Indonesia' },
+  khmer:      { templates: KHMER_TEMPLATES, siteTemplates: KHMER_SITE_TEMPLATES, hl: 'km', label: 'ខ្មែរ' },
+  burmese:    { templates: BURMESE_TEMPLATES, siteTemplates: BURMESE_SITE_TEMPLATES, hl: 'my', label: 'မြန်မာ' },
+  tagalog:    { templates: TAGALOG_TEMPLATES, siteTemplates: TAGALOG_SITE_TEMPLATES, hl: 'tl', label: 'Tagalog' },
+  lao:        { templates: LAO_TEMPLATES, siteTemplates: LAO_SITE_TEMPLATES, hl: 'lo', label: 'ລາວ' },
+  hindi:      { templates: HINDI_TEMPLATES, siteTemplates: HINDI_SITE_TEMPLATES, hl: 'hi', label: 'हिन्दी' },
+  tamil:      { templates: TAMIL_TEMPLATES, siteTemplates: TAMIL_SITE_TEMPLATES, hl: 'ta', label: 'தமிழ்' },
+};
 
 // Category mapping for clearer reporting
 export const CATEGORY_KEYWORDS: Record<string, string[]> = {
