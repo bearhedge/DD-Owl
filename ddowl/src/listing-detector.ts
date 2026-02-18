@@ -209,7 +209,10 @@ export async function checkListings(pool: pg.Pool): Promise<{
     WHERE d.status = 'active'
   `);
 
-  const activeDeals: ActiveDeal[] = activeResult.rows;
+  const activeDeals: ActiveDeal[] = activeResult.rows.map((r: any) => ({
+    dealId: r.deal_id,
+    companyName: r.company_name,
+  }));
   console.log(`Found ${activeDeals.length} active deals to check`);
 
   if (activeDeals.length === 0) {
@@ -223,6 +226,10 @@ export async function checkListings(pool: pg.Pool): Promise<{
   const matches: MatchResult[] = [];
   const THRESHOLD = 0.5;
 
+  // Log a few sample securities for debugging
+  const impressionSec = securities.find(s => s.nameEn.toLowerCase().includes('impression'));
+  if (impressionSec) console.log(`  Sample security found: ${impressionSec.stockCode} ${impressionSec.nameEn}`);
+
   for (const deal of activeDeals) {
     let bestMatch: { security: ListedSecurity; similarity: number } | null = null;
 
@@ -234,6 +241,7 @@ export async function checkListings(pool: pg.Pool): Promise<{
     }
 
     if (bestMatch) {
+      console.log(`  Match: "${deal.companyName}" → "${bestMatch.security.nameEn}" (${(bestMatch.similarity * 100).toFixed(0)}%)`);
       matches.push({
         dealId: deal.dealId,
         companyName: deal.companyName,
