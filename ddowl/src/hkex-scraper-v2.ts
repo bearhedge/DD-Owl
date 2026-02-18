@@ -132,10 +132,13 @@ async function getApplicationsFromYear(
         const href = (link as HTMLAnchorElement).href;
 
         if (linkText.includes('OC Announcement') && href.includes('.pdf')) {
-          ocPdfUrl = href;
-          // Extract app ID from URL like /2025/108018/
-          const appIdMatch = href.match(/\/(\d{6})\//);
-          if (appIdMatch) appId = appIdMatch[1];
+          // Prefer revised OC announcements over originals
+          if (!ocPdfUrl || linkText.includes('Revised')) {
+            ocPdfUrl = href;
+            // Extract app ID from URL like /2025/108018/
+            const appIdMatch = href.match(/\/(\d{6})\//);
+            if (appIdMatch) appId = appIdMatch[1];
+          }
         }
       });
 
@@ -161,7 +164,7 @@ async function getApplicationsFromYear(
 /**
  * Download PDF and extract bank data
  */
-async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<BankAppointment[]> {
+export async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<BankAppointment[]> {
   const banks: BankAppointment[] = [];
 
   try {
@@ -201,8 +204,18 @@ async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<BankAppo
     const parser = new PDFParse(uint8Array);
     const result = await parser.getText();
 
-    // Focus on last 2 pages where bank data typically is
-    const lastPagesText = result.pages.slice(-2).map(p => p.text).join('\n');
+    // Search all pages for bank data; for long PDFs, focus on relevant sections
+    let lastPagesText: string;
+    if (result.pages.length <= 10) {
+      lastPagesText = result.pages.map(p => p.text).join('\n');
+    } else {
+      // For long PDFs, find pages mentioning bank roles or "appointed"
+      const roleKeywords = /sponsor|coordinator|co-ordinator|bookrunner|lead\s*manager|appointed/i;
+      const relevantPages = result.pages.filter(p => roleKeywords.test(p.text));
+      lastPagesText = relevantPages.length > 0
+        ? relevantPages.map(p => p.text).join('\n')
+        : result.pages.slice(-3).map(p => p.text).join('\n');
+    }
 
     // Helper to parse roles from text
     function parseRolesFromText(text: string): Role[] {
@@ -243,7 +256,7 @@ async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<BankAppo
 
     // Method 2: Extract from role headings
     // These patterns detect role HEADINGS - we parse ALL roles from the heading text
-    const roleHeadingPattern = /^(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?((?:(?:Sponsor|Coordinator|Co-ordinator|Bookrunner|Lead\s*Manager)(?:\s+and\s+(?:Joint\s+)?(?:Global\s+)?(?:Overall\s+)?)?)+)/i;
+    const roleHeadingPattern = /^(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?((?:(?:Sponsor|Coordinator|Co-ordinator|Bookrunner|Lead\s*Manager)(?:\(s\))?(?:(?:\s*[-–]\s*|\s+and\s+)(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?)?)+)/i;
 
     const lines = lastPagesText.split('\n');
     let currentRoles: Role[] = ['other'];
@@ -269,7 +282,7 @@ async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<BankAppo
         (trimmed.match(/Securities|Capital|Financial|Bank|Partners|Investment/i) || currentRoles[0] !== 'other');
 
       if (isBankName) {
-        const bankName = trimmed.replace(/\(.*\)/g, '').replace(/^\d+[\.\)]\s*/, '').trim();
+        const bankName = trimmed.replace(/^\d+[\.\)]\s*/, '').trim();
         if (bankName && !banks.find(b => b.bank === bankName)) {
           const isLead = currentRoles.includes('sponsor') || currentRoles.includes('coordinator');
           banks.push({

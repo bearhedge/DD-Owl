@@ -595,6 +595,105 @@ ipoRouter.get('/scrape-runs/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/ipo/rescrape-missing-banks
+ * Re-scrapes OC PDFs for deals that have zero bank appointments
+ */
+ipoRouter.post('/rescrape-missing-banks', async (req: Request, res: Response) => {
+  try {
+    // Find deals with no bank appointments
+    const missingResult = await pool.query(`
+      SELECT d.id as deal_id, c.name_en as company_name, d.hkex_app_id,
+             oc.pdf_url
+      FROM deals d
+      JOIN companies c ON c.id = d.company_id
+      LEFT JOIN deal_appointments da ON da.deal_id = d.id
+      LEFT JOIN oc_announcements oc ON oc.deal_id = d.id
+      WHERE d.status = 'active'
+      GROUP BY d.id, c.name_en, d.hkex_app_id, oc.pdf_url
+      HAVING COUNT(da.id) = 0
+    `);
+
+    const missing = missingResult.rows;
+    res.json({
+      message: `Re-scraping ${missing.length} deals with missing banks`,
+      deals: missing.map((d: any) => d.company_name),
+      count: missing.length,
+      status: 'running',
+    });
+
+    // Re-scrape in background
+    (async () => {
+      try {
+        const { extractBanksFromPdf, closeBrowser } = await import('./hkex-scraper-v2.js');
+        const puppeteer = await import('puppeteer');
+        const browser = await puppeteer.default.launch({
+          headless: true,
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        });
+        const page = await browser.newPage();
+
+        // Accept disclaimer first
+        await page.goto('https://www1.hkexnews.hk/app/appindex.html', {
+          waitUntil: 'networkidle2',
+          timeout: 60000,
+        });
+        await new Promise(r => setTimeout(r, 2000));
+        await page.evaluate(() => {
+          const elements = document.querySelectorAll('button, a, input');
+          for (const el of elements) {
+            if (el.textContent?.trim().toUpperCase() === 'ACCEPT') {
+              (el as HTMLElement).click();
+              return;
+            }
+          }
+        });
+        await new Promise(r => setTimeout(r, 2000));
+
+        let updated = 0;
+        for (const deal of missing) {
+          if (!deal.pdf_url) continue;
+
+          console.log(`Re-scraping: ${deal.company_name}`);
+          const banks = await extractBanksFromPdf(page, deal.pdf_url);
+
+          if (banks.length > 0) {
+            for (const bank of banks) {
+              const bankResult = await pool.query(`
+                INSERT INTO banks (name) VALUES ($1)
+                ON CONFLICT (name) DO UPDATE SET updated_at = NOW()
+                RETURNING id
+              `, [bank.bank]);
+              const bankId = bankResult.rows[0].id;
+
+              await pool.query(`
+                INSERT INTO deal_appointments (deal_id, bank_id, roles, is_lead, source_url)
+                VALUES ($1, $2, $3::bank_role[], $4, $5)
+                ON CONFLICT (deal_id, bank_id) DO UPDATE SET
+                  roles = EXCLUDED.roles,
+                  is_lead = EXCLUDED.is_lead
+              `, [deal.deal_id, bankId, bank.roles, bank.isLead, deal.pdf_url]);
+            }
+            updated++;
+            console.log(`  Found ${banks.length} banks for ${deal.company_name}`);
+          }
+
+          await new Promise(r => setTimeout(r, 200));
+        }
+
+        await page.close();
+        await browser.close();
+        console.log(`Re-scrape complete: ${updated}/${missing.length} deals updated`);
+      } catch (err) {
+        console.error('Re-scrape error:', err);
+      }
+    })();
+  } catch (err) {
+    console.error('Re-scrape trigger error:', err);
+    res.status(500).json({ error: 'Failed to start re-scrape' });
+  }
+});
+
+/**
  * POST /api/ipo/check-listings
  * Checks active deals against HKEX securities list for newly listed companies
  */
