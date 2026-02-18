@@ -131,6 +131,24 @@ async function downloadSecuritiesList(): Promise<ListedSecurity[]> {
 
   const workbook = xlsx.read(Buffer.from(response.data), { type: 'buffer' });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  // HKEX XLSX has incorrect dimension (A1:R8) but actual data extends to 18000+ rows.
+  // Override the range to ensure all rows are parsed.
+  if (sheet['!ref']) {
+    const refMatch = sheet['!ref'].match(/^([A-Z]+)\d+:([A-Z]+)(\d+)$/);
+    if (refMatch && parseInt(refMatch[3]) < 100) {
+      // Dimension is suspiciously small — scan for actual last row
+      let maxRow = 0;
+      for (const k of Object.keys(sheet)) {
+        if (k.startsWith('!')) continue;
+        const rowNum = parseInt(k.replace(/[A-Z]+/, ''));
+        if (rowNum > maxRow) maxRow = rowNum;
+      }
+      if (maxRow > parseInt(refMatch[3])) {
+        sheet['!ref'] = `${refMatch[1]}1:${refMatch[2]}${maxRow}`;
+        console.log(`Fixed sheet range to ${sheet['!ref']} (was ${refMatch[0]})`);
+      }
+    }
+  }
   const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
   // Find header row (contains "Stock Code" or similar)
