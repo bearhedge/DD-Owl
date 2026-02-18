@@ -614,7 +614,8 @@
           // Format listing date from YYYY-MM-DD to DD/MM/YYYY for existing sort/display code
           let dateStr = '';
           if (d.listing_date) {
-            const parts = d.listing_date.split('-');
+            const dateOnly = String(d.listing_date).split('T')[0];
+            const parts = dateOnly.split('-');
             if (parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
           }
 
@@ -664,7 +665,8 @@
           // Format filing date from YYYY-MM-DD to DD/MM/YYYY
           let dateStr = '';
           if (d.filing_date) {
-            const parts = d.filing_date.split('-');
+            const dateOnly = String(d.filing_date).split('T')[0];
+            const parts = dateOnly.split('-');
             if (parts.length === 3) dateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
           }
 

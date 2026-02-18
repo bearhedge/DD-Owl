@@ -382,7 +382,7 @@
           <div class="stat-value blue" id="statReports">-</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Findings</div>
+          <div class="stat-label">Confirmed</div>
           <div class="stat-value blue" id="statFindings">-</div>
         </div>
         <div class="stat-card">
@@ -531,15 +531,15 @@
           const reviewClass = r.edited_markdown ? 'reviewed' : (r.edit_distance != null ? 'pending' : 'unreviewed');
           const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
 
-          const issues = r.finding_count || 0;
-          const selected = r.selected_finding_count || 0;
+          const findings = r.finding_count || 0;
+          const confirmed = r.selected_finding_count || 0;
           let summaryText;
-          if (issues === 0) {
+          if (findings === 0) {
             summaryText = 'Clean';
-          } else if (selected > 0) {
-            summaryText = `${issues} issues · ${selected} findings`;
+          } else if (confirmed > 0) {
+            summaryText = `${findings} findings · ${confirmed} confirmed`;
           } else {
-            summaryText = `${issues} issues`;
+            summaryText = `${findings} findings`;
           }
 
           return `<tr>
@@ -598,8 +598,8 @@
       // Count selected findings
       const selectedCount = report.findings.filter(f => f.included_in_report === 1).length;
       const issueLabel = selectedCount > 0
-        ? `${report.finding_count} issues · ${selectedCount} findings`
-        : `${report.finding_count} issues`;
+        ? `${report.finding_count} findings · ${selectedCount} confirmed`
+        : `${report.finding_count} findings`;
 
       let html = `
         <div style="font-size:12px; color:#666; margin-bottom:16px;">
