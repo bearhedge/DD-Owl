@@ -393,8 +393,6 @@
 
   <div class="main-content">
     <div class="container">
-      <h1>Feedback Loop</h1>
-
       <!-- Stats ribbon -->
       <div class="stats-ribbon" id="statsRibbon">
         <div class="stat-card">
@@ -402,32 +400,8 @@
           <div class="stat-value blue" id="statReports">-</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">% Reviewed</div>
-          <div class="stat-value blue" id="statReviewed">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Confirmed</div>
-          <div class="stat-value green" id="statConfirmed">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Wrong</div>
-          <div class="stat-value red" id="statWrong">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Missed</div>
-          <div class="stat-value amber" id="statMissed">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Accuracy</div>
-          <div class="stat-value green" id="statAccuracy">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Miss Rate</div>
-          <div class="stat-value amber" id="statMissRate">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Avg Edit</div>
-          <div class="stat-value amber" id="statEdit">-</div>
+          <div class="stat-label">Findings</div>
+          <div class="stat-value blue" id="statFindings">-</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Avg Quality</div>
@@ -438,7 +412,7 @@
       <!-- Search + Clear All -->
       <div class="search-row">
         <input type="text" class="search-bar" id="searchInput" placeholder="Search reports by subject name or content...">
-        <button class="btn danger" onclick="clearAllReports()">Clear All</button>
+        <button class="btn danger" onclick="clearAllReports()">clear all</button>
       </div>
 
       <!-- Reports table -->
@@ -552,17 +526,7 @@
       try {
         const s = await fetchStats();
         document.getElementById('statReports').textContent = s.totalReports;
-        document.getElementById('statReviewed').textContent =
-          s.totalReports > 0 ? (s.reviewedReports / s.totalReports * 100).toFixed(0) + '%' : '-';
-        document.getElementById('statConfirmed').textContent = s.confirmed;
-        document.getElementById('statWrong').textContent = s.wrong;
-        document.getElementById('statMissed').textContent = s.missed;
-        document.getElementById('statAccuracy').textContent =
-          s.confirmed + s.wrong > 0 ? (s.accuracy * 100).toFixed(1) + '%' : '-';
-        document.getElementById('statMissRate').textContent =
-          s.confirmed + s.missed > 0 ? (s.missRate * 100).toFixed(1) + '%' : '-';
-        document.getElementById('statEdit').textContent =
-          s.avgEditDistance > 0 ? (s.avgEditDistance * 100).toFixed(1) + '%' : '-';
+        document.getElementById('statFindings').textContent = s.totalFindings;
         document.getElementById('statQuality').textContent =
           s.avgQualityRating > 0 ? s.avgQualityRating.toFixed(1) + '/10' : '-';
       } catch (e) {
@@ -589,19 +553,8 @@
           const reviewClass = r.edited_markdown ? 'reviewed' : (r.edit_distance != null ? 'pending' : 'unreviewed');
           const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
 
-          // Build summary: "{scanned} scanned · {count} flags: headline1, headline2, ..."
-          const scanned = (r.total_search_results || 0).toLocaleString();
           const count = r.finding_count || 0;
-          const headlines = r.headlines || [];
-          let summaryText = `${scanned} scanned · ${count} flag${count !== 1 ? 's' : ''}`;
-          if (count === 0) {
-            summaryText += ': Clean';
-          } else if (headlines.length > 0) {
-            const shown = headlines.slice(0, 3).map(h => escapeHtml(h));
-            const extra = headlines.length - 3;
-            summaryText += ': ' + shown.join(', ');
-            if (extra > 0) summaryText += `, +${extra} more`;
-          }
+          const summaryText = count === 0 ? 'Clean' : `${count} finding${count !== 1 ? 's' : ''}`;
 
           return `<tr>
             <td onclick="openReport(${r.id})"><strong>${escapeHtml(r.subject_name)}</strong></td>
