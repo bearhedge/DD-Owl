@@ -59,7 +59,7 @@ in prison and fined CNY 40.37 million.^2^ Co-conspirators included Wang Xiangdon
 
 ### Database (GCP PostgreSQL)
 
-- **Host**: 35.194.142.132
+- **Host**: 104.199.131.94
 - **Database**: ddowl
 - **Tables**: Reference tables for jurisdictions, authorities, issue types (currently unused - simplified approach preferred)
 

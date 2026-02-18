@@ -284,7 +284,7 @@ async function runImport(options: { test?: number; resume?: boolean; saveToDb?: 
   // Database connection (optional)
   let pool: pg.Pool | null = null;
   if (saveToDb) {
-    const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:DOMRD7x7ECUny4Pc615y9w==@35.194.142.132:5432/ddowl';
+    const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:DOMRD7x7ECUny4Pc615y9w==@104.199.131.94:5432/ddowl';
     pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
     console.log('Connected to database');
   }

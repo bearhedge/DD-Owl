@@ -4,7 +4,7 @@ const { Pool } = pg;
 
 // Database connection
 const pool = new Pool({
-  host: process.env.DB_HOST || '35.194.142.132',
+  host: process.env.DB_HOST || '104.199.131.94',
   port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'ddowl',
   user: process.env.DB_USER || 'postgres',

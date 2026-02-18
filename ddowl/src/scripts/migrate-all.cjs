@@ -7,7 +7,7 @@ const pg = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const DB_URL = process.env.DATABASE_URL || 'postgresql://postgres:DOMRD7x7ECUny4Pc615y9w==@35.194.142.132:5432/ddowl';
+const DB_URL = process.env.DATABASE_URL || 'postgresql://postgres:DOMRD7x7ECUny4Pc615y9w==@104.199.131.94:5432/ddowl';
 const HISTORICAL_CSV = path.join(__dirname, '../../public/baseline-enriched.csv');
 const ACTIVE_CSV = path.join(__dirname, '../../public/active-deals.csv');
 
