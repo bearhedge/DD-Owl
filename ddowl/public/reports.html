@@ -349,23 +349,6 @@
     .save-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
     .save-status { font-size: 11px; color: #2ed573; }
 
-    /* Learnings section */
-    .learnings-section {
-      margin-top: 32px;
-      padding-top: 24px;
-      border-top: 1px solid #222;
-    }
-    .learnings-section h2 { font-size: 16px; margin-bottom: 16px; }
-    .learning-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .learning-card {
-      background: #111;
-      border: 1px solid #222;
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .learning-card h3 { font-size: 13px; color: #4a9eff; margin-bottom: 10px; }
-    .learning-item { font-size: 12px; color: #888; margin-bottom: 4px; }
-    .learning-item strong { color: #e0e0e0; }
 
     .empty-state {
       text-align: center;
@@ -375,7 +358,6 @@
     }
 
     @media (max-width: 768px) {
-      .learning-grid { grid-template-columns: 1fr; }
       .stats-ribbon { gap: 8px; }
       .stat-card { min-width: 90px; padding: 8px 12px; }
       .diff-container { grid-template-columns: 1fr; }
@@ -434,11 +416,6 @@
         No reports yet. Run a screening from the <a href="/" style="color:#4a9eff;">Screening</a> page.
       </div>
 
-      <!-- Learnings -->
-      <div class="learnings-section" id="learningsSection" style="display:none;">
-        <h2>What DD Owl Has Learned</h2>
-        <div class="learning-grid" id="learningsGrid"></div>
-      </div>
 
     </div>
   </div>
@@ -468,7 +445,6 @@
     }
     async function fetchReport(id) { return (await fetch(`/api/reports/${id}`)).json(); }
     async function fetchStats() { return (await fetch('/api/reports/stats')).json(); }
-    async function fetchLearnings() { return (await fetch('/api/reports/learnings')).json(); }
     async function apiDeleteReport(id) {
       return fetch(`/api/reports/${id}`, { method: 'DELETE' });
     }
@@ -508,7 +484,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       loadStats();
       loadReports();
-      loadLearnings();
 
       document.getElementById('searchInput').addEventListener('input', (e) => {
         clearTimeout(searchTimeout);
@@ -721,7 +696,6 @@
       // Refresh stats and list in case verdicts changed
       loadStats();
       loadReports(document.getElementById('searchInput').value);
-      loadLearnings();
     }
 
     // --- Copy modal content ---
@@ -793,64 +767,6 @@
       setTimeout(() => { document.getElementById('saveStatus').textContent = ''; }, 3000);
     }
 
-    // --- Learnings ---
-    async function loadLearnings() {
-      try {
-        const l = await fetchLearnings();
-        const section = document.getElementById('learningsSection');
-        const grid = document.getElementById('learningsGrid');
-
-        const hasData = l.wrongPatterns.length > 0 || l.missedPatterns.length > 0
-          || l.topSources.length > 0 || l.noiseSources.length > 0;
-
-        if (!hasData) { section.style.display = 'none'; return; }
-        section.style.display = 'block';
-
-        let html = '';
-
-        if (l.wrongPatterns.length > 0) {
-          html += `<div class="learning-card">
-            <h3>Wrong Flag Patterns</h3>
-            ${l.wrongPatterns.map(p => {
-              const labels = { name_collision: 'Wrong person', outdated: 'Outdated', not_relevant: 'Not relevant', other: 'Other' };
-              return `<div class="learning-item"><strong>${labels[p.reason] || p.reason}</strong>: ${p.count} times (${p.percentage.toFixed(0)}%)</div>`;
-            }).join('')}
-          </div>`;
-        }
-
-        if (l.missedPatterns.length > 0) {
-          html += `<div class="learning-card">
-            <h3>Commonly Missed</h3>
-            ${l.missedPatterns.map(p => `<div class="learning-item"><strong>${p.eventType}</strong>: ${p.count} times</div>`).join('')}
-          </div>`;
-        }
-
-        if (l.topSources.length > 0) {
-          html += `<div class="learning-card">
-            <h3>Most Reliable Sources</h3>
-            ${l.topSources.map(s => `<div class="learning-item"><strong>${s.domain}</strong>: ${(s.reliability * 100).toFixed(0)}% reliable (${s.sampleSize} reviews)</div>`).join('')}
-          </div>`;
-        }
-
-        if (l.noiseSources.length > 0) {
-          html += `<div class="learning-card">
-            <h3>Noisy Sources</h3>
-            ${l.noiseSources.map(s => `<div class="learning-item"><strong>${s.domain}</strong>: ${s.wrongCount} wrong vs ${s.confirmedCount} confirmed</div>`).join('')}
-          </div>`;
-        }
-
-        if (l.editDistanceTrend.length > 1) {
-          html += `<div class="learning-card">
-            <h3>Edit Distance Trend</h3>
-            ${l.editDistanceTrend.map(t => `<div class="learning-item">${t.month}: <strong>${(t.avg * 100).toFixed(1)}%</strong></div>`).join('')}
-          </div>`;
-        }
-
-        grid.innerHTML = html;
-      } catch (e) {
-        console.error('Failed to load learnings:', e);
-      }
-    }
 
     // --- Delete ---
     async function deleteSingleReport(id, event) {
@@ -867,7 +783,6 @@
       await apiDeleteAllReports();
       loadStats();
       loadReports();
-      loadLearnings();
     }
 
     // --- Util ---
