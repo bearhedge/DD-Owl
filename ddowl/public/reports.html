@@ -727,27 +727,16 @@
         </div>
       `;
 
-      // Report tabs: Generated (read-only) + Final (editable)
-      const aiText = report.report_markdown || '';
+      // Report: single editable textarea for final report
       const finalText = report.edited_markdown || '';
 
       html += `
         <div class="report-section">
-          <h3>Report${report.edit_distance != null ? ` <span style="color:#666; font-size:12px;">(edit distance: ${(report.edit_distance * 100).toFixed(1)}%)</span>` : ''}</h3>
-          <div class="tab-bar">
-            <button class="tab-btn active" onclick="switchTab('generated', this)">Generated</button>
-            <button class="tab-btn" onclick="switchTab('final', this)">Final</button>
-          </div>
-          <div class="tab-content active" id="tab-generated">
-            ${aiText ? `<div class="report-readonly">${escapeHtml(aiText)}</div>` : '<div style="color:#444; font-size:12px;">No generated report available.</div>'}
-          </div>
-          <div class="tab-content" id="tab-final">
-            <textarea class="report-editor" id="reportEditor">${escapeHtml(finalText)}</textarea>
-            <div class="save-row">
-              <button class="btn primary" onclick="saveReport()">Save</button>
-              <span class="save-status" id="saveStatus"></span>
-            </div>
-            <div class="edit-distance-display" id="editDistanceDisplay"></div>
+          <h3>Report</h3>
+          <textarea class="report-editor" id="reportEditor" placeholder="Paste your final report here...">${escapeHtml(finalText)}</textarea>
+          <div class="save-row">
+            <button class="btn primary" onclick="saveReport()">Save</button>
+            <span class="save-status" id="saveStatus"></span>
           </div>
         </div>
       `;
@@ -763,16 +752,6 @@
       loadStats();
       loadReports(document.getElementById('searchInput').value);
       loadLearnings();
-    }
-
-    // --- Tab switching ---
-    function switchTab(tabId, btn) {
-      if (btn.disabled) return;
-      const section = btn.closest('.report-section');
-      section.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      section.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-' + tabId).classList.add('active');
     }
 
     // --- Quality rating ---
