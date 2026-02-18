@@ -5,7 +5,7 @@
 
 import pg from 'pg';
 import { extractBankDataFromPdf } from './hkex-scraper.js';
-import { isCompanyName } from './bank-normalizer.js';
+import { isCompanyName, normalizeBankName } from './bank-normalizer.js';
 import * as https from 'https';
 import * as fs from 'fs';
 
@@ -94,13 +94,14 @@ async function main() {
 
         // Use FULL bank name as-is from PDF (no normalization)
         const fullBankName = bank.bank;
+        const { canonical: shortName } = normalizeBankName(fullBankName);
 
-        // Upsert bank with full name
+        // Upsert bank with full name and short_name
         const bankResult = await pool.query(`
-          INSERT INTO banks (name) VALUES ($1)
-          ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+          INSERT INTO banks (name, short_name) VALUES ($1, $2)
+          ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name)
           RETURNING id
-        `, [fullBankName]);
+        `, [fullBankName, shortName]);
         const bankId = bankResult.rows[0].id;
 
         // Insert appointment

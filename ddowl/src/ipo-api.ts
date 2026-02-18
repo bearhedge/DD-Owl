@@ -6,6 +6,7 @@
 
 import { Router, Request, Response } from 'express';
 import { pool } from './db/index.js';
+import { normalizeBankName } from './bank-normalizer.js';
 
 export const ipoRouter = Router();
 
@@ -346,13 +347,14 @@ ipoRouter.post('/scrape', async (req: Request, res: Response) => {
 
             // Insert bank appointments
             for (const bank of item.banks) {
-              // Upsert bank
+              // Upsert bank with short_name from normalizer
+              const { canonical: shortName } = normalizeBankName(bank.bank);
               const bankResult = await pool.query(`
-                INSERT INTO banks (name)
-                VALUES ($1)
-                ON CONFLICT (name) DO NOTHING
+                INSERT INTO banks (name, short_name)
+                VALUES ($1, $2)
+                ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name)
                 RETURNING id
-              `, [bank.bank]);
+              `, [bank.bank, shortName]);
 
               let bankId = bankResult.rows[0]?.id;
               if (!bankId) {
@@ -528,12 +530,13 @@ ipoRouter.post('/scrape-oc', async (req: Request, res: Response) => {
 
           // Insert bank appointments
           for (const bank of deal.banks) {
+            const { canonical: shortName } = normalizeBankName(bank.bank);
             const bankResult = await pool.query(`
-              INSERT INTO banks (name)
-              VALUES ($1)
-              ON CONFLICT (name) DO UPDATE SET updated_at = NOW()
+              INSERT INTO banks (name, short_name)
+              VALUES ($1, $2)
+              ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name), updated_at = NOW()
               RETURNING id
-            `, [bank.bank]);
+            `, [bank.bank, shortName]);
             const bankId = bankResult.rows[0].id;
 
             await pool.query(`
@@ -648,11 +651,12 @@ ipoRouter.post('/rescrape-missing-banks', async (req: Request, res: Response) =>
 
       if (banks.length > 0) {
         for (const bank of banks) {
+          const { canonical: shortName } = normalizeBankName(bank.bank);
           const bankResult = await pool.query(`
-            INSERT INTO banks (name) VALUES ($1)
-            ON CONFLICT (name) DO UPDATE SET updated_at = NOW()
+            INSERT INTO banks (name, short_name) VALUES ($1, $2)
+            ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name), updated_at = NOW()
             RETURNING id
-          `, [bank.bank]);
+          `, [bank.bank, shortName]);
           const bankId = bankResult.rows[0].id;
 
           await pool.query(`
@@ -753,6 +757,41 @@ ipoRouter.post('/check-listings', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Check listings error:', err);
     res.status(500).json({ error: 'Failed to check listings' });
+  }
+});
+
+/**
+ * POST /api/ipo/populate-bank-short-names
+ * Backfills short_name for all banks using the KNOWN_BANKS normalizer
+ */
+ipoRouter.post('/populate-bank-short-names', async (req: Request, res: Response) => {
+  try {
+    const banksResult = await pool.query(`SELECT id, name FROM banks WHERE short_name IS NULL`);
+    const banks = banksResult.rows;
+
+    if (banks.length === 0) {
+      res.json({ message: 'All banks already have short names', updated: 0 });
+      return;
+    }
+
+    let updated = 0;
+    const mappings: { name: string; shortName: string }[] = [];
+
+    for (const bank of banks) {
+      const { canonical } = normalizeBankName(bank.name);
+      await pool.query(`UPDATE banks SET short_name = $1, updated_at = NOW() WHERE id = $2`, [canonical, bank.id]);
+      mappings.push({ name: bank.name, shortName: canonical });
+      updated++;
+    }
+
+    res.json({
+      message: `Updated ${updated}/${banks.length} bank short names`,
+      updated,
+      mappings,
+    });
+  } catch (err) {
+    console.error('Populate bank short names error:', err);
+    res.status(500).json({ error: 'Failed to populate bank short names' });
   }
 });
 

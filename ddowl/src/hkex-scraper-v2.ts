@@ -15,6 +15,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import pg from 'pg';
 import { extractChineseNameFromText } from './extract-chinese-names.js';
+import { normalizeBankName } from './bank-normalizer.js';
 
 const { Pool } = pg;
 
@@ -595,13 +596,14 @@ export async function saveToDatabase(deals: ScrapedDeal[], pool: InstanceType<ty
 
       // Upsert banks and appointments
       for (const bank of deal.banks) {
-        // Upsert bank
+        // Upsert bank with short_name from normalizer
+        const { canonical: shortName } = normalizeBankName(bank.bank);
         const bankResult = await pool.query(`
-          INSERT INTO banks (name)
-          VALUES ($1)
-          ON CONFLICT (name) DO NOTHING
+          INSERT INTO banks (name, short_name)
+          VALUES ($1, $2)
+          ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name)
           RETURNING id
-        `, [bank.bank]);
+        `, [bank.bank, shortName]);
 
         let bankId = bankResult.rows[0]?.id;
         if (!bankId) {

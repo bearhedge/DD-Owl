@@ -496,13 +496,14 @@ async function saveDealToDatabase(
 
     // Insert banks and appointments
     for (const bank of banks) {
-      // Upsert bank
+      // Upsert bank with short_name
+      const { canonical: shortName } = normalizeBankName(bank.bank);
       const bankResult = await client.query(`
-        INSERT INTO banks (name)
-        VALUES ($1)
-        ON CONFLICT (name) DO UPDATE SET updated_at = NOW()
+        INSERT INTO banks (name, short_name)
+        VALUES ($1, $2)
+        ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name), updated_at = NOW()
         RETURNING id
-      `, [bank.bank]);
+      `, [bank.bank, shortName]);
 
       let bankId = bankResult.rows[0]?.id;
       if (!bankId) {
