@@ -3354,6 +3354,20 @@ app.post('/api/session/:sessionId/generate-report', async (req: Request, res: Re
       const result = await pgPool.query('UPDATE dd_reports SET report_markdown = $1 WHERE run_id = $2', [fullReport, sessionId]);
       if (result.rowCount && result.rowCount > 0) {
         console.log(`[REPORTS] Saved report markdown for run ${sessionId}`);
+
+        // Mark user-selected findings: reset all to 0, then set selected to 1
+        const { rows: [reportRow] } = await pgPool.query('SELECT id FROM dd_reports WHERE run_id = $1', [sessionId]);
+        if (reportRow) {
+          const reportId = reportRow.id;
+          await pgPool.query('UPDATE dd_findings SET included_in_report = 0 WHERE report_id = $1', [reportId]);
+          for (const f of findings) {
+            await pgPool.query(
+              'UPDATE dd_findings SET included_in_report = 1 WHERE report_id = $1 AND headline = $2 AND summary = $3',
+              [reportId, f.headline, f.summary]
+            );
+          }
+          console.log(`[REPORTS] Marked ${findings.length} selected findings for report ${reportId}`);
+        }
       } else {
         console.warn(`[REPORTS] No report found with run_id=${sessionId} — markdown not saved`);
       }

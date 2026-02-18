@@ -557,12 +557,15 @@
           const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
 
           const issues = r.finding_count || 0;
-          let findings = issues;
-          try {
-            const stats = JSON.parse(r.screening_stats_json || '{}');
-            if (stats.consolidated && stats.consolidated.after != null) findings = stats.consolidated.after;
-          } catch {}
-          const summaryText = issues === 0 ? 'Clean' : `${issues} issues · ${findings} findings`;
+          const selected = r.selected_finding_count || 0;
+          let summaryText;
+          if (issues === 0) {
+            summaryText = 'Clean';
+          } else if (selected > 0) {
+            summaryText = `${issues} issues · ${selected} findings`;
+          } else {
+            summaryText = `${issues} issues`;
+          }
 
           return `<tr>
             <td onclick="openReport(${r.id})"><strong>${escapeHtml(r.subject_name)}</strong></td>
@@ -617,9 +620,15 @@
         } catch { /* ignore */ }
       }
 
+      // Count selected findings
+      const selectedCount = report.findings.filter(f => f.included_in_report === 1).length;
+      const issueLabel = selectedCount > 0
+        ? `${report.finding_count} issues · ${selectedCount} findings`
+        : `${report.finding_count} issues`;
+
       let html = `
         <div style="font-size:12px; color:#666; margin-bottom:16px;">
-          ${date} | ${report.finding_count} findings | ${report.queries_executed} queries | $${report.cost_usd.toFixed(2)}
+          ${date} | ${issueLabel} | ${report.queries_executed} queries | $${report.cost_usd.toFixed(2)}
           ${nameVars.length > 1 ? ' | Variants: ' + nameVars.map(v => escapeHtml(v)).join(', ') : ''}
         </div>
         ${statsHtml}

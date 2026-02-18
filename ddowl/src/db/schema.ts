@@ -251,7 +251,7 @@ export const ddFindings = pgTable('dd_findings', {
   dateRange: text('date_range'),
   sourceCount: integer('source_count').notNull().default(1),
   sourceUrls: text('source_urls').notNull().default('[]'),
-  includedInReport: integer('included_in_report').notNull().default(1),
+  includedInReport: integer('included_in_report').notNull().default(0),
   humanVerdict: text('human_verdict'),
   wrongReason: text('wrong_reason'),
   createdAt: timestamp('created_at').defaultNow(),

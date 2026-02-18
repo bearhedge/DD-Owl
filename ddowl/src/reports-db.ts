@@ -194,8 +194,8 @@ export async function saveReport(input: SaveReportInput): Promise<number> {
 
     for (const f of input.findings) {
       await client.query(`
-        INSERT INTO dd_findings (report_id, severity, headline, event_type, summary, date_range, source_count, source_urls)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO dd_findings (report_id, severity, headline, event_type, summary, date_range, source_count, source_urls, included_in_report)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
       `, [reportId, f.severity, f.headline, f.eventType, f.summary,
           f.dateRange || null, f.sourceCount, JSON.stringify(f.sourceUrls)]);
     }
@@ -273,8 +273,20 @@ async function attachHeadlines(reports: any[]): Promise<void> {
     if (!headlineMap.has(row.report_id)) headlineMap.set(row.report_id, []);
     headlineMap.get(row.report_id)!.push(row.headline);
   }
+
+  // Count user-selected findings per report
+  const { rows: selectedRows } = await pool.query(
+    'SELECT report_id, COUNT(*)::int as count FROM dd_findings WHERE report_id = ANY($1::int[]) AND included_in_report = 1 GROUP BY report_id',
+    [ids]
+  );
+  const selectedMap = new Map<number, number>();
+  for (const row of selectedRows) {
+    selectedMap.set(row.report_id, row.count);
+  }
+
   for (const r of reports) {
     r.headlines = headlineMap.get(r.id) || [];
+    r.selected_finding_count = selectedMap.get(r.id) || 0;
     r.findings = [];
     r.missed_flags = [];
   }
@@ -361,7 +373,7 @@ export async function getStats(): Promise<Stats> {
     SELECT
       (SELECT count(*) FROM dd_reports) as "totalReports",
       (SELECT count(DISTINCT r.id) FROM dd_reports r JOIN dd_findings f ON f.report_id = r.id WHERE f.human_verdict IS NOT NULL) as "reviewedReports",
-      (SELECT COALESCE(SUM((screening_stats_json::jsonb->'consolidated'->>'after')::int), 0) FROM dd_reports WHERE screening_stats_json IS NOT NULL) as "totalFindings",
+      (SELECT count(*) FROM dd_findings WHERE included_in_report = 1) as "totalFindings",
       (SELECT count(*) FROM dd_findings WHERE human_verdict = 'CONFIRMED') as confirmed,
       (SELECT count(*) FROM dd_findings WHERE human_verdict = 'WRONG') as wrong,
       (SELECT count(*) FROM dd_missed_flags) as missed,
@@ -553,7 +565,7 @@ const SCHEMA = `
     date_range TEXT,
     source_count INTEGER NOT NULL DEFAULT 1,
     source_urls TEXT NOT NULL DEFAULT '[]',
-    included_in_report INTEGER NOT NULL DEFAULT 1,
+    included_in_report INTEGER NOT NULL DEFAULT 0,
     human_verdict TEXT,
     wrong_reason TEXT,
     created_at TIMESTAMP DEFAULT NOW()
