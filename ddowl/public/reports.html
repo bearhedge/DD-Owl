@@ -556,12 +556,13 @@
           const reviewClass = r.edited_markdown ? 'reviewed' : (r.edit_distance != null ? 'pending' : 'unreviewed');
           const reviewText = r.edited_markdown ? 'Reviewed' : 'Pending';
 
-          let count = r.finding_count || 0;
+          const issues = r.finding_count || 0;
+          let findings = issues;
           try {
             const stats = JSON.parse(r.screening_stats_json || '{}');
-            if (stats.consolidated && stats.consolidated.after != null) count = stats.consolidated.after;
+            if (stats.consolidated && stats.consolidated.after != null) findings = stats.consolidated.after;
           } catch {}
-          const summaryText = count === 0 ? 'Clean' : `${count} finding${count !== 1 ? 's' : ''}`;
+          const summaryText = issues === 0 ? 'Clean' : `${issues} issues · ${findings} findings`;
 
           return `<tr>
             <td onclick="openReport(${r.id})"><strong>${escapeHtml(r.subject_name)}</strong></td>
