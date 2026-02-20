@@ -723,13 +723,14 @@ ipoRouter.post('/extract-chinese-names', async (req: Request, res: Response) => 
       FROM deals d
       JOIN companies c ON c.id = d.company_id
       LEFT JOIN oc_announcements oc ON oc.deal_id = d.id
-      WHERE d.status = 'active' AND c.name_cn IS NULL AND oc.pdf_url IS NOT NULL
+      WHERE d.status IN ('active', 'withdrawn', 'lapsed', 'rejected')
+        AND c.name_cn IS NULL AND oc.pdf_url IS NOT NULL
       ORDER BY d.filing_date DESC
     `);
 
     const deals = missingResult.rows;
     if (deals.length === 0) {
-      res.json({ message: 'All active deals already have Chinese names', count: 0 });
+      res.json({ message: 'All deals already have Chinese names', count: 0 });
       return;
     }
 

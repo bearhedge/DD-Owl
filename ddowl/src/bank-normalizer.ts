@@ -59,7 +59,8 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'Essence Corporate Finance': ['Essence Corporate Finance'],
   'Essence International Securities': ['Essence International Securities'],
   'Essence Securities': ['Essence Securities', 'Essence'],
-  'SPDB': ['SPDB', 'Shanghai Pudong Development Bank'],
+  'SPDB': ['SPDB', 'Shanghai Pudong Development Bank', 'SPDB International'],
+  'China Merchants Securities': ['China Merchants Securities', 'CMS'],
   'Tiger Brokers': ['Tiger Brokers', 'Tiger Securities'],
   'Futu': ['Futu', 'Futu Securities'],
 
@@ -109,6 +110,7 @@ const BANK_KEYWORDS = [
   'Commerzbank', 'Santander', 'BBVA', 'ABN AMRO',
   // Online brokers
   'Longbridge', 'Long Bridge', '9F Prime', '9F Primasia', 'Primasia', 'ZINVEST',
+  'China Merchants Securities', 'SPDB International',
 ];
 
 // Keywords that indicate it's a company (IPO applicant), NOT a bank

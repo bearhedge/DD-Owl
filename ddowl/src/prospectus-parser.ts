@@ -1237,6 +1237,146 @@ export async function extractBanksFromProspectus(pdfBuffer: Buffer): Promise<{
 }
 
 /**
+ * Pricing data extracted from prospectus
+ */
+export interface PricingExtraction {
+  priceHkd: number | null;
+  sharesOffered: number | null;
+  sizeHkdm: number | null;
+  dealType: string | null;
+  rawPriceText: string;
+  rawSharesText: string;
+}
+
+/**
+ * Extract pricing data from prospectus PDF (first ~10 pages)
+ * Prospectus cover pages follow standardized HKEX format with offer price and shares
+ */
+export async function extractPricingFromProspectus(pdfBuffer: Buffer): Promise<PricingExtraction> {
+  const result: PricingExtraction = {
+    priceHkd: null,
+    sharesOffered: null,
+    sizeHkdm: null,
+    dealType: null,
+    rawPriceText: '',
+    rawSharesText: '',
+  };
+
+  try {
+    const uint8Array = new Uint8Array(pdfBuffer);
+    const parser = new PDFParse(uint8Array);
+    const parsed = await parser.getText();
+
+    // Use first 10 pages (cover + summary pages where pricing info lives)
+    const firstPages = parsed.pages.slice(0, 10).map(p => p.text).join('\n');
+    // Clean up whitespace for matching
+    const text = firstPages.replace(/\r\n/g, '\n');
+
+    // ── Deal Type ──
+    // Check the title/cover for deal type
+    if (/GLOBAL\s+OFFERING/i.test(text)) {
+      result.dealType = 'Global offering';
+    } else if (/INTRODUCTION/i.test(text) && !/GLOBAL\s+OFFERING/i.test(text)) {
+      // "Introduction" listings have no offering/pricing
+      result.dealType = 'Introduction';
+      return result;
+    } else if (/PLACING/i.test(text) && !/GLOBAL\s+OFFERING/i.test(text)) {
+      result.dealType = 'Placing';
+    } else if (/SHARE\s+OFFER/i.test(text)) {
+      result.dealType = 'Share offer';
+    } else if (/PUBLIC\s+OFFER/i.test(text)) {
+      result.dealType = 'Public offer';
+    }
+
+    // ── Offer Price ──
+    // Pattern 1: "Offer Price : HK$12.80 per Offer Share" or "Final Offer Price: HK$X.XX"
+    const pricePatterns = [
+      /(?:Final\s+)?(?:Offer|Subscription)\s*Price\s*[:：]?\s*HK\$([\d,.]+)\s*per/i,
+      /(?:Final\s+)?(?:Offer|Subscription)\s*Price\s*[:：]?\s*HK\$([\d,.]+)/i,
+      // Range format: "HK$X.XX to HK$Y.YY" — use the higher (final price)
+      /(?:Final\s+)?(?:Offer|Subscription)\s*Price\s*[:：]?\s*HK\$[\d,.]+\s*to\s*HK\$([\d,.]+)/i,
+      // Cover page format: just "HK$12.80 per Offer Share" near stock code
+      /HK\$([\d,.]+)\s*per\s*(?:Offer\s*)?Share/i,
+      // Price per H share
+      /HK\$([\d,.]+)\s*per\s*H\s*Share/i,
+    ];
+
+    for (const pattern of pricePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const priceStr = match[1].replace(/,/g, '');
+        const price = parseFloat(priceStr);
+        if (price > 0 && price < 100000) {
+          result.priceHkd = price;
+          result.rawPriceText = match[0].trim();
+          break;
+        }
+      }
+    }
+
+    // ── Shares Offered ──
+    const sharesPatterns = [
+      // "Number of Offer Shares : 123,456,000 Shares"
+      /(?:Number\s+of|Total)\s*(?:Offer\s*)?Shares[^:：]*[:：]?\s*([\d,]+)\s*(?:Offer\s*)?Shares/i,
+      // "123,456,000 Offer Shares" standalone
+      /\b([\d,]{5,})\s*(?:Offer|New|Sale)?\s*Shares\s*(?:are|will|under|to|being|comprised)/i,
+      // "Offer Shares: 123,456,000"
+      /Offer\s*Shares\s*[:：]\s*([\d,]+)/i,
+      // "global offering of 123,456,000"
+      /(?:global\s+)?offering\s+of\s+([\d,]+)\s*(?:Offer\s*)?Shares/i,
+      // "123,456,000 Shares" near "Global Offering"
+      /Global\s+Offering[\s\S]{0,200}?\b([\d,]{5,})\s*(?:Offer\s*)?Shares/i,
+      // "X Shares ... being offered" format
+      /\b([\d,]{5,})\s*(?:H\s+)?Shares\s+(?:are\s+)?(?:being\s+)?(?:offered|proposed)/i,
+    ];
+
+    for (const pattern of sharesPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const sharesStr = match[1].replace(/,/g, '');
+        const shares = parseInt(sharesStr);
+        // Reasonable range: at least 1M shares, less than 100B
+        if (shares >= 1_000_000 && shares < 100_000_000_000) {
+          result.sharesOffered = shares;
+          result.rawSharesText = match[0].trim().slice(0, 200);
+          break;
+        }
+      }
+    }
+
+    // ── Size (HKD millions) ──
+    // Calculate from price × shares if both available
+    if (result.priceHkd && result.sharesOffered) {
+      result.sizeHkdm = Math.round((result.priceHkd * result.sharesOffered / 1_000_000) * 1000) / 1000;
+    } else {
+      // Fallback: look for "Gross Proceeds" or total offering size
+      const sizePatterns = [
+        /(?:Gross|Net|Total)\s*(?:Estimated\s*)?Proceeds[^.]*?HK\$([\d,.]+)\s*(?:million|m\b)/i,
+        /(?:Gross|Net|Total)\s*(?:Estimated\s*)?Proceeds[^.]*?approximately\s*HK\$([\d,.]+)\s*(?:million|m\b)/i,
+        /aggregate\s+offering\s+size[^.]*?HK\$([\d,.]+)\s*(?:million|m\b)/i,
+      ];
+
+      for (const pattern of sizePatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          const sizeStr = match[1].replace(/,/g, '');
+          const size = parseFloat(sizeStr);
+          if (size > 0 && size < 1_000_000) {
+            result.sizeHkdm = size;
+            break;
+          }
+        }
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error extracting pricing from prospectus:', error);
+    return result;
+  }
+}
+
+/**
  * Test the parser on a sample PDF
  */
 async function test() {

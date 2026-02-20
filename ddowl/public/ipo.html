@@ -724,6 +724,7 @@
 
           return {
             company: d.company_name || '',
+            companyCn: d.company_name_cn || '',
             ocDate: dateStr,
             sponsors,
             others,
@@ -985,6 +986,7 @@
           // Include date/year in searchable fields
           const searchFields = [
             row.company,
+            row.companyCn,
             row.ocDate,
             ...row.sponsors,
             ...row.others
@@ -1086,9 +1088,9 @@
     function renderActiveCell(row, col) {
       switch (col.id) {
         case 'company':
-          // Note: HKEX URLs for OC announcements are currently broken, so no link
-          const companyHtml = escapeHtml((row.company || '').replace(/Co\.,\s*Ltd\.?/gi, 'Co. Ltd.'));
-          return `<td class="company-name">${companyHtml}</td>`;
+          const activeDisplayHtml = formatCompanyName(row.company, row.companyCn, true);
+          const activePlainName = formatCompanyName(row.company, row.companyCn, false);
+          return `<td class="company-name" title="${escapeHtml(activePlainName)}">${activeDisplayHtml}</td>`;
         case 'ocDate':
           return `<td class="date-cell">${formatDate(row.ocDate)}</td>`;
         case 'sponsors':
@@ -1144,6 +1146,7 @@
 
           return {
             company: d.company_name || '',
+            companyCn: d.company_name_cn || '',
             status: d.status || '',
             ocDate: dateStr,
             sponsors,
@@ -1167,6 +1170,7 @@
         if (search) {
           const searchFields = [
             row.company,
+            row.companyCn,
             row.status,
             row.ocDate,
             ...row.sponsors,
@@ -1268,8 +1272,9 @@
     function renderOtherCell(row, col) {
       switch (col.id) {
         case 'company':
-          const companyHtml = escapeHtml((row.company || '').replace(/Co\.,\s*Ltd\.?/gi, 'Co. Ltd.'));
-          return `<td class="company-name">${companyHtml}</td>`;
+          const otherDisplayHtml = formatCompanyName(row.company, row.companyCn, true);
+          const otherPlainName = formatCompanyName(row.company, row.companyCn, false);
+          return `<td class="company-name" title="${escapeHtml(otherPlainName)}">${otherDisplayHtml}</td>`;
         case 'status':
           const statusClass = 'status-' + (row.status || '').toLowerCase();
           return `<td><span class="status-badge ${statusClass}">${escapeHtml(row.status)}</span></td>`;
