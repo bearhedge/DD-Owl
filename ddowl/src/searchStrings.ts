@@ -232,3 +232,231 @@ export function detectCategory(text: string): string {
   }
   return 'General';
 }
+
+// ============================================================================
+// SUPPLEMENTARY TEMPLATE SYSTEM (Profile-Guided Tier 2 Search)
+// These templates are selected based on entity type, industry, and geography
+// ============================================================================
+
+export interface SupplementaryTemplate {
+  id: string;
+  category: string;
+  template: string;
+  language: 'zh' | 'en';
+  hl: string;
+  triggers: {
+    entityType?: 'company' | 'individual';  // null = both
+    industries?: string[];   // any match activates
+    geographies?: string[];  // any match activates
+    always?: boolean;        // always include for this entity type
+  };
+}
+
+export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
+  // === Company-always templates (run for any company screening) ===
+  {
+    id: 'COMP_GOV_CN',
+    category: 'Internal Governance',
+    template: '"{NAME}" 内部调查|內部調查|开除|開除|违纪|違紀|受贿|受賄|举报|舉報|廉洁|廉潔',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { entityType: 'company', always: true },
+  },
+  {
+    id: 'COMP_GOV_EN',
+    category: 'Internal Governance',
+    template: '"{NAME}" "internal investigation"|fired|discharged|whistleblower|misconduct|"compliance violation"',
+    language: 'en',
+    hl: 'en',
+    triggers: { entityType: 'company', always: true },
+  },
+  {
+    id: 'COMP_TAX_CN',
+    category: 'Tax & Customs',
+    template: '"{NAME}" 逃税|逃稅|避税|避稅|偷税|偷稅|税务|稅務|海关|海關|补缴|補繳|转让定价|轉讓定價',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { entityType: 'company', always: true },
+  },
+  {
+    id: 'COMP_TAX_EN',
+    category: 'Tax & Customs',
+    template: '"{NAME}" "tax evasion"|"tax fraud"|customs|"duty evasion"|"transfer pricing"|"tax avoidance"',
+    language: 'en',
+    hl: 'en',
+    triggers: { entityType: 'company', always: true },
+  },
+
+  // === Individual-always templates (run for any individual screening) ===
+  {
+    id: 'IND_CONDUCT_CN',
+    category: 'Personal Conduct',
+    template: '"{NAME}" 骚扰|騷擾|性侵|猥亵|猥褻|家暴|酒驾|酒駕|失德|品行',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { entityType: 'individual', always: true },
+  },
+  {
+    id: 'IND_CONDUCT_EN',
+    category: 'Personal Conduct',
+    template: '"{NAME}" harassment|assault|"domestic violence"|"drunk driving"|misconduct|"personal conduct"',
+    language: 'en',
+    hl: 'en',
+    triggers: { entityType: 'individual', always: true },
+  },
+  {
+    id: 'IND_PEP_CN',
+    category: 'PEP Screening',
+    template: '"{NAME}" 政治人物|政协|政協|人大|官员|官員|公职|公職|政治献金|政治獻金',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { entityType: 'individual', always: true },
+  },
+  {
+    id: 'IND_PEP_EN',
+    category: 'PEP Screening',
+    template: '"{NAME}" "politically exposed"|PEP|"government official"|"public office"|"political donation"',
+    language: 'en',
+    hl: 'en',
+    triggers: { entityType: 'individual', always: true },
+  },
+
+  // === Industry-triggered: Product Safety ===
+  {
+    id: 'IND_SAFETY_CN',
+    category: 'Product Safety',
+    template: '"{NAME}" 召回|缺陷|刹车失灵|剎車失靈|事故|爆炸|起火|安全隐患|安全隱患|质量问题|質量問題|投诉|投訴|维权|維權|三包',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { industries: ['technology', 'consumer', 'electronics', 'automotive', 'manufacturing', 'appliance', 'food', 'electric vehicle'] },
+  },
+  {
+    id: 'IND_SAFETY_EN',
+    category: 'Product Safety',
+    template: '"{NAME}" recall|defect|malfunction|"brake failure"|accident|fire|explosion|"safety hazard"|"product liability"',
+    language: 'en',
+    hl: 'en',
+    triggers: { industries: ['technology', 'consumer', 'electronics', 'automotive', 'manufacturing', 'appliance', 'food', 'electric vehicle'] },
+  },
+
+  // === Industry-triggered: Privacy & Data ===
+  {
+    id: 'IND_PRIVACY_CN',
+    category: 'Privacy & Data',
+    template: '"{NAME}" 数据泄露|數據洩露|隐私|隱私|个人信息|個人信息|数据安全|數據安全|数据出境|數據出境|信息泄露|信息洩露|审查|審查|监控|監控',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { industries: ['technology', 'telecom', 'fintech', 'social media', 'e-commerce', 'software', 'internet'] },
+  },
+  {
+    id: 'IND_PRIVACY_EN',
+    category: 'Privacy & Data',
+    template: '"{NAME}" "data breach"|privacy|GDPR|"data transfer"|censorship|surveillance|"data protection"|Noyb',
+    language: 'en',
+    hl: 'en',
+    triggers: { industries: ['technology', 'telecom', 'fintech', 'social media', 'e-commerce', 'software', 'internet'] },
+  },
+
+  // === Industry-triggered: ESG ===
+  {
+    id: 'IND_ESG_CN',
+    category: 'ESG & Environment',
+    template: '"{NAME}" 排污|污染|环保|環保|碳排放|劳工|勞工|过劳|過勞|加班|996|强迫劳动|強迫勞動|供应链|供應鏈|血汗',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { industries: ['manufacturing', 'mining', 'energy', 'automotive', 'technology', 'textile', 'electronics', 'consumer'] },
+  },
+  {
+    id: 'IND_ESG_EN',
+    category: 'ESG & Environment',
+    template: '"{NAME}" "forced labor"|"forced labour"|pollution|environmental|Uyghur|overwork|"supply chain"|sweatshop|"modern slavery"|Greenpeace|ESG',
+    language: 'en',
+    hl: 'en',
+    triggers: { industries: ['manufacturing', 'mining', 'energy', 'automotive', 'technology', 'textile', 'electronics', 'consumer'] },
+  },
+
+  // === Industry-triggered: Antitrust ===
+  {
+    id: 'IND_ANTITRUST_CN',
+    category: 'Antitrust & Competition',
+    template: '"{NAME}" 反垄断|反壟斷|垄断|壟斷|不正当竞争|不正當競爭|市场支配|市場支配|排他|搭售|滥用|濫用',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { industries: ['technology', 'telecom', 'e-commerce', 'platform', 'pharmaceutical', 'internet'] },
+  },
+  {
+    id: 'IND_ANTITRUST_EN',
+    category: 'Antitrust & Competition',
+    template: '"{NAME}" antitrust|"anti-competitive"|collusion|cartel|monopoly|"competition authority"|"price fixing"',
+    language: 'en',
+    hl: 'en',
+    triggers: { industries: ['technology', 'telecom', 'e-commerce', 'platform', 'pharmaceutical', 'internet'] },
+  },
+
+  // === Geography-triggered site templates ===
+  {
+    id: 'GEO_INDIA',
+    category: 'India Regulatory',
+    template: 'site:economictimes.indiatimes.com OR site:livemint.com "{NAME}" enforcement|ED|FEMA|customs|CCI|"competition commission"',
+    language: 'en',
+    hl: 'en',
+    triggers: { geographies: ['india', 'indian'] },
+  },
+  {
+    id: 'GEO_CN_REG',
+    category: 'China Regulatory',
+    template: 'site:samr.gov.cn OR site:12315.cn OR site:miit.gov.cn "{NAME}"',
+    language: 'zh',
+    hl: 'zh-cn',
+    triggers: { geographies: ['china', 'chinese', 'mainland', 'prc'] },
+  },
+  {
+    id: 'GEO_EU',
+    category: 'EU Regulatory',
+    template: '"{NAME}" GDPR|"competition"|"consumer protection"|"antitrust" site:ec.europa.eu OR site:edpb.europa.eu',
+    language: 'en',
+    hl: 'en',
+    triggers: { geographies: ['eu', 'europe', 'germany', 'france', 'italy', 'spain', 'netherlands', 'poland', 'european'] },
+  },
+  {
+    id: 'GEO_US',
+    category: 'US Regulatory',
+    template: 'site:ftc.gov OR site:cfpb.gov OR site:epa.gov "{NAME}"',
+    language: 'en',
+    hl: 'en',
+    triggers: { geographies: ['us', 'usa', 'united states', 'american'] },
+  },
+  {
+    id: 'GEO_TW',
+    category: 'Taiwan Regulatory',
+    template: 'site:ftc.gov.tw OR site:tipo.gov.tw "{NAME}"',
+    language: 'zh',
+    hl: 'zh-tw',
+    triggers: { geographies: ['taiwan', 'taiwanese'] },
+  },
+];
+
+/**
+ * Select supplementary templates based on entity profile (industry, geography)
+ * and whether the subject is a company or individual
+ */
+export function selectSupplementaryTemplates(
+  profile: { industry: string[]; nationality: string[] },
+  isCompany: boolean
+): SupplementaryTemplate[] {
+  return SUPPLEMENTARY_REGISTRY.filter(t => {
+    // Entity type gate
+    if (t.triggers.entityType && t.triggers.entityType !== (isCompany ? 'company' : 'individual')) return false;
+    // Always-on for this entity type
+    if (t.triggers.always) return true;
+    // Industry match (fuzzy: "consumer electronics" matches "consumer")
+    if (t.triggers.industries?.some(i =>
+      profile.industry.some(pi => pi.toLowerCase().includes(i))
+    )) return true;
+    // Geography match
+    if (t.triggers.geographies?.some(g =>
+      profile.nationality.some(pn => pn.toLowerCase().includes(g))
+    )) return true;
+    return false;
+  });
+}

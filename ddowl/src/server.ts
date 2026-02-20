@@ -22,7 +22,7 @@ import cors from 'cors';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, isChineseName, detectScript, LANGUAGE_CONFIG } from './searchStrings.js';
+import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, buildSearchQueryWithVariants, isChineseName, detectScript, LANGUAGE_CONFIG, selectSupplementaryTemplates } from './searchStrings.js';
 import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult, searchGoogle } from './searcher.js';
 import { getSerperKeyManager } from './serperKeyManager.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
@@ -299,6 +299,31 @@ async function searchCompanyAdverseMedia(
   return results.filter(r => {
     if (seen.has(r.url)) return false;
     seen.add(r.url);
+    return true;
+  });
+}
+
+/**
+ * Check if the screening subject is a company (vs an individual)
+ */
+function isCompanyScreening(name: string): boolean {
+  const companyIndicators = [
+    /公司$/, /集团$/, /集團$/, /Corp/i, /Inc\b/i, /Ltd/i, /Limited/i, /Group/i,
+    /Corporation/i, /Holdings/i, /Enterprise/i, /Co\.$/i, /LLC/i, /PLC/i,
+    /有限$/, /股份$/
+  ];
+  return companyIndicators.some(p => p.test(name));
+}
+
+/**
+ * Deduplicate companies by normalizing English/Chinese names
+ */
+function deduplicateCompanies(companies: DetectedCompany[]): DetectedCompany[] {
+  const seen = new Set<string>();
+  return companies.filter(c => {
+    const key = (c.chinese || c.english || '').toLowerCase().trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -913,10 +938,11 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
               url: item.url,
               title: item.title,
               severity: item.classification === 'RED' ? 'RED' : 'AMBER',
-              headline: 'Content unavailable - manual review required',
-              summary: `Triage flagged as ${item.classification}: "${item.reason}". Could not fetch page content.`,
+              headline: item.title,
+              summary: `${item.reason}. Source: ${item.title}. Full article content was not accessible at time of screening.`,
               triageClassification: item.classification,
-              fetchFailed: true
+              fetchFailed: true,
+              snippetBased: true
             });
             sendEvent({
               type: 'analyze_result',
@@ -924,8 +950,8 @@ app.get('/api/screen/v3', async (req: Request, res: Response) => {
               title: item.title,
               isAdverse: true,
               severity: item.classification === 'RED' ? 'RED' : 'AMBER',
-              headline: 'Content unavailable - manual review required',
-              summary: `Triage reason: ${item.reason}`,
+              headline: item.title,
+              summary: `${item.reason}. Source: ${item.title}.`,
               action: 'FLAG_MANUAL_REVIEW'
             });
             continue;
@@ -1709,8 +1735,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     const shouldRunCompanyExpansion = (!skipGather && allResults.length > 0) || companyExpansionStartIndex > 0;
 
     if (shouldRunCompanyExpansion) {
-      // Use restored companies if resuming mid-company-expansion, otherwise extract from results
-      const detectedCompanies = restoredDetectedCompanies || extractCompaniesFromResults(allResults);
+      // Use restored companies if resuming mid-company-expansion, otherwise extract from results + profile seed
+      let detectedCompanies: DetectedCompany[];
+      if (restoredDetectedCompanies) {
+        detectedCompanies = restoredDetectedCompanies;
+      } else {
+        const registryCompanies = extractCompaniesFromResults(allResults);
+        detectedCompanies = deduplicateCompanies(registryCompanies);
+      }
 
       if (detectedCompanies.length > 0) {
         const resumeInfo = companyExpansionStartIndex > 0 ? ` (resuming from company ${companyExpansionStartIndex + 1})` : '';
@@ -1903,6 +1935,157 @@ If you cannot determine a field with reasonable confidence, use the default empt
       // Save profile to session and send to client
       await updateSession(sessionId, { profile: subjectProfile }, connectionId);
       sendEvent({ type: 'profile_seed', profile: subjectProfile });
+    }
+
+    // ========================================
+    // PHASE 1.95: SUBSIDIARY EXTRACTION (for company screenings only)
+    // Uses LLM to identify known subsidiaries and regional entities
+    // ========================================
+    const DEEPSEEK_KEY_SUB = process.env.DEEPSEEK_API_KEY || '';
+    if (isCompanyScreening(subjectName) && DEEPSEEK_KEY_SUB) {
+      try {
+        console.log(`[V4] [SUBSIDIARY] Running subsidiary extraction for company: ${subjectName}`);
+        sendEvent({ type: 'phase', phase: '1.95', name: 'SUBSIDIARY_EXTRACTION', message: `Extracting known subsidiaries for ${subjectName}...` });
+
+        const subsidiaryPrompt = `List all known subsidiaries, regional entities, and affiliated companies of "${subjectName}".
+Include:
+- Regional subsidiaries (e.g., "Company India", "Company Taiwan", "Company Technology India Pvt Ltd")
+- Payment/fintech subsidiaries
+- Recently acquired companies
+- Entities with different names that are known subsidiaries
+- Short-form trading names commonly used
+
+Return JSON array: [{"name": "...", "chinese": "...", "relationship": "subsidiary|affiliate|regional_entity"}]
+Only include entities you are confident about. Do NOT guess. Return [] if unsure.`;
+
+        const subResp = await axios.post(
+          'https://api.deepseek.com/v1/chat/completions',
+          {
+            model: 'deepseek-chat',
+            messages: [{ role: 'user', content: subsidiaryPrompt }],
+            temperature: 0.1,
+          },
+          {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY_SUB}` },
+            timeout: 30000,
+          }
+        );
+
+        const subRaw = subResp.data.choices?.[0]?.message?.content || '';
+        const subText = subRaw.replace(/```json\s*/gi, '').replace(/```/g, '');
+        const subMatch = subText.match(/\[[\s\S]*\]/);
+        if (subMatch) {
+          const subsidiaries = JSON.parse(subMatch[0]) as { name: string; chinese?: string; relationship: string }[];
+          if (subsidiaries.length > 0) {
+            console.log(`[V4] [SUBSIDIARY] Found ${subsidiaries.length} subsidiaries:`, subsidiaries.map(s => s.name));
+
+            // Add to profile's associatedCompanies
+            for (const sub of subsidiaries) {
+              if (!subjectProfile.associatedCompanies.some(c => c.name === sub.name)) {
+                subjectProfile.associatedCompanies.push({ name: sub.name, relationship: sub.relationship || 'subsidiary' });
+              }
+            }
+
+            // Search adverse media for each subsidiary directly
+            sendEvent({ type: 'progress', message: `Searching adverse media for ${subsidiaries.length} subsidiaries...` });
+
+            for (const sub of subsidiaries) {
+              if (signal.aborted) break;
+              const subCompany: DetectedCompany = {
+                english: sub.name,
+                chinese: sub.chinese || '',
+                source: 'subsidiary_extraction'
+              };
+
+              const subResults = await searchCompanyAdverseMedia(subCompany, signal);
+              if (subResults.length > 0) {
+                for (const r of subResults) {
+                  (r as any).sourceCompany = sub.name;
+                  if (!allResults.find(existing => existing.url === r.url)) {
+                    allResults.push(r);
+                  }
+                }
+                console.log(`[V4] [SUBSIDIARY] ${sub.name}: ${subResults.length} results found`);
+              }
+            }
+
+            await updateSession(sessionId, { profile: subjectProfile, gatheredResults: allResults }, connectionId);
+            sendEvent({ type: 'subsidiary_extraction', count: subsidiaries.length, subsidiaries: subsidiaries.map(s => s.name), totalResults: allResults.length });
+          }
+        }
+      } catch (err: any) {
+        console.error(`[V4] [SUBSIDIARY] Extraction failed (non-fatal): ${err?.message}`);
+      }
+    }
+
+    // ========================================
+    // PHASE 1.96: SUPPLEMENTARY PROFILE-GUIDED SEARCH
+    // Adds targeted search templates based on entity profile (industry, geography)
+    // ========================================
+    const isCompany = isCompanyScreening(subjectName);
+    const supplementary = selectSupplementaryTemplates(
+      { industry: subjectProfile.industry, nationality: subjectProfile.nationality },
+      isCompany
+    );
+
+    if (supplementary.length > 0) {
+      console.log(`[V4] [SUPPLEMENTARY] Selected ${supplementary.length} supplementary templates: ${supplementary.map(t => t.id).join(', ')}`);
+      sendEvent({ type: 'phase', phase: '1.96', name: 'SUPPLEMENTARY_SEARCH', message: `Running ${supplementary.length} profile-guided supplementary searches...`, total: supplementary.length });
+
+      const SUPP_MAX_PAGES = 5;  // Supplementary = 5 pages (not 10)
+      const cjkNames = nameVariations.filter(n => isChineseName(n));
+      const nonCjkNames = nameVariations.filter(n => !isChineseName(n));
+      let suppResultCount = 0;
+
+      for (let tIdx = 0; tIdx < supplementary.length; tIdx++) {
+        if (signal.aborted) break;
+        const tmpl = supplementary[tIdx];
+
+        // Select appropriate name variants based on template language
+        const relevantNames = tmpl.language === 'zh' ? cjkNames : nonCjkNames;
+        if (relevantNames.length === 0) continue;
+
+        const query = buildSearchQueryWithVariants(tmpl.template, relevantNames);
+
+        sendEvent({ type: 'progress', message: `Supplementary search ${tIdx + 1}/${supplementary.length}: ${tmpl.category}` });
+
+        for (let page = 1; page <= SUPP_MAX_PAGES; page++) {
+          if (signal.aborted) break;
+          try {
+            const pageResults = await searchGoogle(query, page, 10, signal, tmpl.hl);
+            if (pageResults.length === 0) break;
+            for (const r of pageResults) {
+              if (!allResults.find(existing => existing.url === r.link)) {
+                allResults.push({
+                  url: r.link,
+                  title: r.title,
+                  snippet: r.snippet || '',
+                  query: `[SUPP:${tmpl.id}] ${tmpl.template}`
+                });
+                suppResultCount++;
+              }
+            }
+            if (pageResults.length < 10) break;
+            await new Promise(r => setTimeout(r, 200));
+          } catch (err) {
+            console.error(`[V4] [SUPPLEMENTARY] Search failed for ${tmpl.id} page ${page}:`, err);
+            break;
+          }
+        }
+      }
+
+      if (suppResultCount > 0) {
+        console.log(`[V4] [SUPPLEMENTARY] Added ${suppResultCount} new results. Total: ${allResults.length}`);
+        await updateSession(sessionId, { gatheredResults: allResults }, connectionId);
+      }
+
+      sendEvent({
+        type: 'phase_complete',
+        phase: '1.96',
+        count: suppResultCount,
+        templates: supplementary.length,
+        message: `Supplementary search complete. ${suppResultCount} new results from ${supplementary.length} templates.`
+      });
     }
 
     // ========================================
@@ -2544,15 +2727,16 @@ If you cannot determine a field with reasonable confidence, use the default empt
 
         if (!result.analysis) {
           // Flag for manual review if triage thought it was important
-          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: 'Content unavailable' });
+          urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FAILED', headline: item.title });
           allFindings.push({
             url: item.url,
             title: item.title,
             severity: item.category === 'RED' ? 'RED' : 'AMBER',
-            headline: 'Content unavailable - manual review required',
-            summary: `Categorized as ${item.category}: "${item.reason}". Could not fetch content.`,
+            headline: item.title,
+            summary: `${item.reason}. Source: ${item.title}. Full article content was not accessible at time of screening.`,
             triageClassification: item.category,
             fetchFailed: true,
+            snippetBased: true,
             clusterId: item.clusterId,
             clusterLabel: item.clusterLabel,
           });
@@ -2720,25 +2904,25 @@ If you cannot determine a field with reasonable confidence, use the default empt
     // ========================================
     let consolidatedFindings: ConsolidatedFinding[] = [];
 
-    // Separate unfetched content — these go to a separate "unverified" section
-    const verifiedFindings = allFindings.filter(f => !f.fetchFailed);
-    const unverifiedFindings = allFindings.filter(f => f.fetchFailed);
-    if (unverifiedFindings.length > 0) {
-      console.log(`[V4] Separated ${unverifiedFindings.length} unverified (content unavailable)`);
+    // Include snippet-based (fetchFailed) findings in consolidation instead of separating them
+    // They now have meaningful titles and summaries from triage metadata
+    const snippetBasedCount = allFindings.filter(f => f.fetchFailed).length;
+    if (snippetBasedCount > 0) {
+      console.log(`[V4] Including ${snippetBasedCount} snippet-based findings in consolidation (previously excluded as unverified)`);
     }
 
     if (skipConsolidate && restoredConsolidated) {
       // Restored from session - use existing consolidated findings
       consolidatedFindings = restoredConsolidated;
       console.log(`[V4] Skipped consolidate phase, using ${consolidatedFindings.length} restored findings`);
-    } else if (verifiedFindings.length > 0) {
-      sendEvent({ type: 'phase', phase: 5, name: 'CONSOLIDATE', message: `Consolidating ${verifiedFindings.length} findings...` });
+    } else if (allFindings.length > 0) {
+      sendEvent({ type: 'phase', phase: 5, name: 'CONSOLIDATE', message: `Consolidating ${allFindings.length} findings...` });
 
       // Update session to consolidate phase BEFORE starting (for reconnection tracking)
       await updateSession(sessionId, { currentPhase: 'consolidate' }, connectionId);
 
-      consolidatedFindings = await consolidateFindings(verifiedFindings, subjectName, parkedArticles);
-      tracker.recordConsolidation(verifiedFindings.length, consolidatedFindings.length);
+      consolidatedFindings = await consolidateFindings(allFindings, subjectName, parkedArticles);
+      tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
 
       // Store consolidated results in session (for reconnection)
       await updateSession(sessionId, { consolidatedFindings }, connectionId);
@@ -2836,12 +3020,7 @@ If you cannot determine a field with reasonable confidence, use the default empt
         durationMin: (totalDuration / 60000).toFixed(1),
       },
       findings: consolidatedFindings,
-      unverifiedFindings: unverifiedFindings.map(f => ({
-        url: f.url,
-        title: f.title,
-        originalCategory: f.triageClassification,
-        reason: f.summary,
-      })),
+      unverifiedFindings: [],  // Snippet-based findings are now included in consolidated findings
       nameVariations,
       cleanResults,
       profile: subjectProfile,

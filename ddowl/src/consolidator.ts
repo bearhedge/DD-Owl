@@ -543,7 +543,7 @@ function pickBestFinding(findings: RawFinding[]): ConsolidatedFinding {
   const scored = findings.map(f => ({
     finding: f,
     score: (severityScore[f.severity] || 0) * 1000
-      + (f.fetchFailed ? 0 : 500)
+      + (f.fetchFailed ? 200 : 500)  // Reduced penalty: snippet-based findings still valuable for RED items
       + (f.summary?.length || 0)
   }));
   scored.sort((a, b) => b.score - a.score);
@@ -554,6 +554,9 @@ function pickBestFinding(findings: RawFinding[]): ConsolidatedFinding {
     .filter(f => f.articleContent)
     .map(f => ({ url: f.url, content: f.articleContent! }));
   const fp = best.fingerprint || extractFingerprint(best.headline, best.summary);
+
+  // Mark as snippet-based if the best finding has no article content and was fetchFailed
+  const isSnippetBased = best.fetchFailed || best.snippetBased || false;
 
   return {
     headline: best.headline,
@@ -566,6 +569,7 @@ function pickBestFinding(findings: RawFinding[]): ConsolidatedFinding {
     clusterId: best.clusterId,
     clusterLabel: best.clusterLabel,
     articleContents: articleContents.length > 0 ? articleContents : undefined,
+    snippetBased: isSnippetBased,
   };
 }
 
@@ -760,6 +764,7 @@ export async function consolidateFindings(
         clusterId: f.clusterId,
         clusterLabel: f.clusterLabel,
         articleContents: f.articleContent ? [{ url: f.url, content: f.articleContent }] : undefined,
+        snippetBased: f.fetchFailed || f.snippetBased || false,
         relatedLinks: parkedSources.length > 0 ? parkedSources : undefined,
       });
     } else {

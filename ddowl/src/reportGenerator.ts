@@ -427,6 +427,10 @@ export async function generateFullReport(
         // Pass article content if available for richer, grounded write-ups
         const articleContent = entityFindings[i].articleContents?.map(ac => ac.content).join('\n\n---\n\n');
         const result = await generateWriteUp(entityFindings[i], subjectName, onChunk, articleContent || undefined, footnoteIndex);
+        // Add snippet-based annotation if finding was based on metadata only
+        if (entityFindings[i].snippetBased) {
+          onChunk('\n\nNote: This finding is based on source metadata; full article content was not accessible at time of screening.');
+        }
         // Collect source URLs for consolidated footnotes
         for (const src of entityFindings[i].sources) {
           allSourceUrls.push(src.url);

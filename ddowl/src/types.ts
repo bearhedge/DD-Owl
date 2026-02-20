@@ -76,6 +76,7 @@ export interface RawFinding {
   triageClassification: string;
   fingerprint?: FindingFingerprint;
   fetchFailed?: boolean;  // True if content couldn't be fetched - needs manual review
+  snippetBased?: boolean; // True if finding is based on title/snippet metadata only (not full article)
   clusterId?: string;     // From Phase 2.5 incident clustering
   clusterLabel?: string;  // Incident description from clustering
   matchConfidence?: 'strong' | 'possible' | 'weak';
@@ -96,6 +97,7 @@ export interface ConsolidatedFinding {
   clusterLabel?: string;  // Incident description from clustering
   articleContents?: { url: string; content: string }[];  // Cached article texts from source findings
   relatedLinks?: { url: string; title: string }[];  // Parked/duplicate articles (not counted in sourceCount)
+  snippetBased?: boolean;  // True if finding is based on source metadata only (article content not accessible)
 }
 
 // Subject profile built progressively during screening
