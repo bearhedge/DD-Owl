@@ -719,12 +719,18 @@ ipoRouter.post('/extract-chinese-names', async (req: Request, res: Response) => 
   try {
     const missingResult = await pool.query(`
       SELECT d.id as deal_id, c.name_en as company_name, c.id as company_id,
-             oc.pdf_url
+             COALESCE(
+               oc.pdf_url,
+               (SELECT da.source_url FROM deal_appointments da WHERE da.deal_id = d.id AND da.source_url IS NOT NULL LIMIT 1)
+             ) as pdf_url
       FROM deals d
       JOIN companies c ON c.id = d.company_id
       LEFT JOIN oc_announcements oc ON oc.deal_id = d.id
       WHERE d.status IN ('active', 'withdrawn', 'lapsed', 'rejected')
-        AND c.name_cn IS NULL AND oc.pdf_url IS NOT NULL
+        AND c.name_cn IS NULL
+        AND (oc.pdf_url IS NOT NULL OR EXISTS (
+          SELECT 1 FROM deal_appointments da WHERE da.deal_id = d.id AND da.source_url IS NOT NULL
+        ))
       ORDER BY d.filing_date DESC
     `);
 
