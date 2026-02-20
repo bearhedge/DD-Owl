@@ -79,8 +79,15 @@ ipoRouter.get('/deals', async (req: Request, res: Response) => {
     let paramIndex = 1;
 
     if (status) {
-      query += ` AND d.status = $${paramIndex++}`;
-      params.push(status);
+      const statuses = (status as string).split(',');
+      if (statuses.length === 1) {
+        query += ` AND d.status = $${paramIndex++}`;
+        params.push(statuses[0]);
+      } else {
+        const placeholders = statuses.map((_, i) => `$${paramIndex + i}`).join(',');
+        query += ` AND d.status IN (${placeholders})`;
+        statuses.forEach(s => { params.push(s); paramIndex++; });
+      }
     }
 
     if (board) {
@@ -105,8 +112,8 @@ ipoRouter.get('/deals', async (req: Request, res: Response) => {
       paramIndex++;
     }
 
-    // Default limit: 200 for listed, 500 for active
-    const defaultLimit = status === 'listed' ? 200 : (status === 'active' ? 500 : 50);
+    // Default limit: 200 for listed/other, 500 for active
+    const defaultLimit = status === 'listed' ? 200 : (status === 'active' ? 500 : 200);
     const effectiveLimit = Number(limit) || defaultLimit;
 
     query += `
@@ -505,19 +512,35 @@ ipoRouter.post('/scrape-oc', async (req: Request, res: Response) => {
           `, [deal.company]);
           const companyId = companyResult.rows[0].id;
 
-          // Upsert deal
-          const dealResult = await pool.query(`
-            INSERT INTO deals (company_id, status, filing_date, hkex_app_id, board)
-            VALUES ($1, 'active', $2, $3, $4)
-            ON CONFLICT (company_id) WHERE status = 'active' DO UPDATE SET
-              filing_date = COALESCE(EXCLUDED.filing_date, deals.filing_date),
-              hkex_app_id = COALESCE(EXCLUDED.hkex_app_id, deals.hkex_app_id),
-              updated_at = NOW()
-            RETURNING id, (xmax = 0) as inserted
+          // Re-activate lapsed deal if one exists, otherwise upsert
+          let dealId: number;
+          let inserted = false;
+
+          const reactivated = await pool.query(`
+            UPDATE deals SET status = 'active', filing_date = $2, hkex_app_id = $3, board = $4, updated_at = NOW()
+            WHERE company_id = $1 AND status = 'lapsed'
+            RETURNING id
           `, [companyId, filingDate, deal.appId, deal.board]);
 
-          const dealId = dealResult.rows[0].id;
-          if (dealResult.rows[0].inserted) newDeals++;
+          if (reactivated.rows.length > 0) {
+            dealId = reactivated.rows[0].id;
+            newDeals++;
+          } else {
+            const dealResult = await pool.query(`
+              INSERT INTO deals (company_id, status, filing_date, hkex_app_id, board)
+              VALUES ($1, 'active', $2, $3, $4)
+              ON CONFLICT (company_id) WHERE status = 'active' DO UPDATE SET
+                filing_date = COALESCE(EXCLUDED.filing_date, deals.filing_date),
+                hkex_app_id = COALESCE(EXCLUDED.hkex_app_id, deals.hkex_app_id),
+                updated_at = NOW()
+              RETURNING id, (xmax = 0) as inserted
+            `, [companyId, filingDate, deal.appId, deal.board]);
+
+            dealId = dealResult.rows[0].id;
+            inserted = dealResult.rows[0].inserted;
+          }
+
+          if (inserted) newDeals++;
 
           // Insert OC announcement
           if (deal.ocPdfUrl) {
@@ -745,20 +768,6 @@ ipoRouter.post('/extract-chinese-names', async (req: Request, res: Response) => 
   }
 });
 
-/**
- * POST /api/ipo/check-listings
- * Checks active deals against HKEX securities list for newly listed companies
- */
-ipoRouter.post('/check-listings', async (req: Request, res: Response) => {
-  try {
-    const { checkListings } = await import('./listing-detector.js');
-    const result = await checkListings(pool);
-    res.json(result);
-  } catch (err) {
-    console.error('Check listings error:', err);
-    res.status(500).json({ error: 'Failed to check listings' });
-  }
-});
 
 /**
  * POST /api/ipo/populate-bank-short-names
