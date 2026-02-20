@@ -10,11 +10,11 @@
 // Known banks with their canonical names and variations
 export const KNOWN_BANKS: Record<string, string[]> = {
   // Global bulge bracket
-  'Goldman Sachs': ['Goldman Sachs', 'Goldman Sachs (Asia)', 'GS'],
+  'Goldman Sachs': ['Goldman Sachs', 'Goldman Sachs (Asia)', 'Goldman Sachs (Asia) L.L.C.', 'GS'],
   'Morgan Stanley': ['Morgan Stanley', 'Morgan Stanley Asia'],
   'J.P. Morgan': ['J.P. Morgan', 'JP Morgan', 'JPMorgan', 'J.P. Morgan Securities'],
-  'Citi': ['Citi', 'Citigroup', 'Citigroup Global Markets'],
-  'Bank of America': ['Bank of America', 'BofA', 'BofA Securities', 'Merrill Lynch', 'Merrill'],
+  'Citi': ['Citi', 'Citigroup', 'Citigroup Global Markets', 'Citigroup Global Markets Asia'],
+  'Bank of America': ['Bank of America', 'BofA', 'BofA Securities', 'Merrill Lynch', 'Merrill', 'Merrill Lynch (Asia Pacific)'],
   'UBS': ['UBS', 'UBS AG', 'UBS Securities'],
   'Credit Suisse': ['Credit Suisse', 'CS', 'Credit Suisse Securities'],
   'Deutsche Bank': ['Deutsche Bank', 'DB'],
@@ -40,12 +40,12 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'BOCI': ['BOCI', 'BOC International', 'Bank of China International', 'BOCR'],
   'CCB International': ['CCB International', 'CCBI', 'China Construction Bank International'],
   'BOCOM International': ['BOCOM International', 'Bank of Communications International'],
-  'China Everbright': ['China Everbright', 'Everbright Securities', 'CEB'],
+  'China Everbright': ['China Everbright', 'Everbright Securities', 'CEB', 'China Everbright Securities'],
   'Cinda International': ['Cinda International', 'Cinda'],
   'China Renaissance': ['China Renaissance', 'Huaxing', 'China Renaissance Securities'],
   'Fosun': ['Fosun', 'Fosun International', 'Fosun Securities'],
   'Guosen': ['Guosen', 'Guosen Securities'],
-  'China Galaxy': ['China Galaxy', 'Galaxy Securities'],
+  'China Galaxy': ['China Galaxy', 'Galaxy Securities', 'China Galaxy International'],
   'ABCI': ['ABCI', 'ABCI Capital', 'Agricultural Bank of China International'],
   'CMBC': ['CMBC', 'CMBC Securities', 'China Minsheng Banking'],
   'CEB International': ['CEB International', 'China Everbright Securities'],
@@ -60,7 +60,10 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'Essence International Securities': ['Essence International Securities'],
   'Essence Securities': ['Essence Securities', 'Essence'],
   'SPDB': ['SPDB', 'Shanghai Pudong Development Bank', 'SPDB International'],
-  'China Merchants Securities': ['China Merchants Securities', 'CMS'],
+  'China Merchants Securities': ['China Merchants Securities', 'CMS', 'China Merchants Securities (HK)'],
+  'Ping An Securities': ['Ping An Securities', 'Ping An'],
+  'SDIC Securities': ['SDIC Securities', 'SDIC'],
+  'Sinolink Securities': ['Sinolink Securities', 'Sinolink'],
   'Tiger Brokers': ['Tiger Brokers', 'Tiger Securities'],
   'Futu': ['Futu', 'Futu Securities'],
 
@@ -72,7 +75,7 @@ export const KNOWN_BANKS: Record<string, string[]> = {
   'Macquarie': ['Macquarie', 'Macquarie Capital', 'Macquarie Bank'],
   'First Capital': ['First Capital', 'First Capital Securities'],
   'National Australia Bank': ['National Australia Bank', 'NAB', 'NADS'],
-  'Jefferies': ['Jefferies', 'Jefferies LLC'],
+  'Jefferies': ['Jefferies', 'Jefferies LLC', 'Jefferies Hong Kong'],
   'Mizuho': ['Mizuho', 'Mizuho Securities'],
   'SMBC': ['SMBC', 'SMBC Nikko', 'Sumitomo Mitsui'],
   'SBI': ['SBI', 'SBI Securities'],
@@ -111,6 +114,7 @@ const BANK_KEYWORDS = [
   // Online brokers
   'Longbridge', 'Long Bridge', '9F Prime', '9F Primasia', 'Primasia', 'ZINVEST',
   'China Merchants Securities', 'SPDB International',
+  'Jefferies', 'SDIC', 'Ping An', 'Sinolink',
 ];
 
 // Keywords that indicate it's a company (IPO applicant), NOT a bank

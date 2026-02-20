@@ -786,18 +786,25 @@ ipoRouter.post('/populate-bank-short-names', async (req: Request, res: Response)
 
     let updated = 0;
     const mappings: { name: string; shortName: string }[] = [];
+    const errors: { name: string; error: string }[] = [];
 
     for (const bank of banks) {
-      const { canonical } = normalizeBankName(bank.name);
-      await pool.query(`UPDATE banks SET short_name = $1, updated_at = NOW() WHERE id = $2`, [canonical, bank.id]);
-      mappings.push({ name: bank.name, shortName: canonical });
-      updated++;
+      try {
+        const { canonical } = normalizeBankName(bank.name);
+        await pool.query(`UPDATE banks SET short_name = $1, updated_at = NOW() WHERE id = $2`, [canonical, bank.id]);
+        mappings.push({ name: bank.name, shortName: canonical });
+        updated++;
+      } catch (err) {
+        console.error(`Failed to update bank ${bank.id} "${bank.name}":`, err);
+        errors.push({ name: bank.name, error: String(err) });
+      }
     }
 
     res.json({
-      message: `Updated ${updated}/${banks.length} bank short names`,
+      message: `Updated ${updated}/${banks.length} bank short names${errors.length ? `, ${errors.length} errors` : ''}`,
       updated,
       mappings,
+      errors: errors.length > 0 ? errors : undefined,
     });
   } catch (err) {
     console.error('Populate bank short names error:', err);
