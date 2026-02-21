@@ -783,6 +783,7 @@ ipoRouter.post('/extract-chinese-names', async (req: Request, res: Response) => 
  */
 ipoRouter.post('/batch-update-chinese-names', async (req: Request, res: Response) => {
   try {
+    const { force } = req.query;
     const updates: { appId: string; companyCn: string }[] = req.body;
     if (!Array.isArray(updates) || updates.length === 0) {
       res.status(400).json({ error: 'Expected array of { appId, companyCn }' });
@@ -794,12 +795,15 @@ ipoRouter.post('/batch-update-chinese-names', async (req: Request, res: Response
 
     for (const { appId, companyCn } of updates) {
       if (!appId || !companyCn) continue;
-      const result = await pool.query(`
-        UPDATE companies SET name_cn = $1, updated_at = NOW()
-        WHERE id = (SELECT company_id FROM deals WHERE hkex_app_id = $2 LIMIT 1)
-          AND name_cn IS NULL
-        RETURNING name_en
-      `, [companyCn, appId]);
+      const query = force
+        ? `UPDATE companies SET name_cn = $1, updated_at = NOW()
+           WHERE id = (SELECT company_id FROM deals WHERE hkex_app_id = $2 LIMIT 1)
+           RETURNING name_en`
+        : `UPDATE companies SET name_cn = $1, updated_at = NOW()
+           WHERE id = (SELECT company_id FROM deals WHERE hkex_app_id = $2 LIMIT 1)
+             AND name_cn IS NULL
+           RETURNING name_en`;
+      const result = await pool.query(query, [companyCn, appId]);
 
       if (result.rows.length > 0) {
         updated++;
