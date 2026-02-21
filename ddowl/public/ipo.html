@@ -900,9 +900,6 @@
         case 'company':
           const displayHtml = formatCompanyName(row.company, row.companyCn, true);
           const plainName = formatCompanyName(row.company, row.companyCn, false);
-          if (row.prospectusUrl) {
-            return `<td class="company-name" title="${escapeHtml(plainName)}"><a href="${row.prospectusUrl}" target="_blank">${displayHtml}</a></td>`;
-          }
           return `<td class="company-name" title="${escapeHtml(plainName)}">${displayHtml}</td>`;
         case 'date':
           return `<td class="date-cell">${formatDate(row.date)}</td>`;
