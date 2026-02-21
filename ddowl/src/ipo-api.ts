@@ -777,6 +777,42 @@ ipoRouter.post('/extract-chinese-names', async (req: Request, res: Response) => 
   }
 });
 
+/**
+ * POST /api/ipo/batch-update-chinese-names
+ * Accepts JSON array of { appId, companyCn } to update companies.name_cn
+ */
+ipoRouter.post('/batch-update-chinese-names', async (req: Request, res: Response) => {
+  try {
+    const updates: { appId: string; companyCn: string }[] = req.body;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      res.status(400).json({ error: 'Expected array of { appId, companyCn }' });
+      return;
+    }
+
+    let updated = 0;
+    const results: { appId: string; company: string; companyCn: string }[] = [];
+
+    for (const { appId, companyCn } of updates) {
+      if (!appId || !companyCn) continue;
+      const result = await pool.query(`
+        UPDATE companies SET name_cn = $1, updated_at = NOW()
+        WHERE id = (SELECT company_id FROM deals WHERE hkex_app_id = $2 LIMIT 1)
+          AND name_cn IS NULL
+        RETURNING name_en
+      `, [companyCn, appId]);
+
+      if (result.rows.length > 0) {
+        updated++;
+        results.push({ appId, company: result.rows[0].name_en, companyCn });
+      }
+    }
+
+    res.json({ message: `Updated ${updated}/${updates.length} Chinese names`, updated, results });
+  } catch (err) {
+    console.error('Batch update Chinese names error:', err);
+    res.status(500).json({ error: 'Failed to batch update Chinese names' });
+  }
+});
 
 /**
  * POST /api/ipo/populate-bank-short-names
