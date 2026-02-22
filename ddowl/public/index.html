@@ -3030,8 +3030,10 @@
 
       if (data.type === 'search_progress') {
         addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries} | ${data.resultsFound} results | ${data.query}`);
-        const pct = calculateOverallProgress('gather', data.queryIndex, data.totalQueries);
-        updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+        if (!data.supplementary) {
+          const pct = calculateOverallProgress('gather', data.queryIndex, data.totalQueries);
+          updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+        }
       }
 
       // Handle clustering
@@ -4250,9 +4252,11 @@
 
           if (data.type === 'search_progress') {
             addLogEntry('search', `Query ${data.queryIndex}/${data.totalQueries} | ${data.resultsFound} results | ${data.query}`);
-            // Update progress bar
-            const pct = calculateOverallProgress('gather', data.queryIndex, data.totalQueries);
-            updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+            if (!data.supplementary) {
+              // Update progress bar
+              const pct = calculateOverallProgress('gather', data.queryIndex, data.totalQueries);
+              updateProgressCard('running', pct, progressState.redCount, progressState.amberCount, name);
+            }
           }
 
           if (data.type === 'gather_complete') {

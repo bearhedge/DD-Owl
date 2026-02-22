@@ -1330,6 +1330,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     let skipCluster = false;
     let skipCategorize = false;
     let skipConsolidate = false;
+    let skipSubsidiaryAndSupplementary = false;
     let analyzeStartIndex = 0;
     let gatherStartIndex = 0;  // For mid-gather resume
     let companyExpansionStartIndex = 0;  // For mid-company-expansion resume
@@ -1442,12 +1443,14 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Set skip flags based on current phase (NO phase_skipped events - just set flags)
       if (phase === 'eliminate' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipGather = true;
+        skipSubsidiaryAndSupplementary = true;
         restoredResults = existingSession.gatheredResults;
       }
 
       if (phase === 'cluster' || phase === 'categorize' || phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
         skipElimination = true;
         skipTitleDedupe = true;  // Skip title dedupe if past elimination phase
+        skipSubsidiaryAndSupplementary = true;
         // Only skip cluster if we're past it (categorize or later), not if we're mid-cluster
         if (phase !== 'cluster') {
           skipCluster = true;
@@ -1966,7 +1969,7 @@ If you cannot determine a field with reasonable confidence, use the default empt
     let extractedSubsidiaries: { name: string; chinese?: string; relationship: string; significance?: string }[] = [];
 
     const DEEPSEEK_KEY_SUB = process.env.DEEPSEEK_API_KEY || '';
-    if (isCompanyScreening(subjectName) && DEEPSEEK_KEY_SUB) {
+    if (isCompanyScreening(subjectName) && DEEPSEEK_KEY_SUB && !skipSubsidiaryAndSupplementary) {
       try {
         console.log(`[V4] [SUBSIDIARY] Running subsidiary extraction for company: ${subjectName}`);
         sendEvent({ type: 'phase', phase: '1.95', name: 'SUBSIDIARY_EXTRACTION', message: `Extracting known subsidiaries for ${subjectName}...` });
@@ -2030,7 +2033,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       geoHints
     );
 
-    if (supplementary.length > 0) {
+    if (supplementary.length > 0 && !skipSubsidiaryAndSupplementary) {
       console.log(`[V4] [SUPPLEMENTARY] Selected ${supplementary.length} supplementary templates: ${supplementary.map(t => t.id).join(', ')}`);
       sendEvent({ type: 'phase', phase: '1.95', name: 'SUPPLEMENTARY_SEARCH', message: `Running ${supplementary.length} profile-guided supplementary searches...`, total: supplementary.length });
 
@@ -2071,6 +2074,16 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
           if (signal.aborted) break;
           try {
             const pageResults = await searchGoogle(query, page, 10, signal, tmpl.hl);
+            sendEvent({
+              type: 'search_page',
+              engine: 'google',
+              queryIndex: tIdx + 1,
+              totalQueries: supplementary.length,
+              page,
+              pageResults: pageResults.length,
+              supplementary: true,
+              templateId: tmpl.id,
+            });
             if (pageResults.length === 0) break;
             for (const r of pageResults) {
               if (!allResults.find(existing => existing.url === r.link)) {
@@ -2090,6 +2103,18 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
             break;
           }
         }
+
+        const templateResults = allResults.filter(r => r.query === `[SUPP:${tmpl.id}] ${tmpl.template}`).length;
+        sendEvent({
+          type: 'search_progress',
+          queryIndex: tIdx + 1,
+          totalQueries: supplementary.length,
+          query: `[SUPP] ${tmpl.category}`,
+          resultsFound: templateResults,
+          totalSoFar: allResults.length,
+          supplementary: true,
+        });
+        console.log(`[V4] [SUPPLEMENTARY] ${tmpl.id} (${tIdx + 1}/${supplementary.length}): ${templateResults} new results`);
       }
 
       if (suppResultCount > 0) {
