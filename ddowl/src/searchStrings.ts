@@ -328,7 +328,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" 召回|缺陷|刹车失灵|剎車失靈|事故|爆炸|起火|安全隐患|安全隱患|质量问题|質量問題|投诉|投訴|维权|維權|三包',
     language: 'zh',
     hl: 'zh-cn',
-    triggers: { industries: ['technology', 'consumer', 'electronics', 'automotive', 'manufacturing', 'appliance', 'food', 'electric vehicle'] },
+    triggers: { entityType: 'company', always: true },
   },
   {
     id: 'IND_SAFETY_EN',
@@ -336,7 +336,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" recall|defect|malfunction|"brake failure"|accident|fire|explosion|"safety hazard"|"product liability"',
     language: 'en',
     hl: 'en',
-    triggers: { industries: ['technology', 'consumer', 'electronics', 'automotive', 'manufacturing', 'appliance', 'food', 'electric vehicle'] },
+    triggers: { entityType: 'company', always: true },
   },
 
   // === Industry-triggered: Privacy & Data ===
@@ -346,7 +346,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" 数据泄露|數據洩露|隐私|隱私|个人信息|個人信息|数据安全|數據安全|数据出境|數據出境|信息泄露|信息洩露|审查|審查|监控|監控',
     language: 'zh',
     hl: 'zh-cn',
-    triggers: { industries: ['technology', 'telecom', 'fintech', 'social media', 'e-commerce', 'software', 'internet'] },
+    triggers: { entityType: 'company', always: true },
   },
   {
     id: 'IND_PRIVACY_EN',
@@ -354,7 +354,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" "data breach"|privacy|GDPR|"data transfer"|censorship|surveillance|"data protection"|Noyb',
     language: 'en',
     hl: 'en',
-    triggers: { industries: ['technology', 'telecom', 'fintech', 'social media', 'e-commerce', 'software', 'internet'] },
+    triggers: { entityType: 'company', always: true },
   },
 
   // === Industry-triggered: ESG ===
@@ -364,7 +364,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" 排污|污染|环保|環保|碳排放|劳工|勞工|过劳|過勞|加班|996|强迫劳动|強迫勞動|供应链|供應鏈|血汗',
     language: 'zh',
     hl: 'zh-cn',
-    triggers: { industries: ['manufacturing', 'mining', 'energy', 'automotive', 'technology', 'textile', 'electronics', 'consumer'] },
+    triggers: { entityType: 'company', always: true },
   },
   {
     id: 'IND_ESG_EN',
@@ -372,7 +372,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" "forced labor"|"forced labour"|pollution|environmental|Uyghur|overwork|"supply chain"|sweatshop|"modern slavery"|Greenpeace|ESG',
     language: 'en',
     hl: 'en',
-    triggers: { industries: ['manufacturing', 'mining', 'energy', 'automotive', 'technology', 'textile', 'electronics', 'consumer'] },
+    triggers: { entityType: 'company', always: true },
   },
 
   // === Industry-triggered: Antitrust ===
@@ -382,7 +382,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" 反垄断|反壟斷|垄断|壟斷|不正当竞争|不正當競爭|市场支配|市場支配|排他|搭售|滥用|濫用',
     language: 'zh',
     hl: 'zh-cn',
-    triggers: { industries: ['technology', 'telecom', 'e-commerce', 'platform', 'pharmaceutical', 'internet'] },
+    triggers: { entityType: 'company', always: true },
   },
   {
     id: 'IND_ANTITRUST_EN',
@@ -390,7 +390,7 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
     template: '"{NAME}" antitrust|"anti-competitive"|collusion|cartel|monopoly|"competition authority"|"price fixing"',
     language: 'en',
     hl: 'en',
-    triggers: { industries: ['technology', 'telecom', 'e-commerce', 'platform', 'pharmaceutical', 'internet'] },
+    triggers: { entityType: 'company', always: true },
   },
 
   // === Geography-triggered site templates ===
@@ -437,13 +437,36 @@ export const SUPPLEMENTARY_REGISTRY: SupplementaryTemplate[] = [
 ];
 
 /**
+ * Infer geography hints from subject name using simple regex matching.
+ * Returns geography labels that can be merged with profile.nationality
+ * for supplementary template selection.
+ */
+export function inferGeographyFromName(name: string): string[] {
+  const hints: string[] = [];
+  const geo: [RegExp, string][] = [
+    [/中国|中國|china|beijing|shanghai|shenzhen|guangzhou|chengdu/i, 'china'],
+    [/india|mumbai|delhi|bangalore/i, 'india'],
+    [/台湾|台灣|taiwan|taipei/i, 'taiwan'],
+    [/europe|eu\b|deutschland|france|italia/i, 'eu'],
+    [/america|usa|united states/i, 'us'],
+  ];
+  for (const [pattern, label] of geo) {
+    if (pattern.test(name)) hints.push(label);
+  }
+  return hints;
+}
+
+/**
  * Select supplementary templates based on entity profile (industry, geography)
- * and whether the subject is a company or individual
+ * and whether the subject is a company or individual.
+ * Optional geoHints are merged with profile.nationality for geography matching.
  */
 export function selectSupplementaryTemplates(
   profile: { industry: string[]; nationality: string[] },
-  isCompany: boolean
+  isCompany: boolean,
+  geoHints?: string[]
 ): SupplementaryTemplate[] {
+  const effectiveNationality = [...profile.nationality, ...(geoHints || [])];
   return SUPPLEMENTARY_REGISTRY.filter(t => {
     // Entity type gate
     if (t.triggers.entityType && t.triggers.entityType !== (isCompany ? 'company' : 'individual')) return false;
@@ -453,9 +476,9 @@ export function selectSupplementaryTemplates(
     if (t.triggers.industries?.some(i =>
       profile.industry.some(pi => pi.toLowerCase().includes(i))
     )) return true;
-    // Geography match
+    // Geography match (uses effectiveNationality = profile + geoHints)
     if (t.triggers.geographies?.some(g =>
-      profile.nationality.some(pn => pn.toLowerCase().includes(g))
+      effectiveNationality.some(pn => pn.toLowerCase().includes(g))
     )) return true;
     return false;
   });

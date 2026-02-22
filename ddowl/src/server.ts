@@ -22,7 +22,7 @@ import cors from 'cors';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
-import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, buildSearchQueryWithVariants, isChineseName, detectScript, LANGUAGE_CONFIG, selectSupplementaryTemplates } from './searchStrings.js';
+import { SEARCH_TEMPLATES, CHINESE_TEMPLATES, ENGLISH_TEMPLATES, SITE_TEMPLATES, ENGLISH_SITE_TEMPLATES, TEMPLATE_CATEGORIES, buildSearchQuery, buildSearchQueryWithVariants, isChineseName, detectScript, LANGUAGE_CONFIG, selectSupplementaryTemplates, inferGeographyFromName } from './searchStrings.js';
 import { searchAllPages, searchAllEngines, SearchProgressCallback, searchAll, BatchSearchResult, searchGoogle } from './searcher.js';
 import { getSerperKeyManager } from './serperKeyManager.js';
 import { isBaiduAvailable } from './baiduSearcher.js';
@@ -1866,7 +1866,28 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
           `[${i + 1}] ${r.title} — ${r.snippet || ''}`
         ).join('\n');
 
-        const profilePrompt = `You are a due diligence analyst. Given these search results about "${subjectName}", extract a preliminary subject profile.
+        const isCompanyProfile = isCompanyScreening(subjectName);
+        const profilePrompt = isCompanyProfile
+          ? `You are a due diligence analyst. Given these search results about company "${subjectName}", extract a company profile.
+
+SEARCH RESULTS:
+${snippetSummary}
+
+For well-known public companies, you may use your general knowledge to fill industry and nationality even if not explicitly stated in the search results.
+
+OUTPUT FORMAT (JSON only):
+{
+  "nationality": ["China"],
+  "operatingRegions": ["China", "India", "EU"],
+  "industry": ["technology", "consumer electronics", "electric vehicles"],
+  "currentRole": null,
+  "pastRoles": [],
+  "associatedCompanies": [{"name": "Xiaomi India", "relationship": "subsidiary"}],
+  "associatedPeople": [{"name": "Lei Jun", "relationship": "CEO"}]
+}
+
+For nationality, provide the headquarters jurisdiction. For industry, list all relevant sectors.`
+          : `You are a due diligence analyst. Given these search results about "${subjectName}", extract a preliminary subject profile.
 
 SEARCH RESULTS:
 ${snippetSummary}
@@ -1938,9 +1959,12 @@ If you cannot determine a field with reasonable confidence, use the default empt
     }
 
     // ========================================
-    // PHASE 1.95: SUBSIDIARY EXTRACTION (for company screenings only)
-    // Uses LLM to identify known subsidiaries and regional entities
+    // PHASE 1.95: SUBSIDIARY EXTRACTION & SUPPLEMENTARY SEARCH
+    // Extracts subsidiaries (LLM), then runs profile-guided supplementary searches
+    // with core subsidiary names included in OR clauses (language-separated)
     // ========================================
+    let extractedSubsidiaries: { name: string; chinese?: string; relationship: string; significance?: string }[] = [];
+
     const DEEPSEEK_KEY_SUB = process.env.DEEPSEEK_API_KEY || '';
     if (isCompanyScreening(subjectName) && DEEPSEEK_KEY_SUB) {
       try {
@@ -1955,7 +1979,9 @@ Include:
 - Entities with different names that are known subsidiaries
 - Short-form trading names commonly used
 
-Return JSON array: [{"name": "...", "chinese": "...", "relationship": "subsidiary|affiliate|regional_entity"}]
+Return JSON array: [{"name": "...", "chinese": "...", "relationship": "subsidiary|affiliate|regional_entity", "significance": "core|minor"}]
+
+Mark as "core" subsidiaries that are major operating entities (regional HQs, primary business units, entities with independent regulatory exposure). Mark as "minor" smaller or dormant entities.
 Only include entities you are confident about. Do NOT guess. Return [] if unsure.`;
 
         const subResp = await axios.post(
@@ -1975,42 +2001,19 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         const subText = subRaw.replace(/```json\s*/gi, '').replace(/```/g, '');
         const subMatch = subText.match(/\[[\s\S]*\]/);
         if (subMatch) {
-          const subsidiaries = JSON.parse(subMatch[0]) as { name: string; chinese?: string; relationship: string }[];
-          if (subsidiaries.length > 0) {
-            console.log(`[V4] [SUBSIDIARY] Found ${subsidiaries.length} subsidiaries:`, subsidiaries.map(s => s.name));
+          extractedSubsidiaries = JSON.parse(subMatch[0]) as { name: string; chinese?: string; relationship: string; significance?: string }[];
+          if (extractedSubsidiaries.length > 0) {
+            console.log(`[V4] [SUBSIDIARY] Found ${extractedSubsidiaries.length} subsidiaries:`, extractedSubsidiaries.map(s => s.name));
 
             // Add to profile's associatedCompanies
-            for (const sub of subsidiaries) {
+            for (const sub of extractedSubsidiaries) {
               if (!subjectProfile.associatedCompanies.some(c => c.name === sub.name)) {
                 subjectProfile.associatedCompanies.push({ name: sub.name, relationship: sub.relationship || 'subsidiary' });
               }
             }
 
-            // Search adverse media for each subsidiary directly
-            sendEvent({ type: 'progress', message: `Searching adverse media for ${subsidiaries.length} subsidiaries...` });
-
-            for (const sub of subsidiaries) {
-              if (signal.aborted) break;
-              const subCompany: DetectedCompany = {
-                english: sub.name,
-                chinese: sub.chinese || '',
-                source: 'subsidiary_extraction'
-              };
-
-              const subResults = await searchCompanyAdverseMedia(subCompany, signal);
-              if (subResults.length > 0) {
-                for (const r of subResults) {
-                  (r as any).sourceCompany = sub.name;
-                  if (!allResults.find(existing => existing.url === r.url)) {
-                    allResults.push(r);
-                  }
-                }
-                console.log(`[V4] [SUBSIDIARY] ${sub.name}: ${subResults.length} results found`);
-              }
-            }
-
-            await updateSession(sessionId, { profile: subjectProfile, gatheredResults: allResults }, connectionId);
-            sendEvent({ type: 'subsidiary_extraction', count: subsidiaries.length, subsidiaries: subsidiaries.map(s => s.name), totalResults: allResults.length });
+            await updateSession(sessionId, { profile: subjectProfile }, connectionId);
+            sendEvent({ type: 'subsidiary_extraction', count: extractedSubsidiaries.length, subsidiaries: extractedSubsidiaries.map(s => s.name) });
           }
         }
       } catch (err: any) {
@@ -2018,23 +2021,38 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       }
     }
 
-    // ========================================
-    // PHASE 1.96: SUPPLEMENTARY PROFILE-GUIDED SEARCH
-    // Adds targeted search templates based on entity profile (industry, geography)
-    // ========================================
+    // Supplementary profile-guided search (still within Phase 1.95)
     const isCompany = isCompanyScreening(subjectName);
+    const geoHints = inferGeographyFromName(subjectName);
     const supplementary = selectSupplementaryTemplates(
       { industry: subjectProfile.industry, nationality: subjectProfile.nationality },
-      isCompany
+      isCompany,
+      geoHints
     );
 
     if (supplementary.length > 0) {
       console.log(`[V4] [SUPPLEMENTARY] Selected ${supplementary.length} supplementary templates: ${supplementary.map(t => t.id).join(', ')}`);
-      sendEvent({ type: 'phase', phase: '1.96', name: 'SUPPLEMENTARY_SEARCH', message: `Running ${supplementary.length} profile-guided supplementary searches...`, total: supplementary.length });
+      sendEvent({ type: 'phase', phase: '1.95', name: 'SUPPLEMENTARY_SEARCH', message: `Running ${supplementary.length} profile-guided supplementary searches...`, total: supplementary.length });
+
+      // Build augmented name lists with core subsidiary names (language-separated)
+      const coreSubsidiaries = extractedSubsidiaries.filter(s => s.significance === 'core');
+      const suppCjkNames = [...nameVariations.filter(n => isChineseName(n))];
+      const suppNonCjkNames = [...nameVariations.filter(n => !isChineseName(n))];
+
+      for (const sub of coreSubsidiaries) {
+        if (sub.chinese && isChineseName(sub.chinese) && !suppCjkNames.includes(sub.chinese)) {
+          suppCjkNames.push(sub.chinese);
+        }
+        if (sub.name && !isChineseName(sub.name) && !suppNonCjkNames.includes(sub.name)) {
+          suppNonCjkNames.push(sub.name);
+        }
+      }
+
+      if (coreSubsidiaries.length > 0) {
+        console.log(`[V4] [SUPPLEMENTARY] Augmented with ${coreSubsidiaries.length} core subsidiaries. CJK names: ${suppCjkNames.length}, Non-CJK names: ${suppNonCjkNames.length}`);
+      }
 
       const SUPP_MAX_PAGES = 5;  // Supplementary = 5 pages (not 10)
-      const cjkNames = nameVariations.filter(n => isChineseName(n));
-      const nonCjkNames = nameVariations.filter(n => !isChineseName(n));
       let suppResultCount = 0;
 
       for (let tIdx = 0; tIdx < supplementary.length; tIdx++) {
@@ -2042,7 +2060,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         const tmpl = supplementary[tIdx];
 
         // Select appropriate name variants based on template language
-        const relevantNames = tmpl.language === 'zh' ? cjkNames : nonCjkNames;
+        const relevantNames = tmpl.language === 'zh' ? suppCjkNames : suppNonCjkNames;
         if (relevantNames.length === 0) continue;
 
         const query = buildSearchQueryWithVariants(tmpl.template, relevantNames);
@@ -2081,7 +2099,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
 
       sendEvent({
         type: 'phase_complete',
-        phase: '1.96',
+        phase: '1.95',
         count: suppResultCount,
         templates: supplementary.length,
         message: `Supplementary search complete. ${suppResultCount} new results from ${supplementary.length} templates.`
@@ -2188,7 +2206,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
     }
 
     // ========================================
-    // PHASE 1.75: LLM TITLE DEDUPLICATION
+    // PHASE 2.1: LLM TITLE DEDUPLICATION
     // Batch dedupe before clustering to save LLM costs
     // ========================================
     let titleDedupeDuplicates: typeof passed = [];
@@ -2210,7 +2228,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       // Only run if we have enough articles (worth the LLM cost)
       sendEvent({
         type: 'phase',
-        phase: '1.75',
+        phase: '2.1',
         name: 'TITLE_DEDUPE',
         message: `Batch deduplicating ${passed.length} titles...`
       });
@@ -2585,7 +2603,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
     }
 
     // ========================================
-    // PHASE 3: FETCH & ANALYZE flagged only
+    // PHASE 4: FETCH & ANALYZE flagged only
     // ========================================
     const toProcess = [...categorized.red, ...categorized.amber];
 

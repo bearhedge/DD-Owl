@@ -860,6 +860,109 @@ ipoRouter.post('/populate-bank-short-names', async (req: Request, res: Response)
   }
 });
 
+/**
+ * POST /api/ipo/batch-add-deal-banks
+ * Batch add banks and OC PDF URLs for deals identified by hkex_app_id.
+ * Body: [{ hkexAppId, ocPdfUrl, banks: [{ name, role }] }]
+ */
+ipoRouter.post('/batch-add-deal-banks', async (req: Request, res: Response) => {
+  try {
+    const items: { hkexAppId: string; ocPdfUrl?: string; banks: { name: string; role: string }[] }[] = req.body;
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: 'Expected array of { hkexAppId, ocPdfUrl?, banks }' });
+      return;
+    }
+
+    const { normalizeRole, isLeadRole } = await import('./role-normalizer.js');
+
+    let dealsUpdated = 0;
+    let banksAdded = 0;
+    let appointmentsAdded = 0;
+    let ocLinksAdded = 0;
+    const results: { hkexAppId: string; company?: string; banksAdded: number; ocLink: boolean; error?: string }[] = [];
+
+    for (const item of items) {
+      // Find deal by hkex_app_id
+      const dealResult = await pool.query(`
+        SELECT d.id as deal_id, c.name_en as company_name
+        FROM deals d
+        JOIN companies c ON c.id = d.company_id
+        WHERE d.hkex_app_id = $1
+      `, [item.hkexAppId]);
+
+      if (dealResult.rows.length === 0) {
+        results.push({ hkexAppId: item.hkexAppId, banksAdded: 0, ocLink: false, error: 'Deal not found' });
+        continue;
+      }
+
+      const { deal_id: dealId, company_name: companyName } = dealResult.rows[0];
+      let itemBanksAdded = 0;
+
+      // Upsert OC PDF URL
+      let ocAdded = false;
+      if (item.ocPdfUrl) {
+        const ocResult = await pool.query(`
+          INSERT INTO oc_announcements (deal_id, pdf_url)
+          VALUES ($1, $2)
+          ON CONFLICT DO NOTHING
+          RETURNING id
+        `, [dealId, item.ocPdfUrl]);
+        // If ON CONFLICT DO NOTHING hit, check if already exists
+        if (ocResult.rows.length > 0) {
+          ocAdded = true;
+          ocLinksAdded++;
+        } else {
+          // Already exists — still count as success
+          ocAdded = true;
+        }
+      }
+
+      // Upsert banks and appointments
+      for (const bank of item.banks) {
+        const roles = normalizeRole(bank.role);
+        const isLead = isLeadRole(roles);
+        const { canonical: shortName } = normalizeBankName(bank.name);
+
+        const bankResult = await pool.query(`
+          INSERT INTO banks (name, short_name)
+          VALUES ($1, $2)
+          ON CONFLICT (name) DO UPDATE SET short_name = COALESCE(banks.short_name, EXCLUDED.short_name), updated_at = NOW()
+          RETURNING id
+        `, [bank.name, shortName]);
+        const bankId = bankResult.rows[0].id;
+        banksAdded++;
+
+        await pool.query(`
+          INSERT INTO deal_appointments (deal_id, bank_id, roles, raw_role, is_lead, source_url)
+          VALUES ($1, $2, $3::bank_role[], $4, $5, $6)
+          ON CONFLICT (deal_id, bank_id) DO UPDATE SET
+            roles = EXCLUDED.roles,
+            raw_role = EXCLUDED.raw_role,
+            is_lead = EXCLUDED.is_lead,
+            source_url = COALESCE(EXCLUDED.source_url, deal_appointments.source_url)
+        `, [dealId, bankId, roles, bank.role, isLead, item.ocPdfUrl || null]);
+        appointmentsAdded++;
+        itemBanksAdded++;
+      }
+
+      dealsUpdated++;
+      results.push({ hkexAppId: item.hkexAppId, company: companyName, banksAdded: itemBanksAdded, ocLink: ocAdded });
+    }
+
+    res.json({
+      message: `Updated ${dealsUpdated}/${items.length} deals, ${appointmentsAdded} appointments, ${ocLinksAdded} OC links`,
+      dealsUpdated,
+      banksAdded,
+      appointmentsAdded,
+      ocLinksAdded,
+      results,
+    });
+  } catch (err) {
+    console.error('Batch add deal banks error:', err);
+    res.status(500).json({ error: 'Failed to batch add deal banks' });
+  }
+});
+
 // Fix deal_appointments: reassign a deal's bank to the correct bank_id
 ipoRouter.post('/fix-deal-bank', async (req: Request, res: Response) => {
   try {
