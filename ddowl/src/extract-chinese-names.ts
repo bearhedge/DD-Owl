@@ -38,11 +38,13 @@ const COMPANY_SUFFIXES = [
  * @param text - Chinese text to validate (should be pre-cleaned, no spaces)
  */
 export function isCompanyName(text: string): boolean {
-  // Must be at least 4 characters (minimum: X公司)
-  if (text.length < 3) return false;
-
-  // Must end with a company suffix
-  return COMPANY_SUFFIXES.some(suffix => text.endsWith(suffix));
+  // Find the longest matching suffix, then require at least 2 chars before it
+  // (e.g. "股份有限公司" alone is NOT a valid name — needs a prefix like "深圳信立泰藥業")
+  const matchedSuffix = COMPANY_SUFFIXES
+    .filter(suffix => text.endsWith(suffix))
+    .sort((a, b) => b.length - a.length)[0];
+  if (!matchedSuffix) return false;
+  return text.length >= matchedSuffix.length + 2;
 }
 
 // Common Chinese name-like suffixes (broader than strict company suffixes)
