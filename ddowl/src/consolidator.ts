@@ -735,9 +735,16 @@ Return JSON only:
 export async function consolidateFindings(
   findings: RawFinding[],
   subjectName: string,
-  parkedArticles: { url: string; title: string; clusterId?: string; clusterLabel?: string }[] = []
+  parkedArticles: { url: string; title: string; clusterId?: string; clusterLabel?: string }[] = [],
+  signal?: AbortSignal  // For cross-instance abort on ownership loss
 ): Promise<ConsolidatedFinding[]> {
   if (findings.length === 0) return [];
+
+  // Check if aborted before starting (ownership lost)
+  if (signal?.aborted) {
+    console.log(`[CONSOLIDATE] Aborted before starting`);
+    return [];
+  }
 
   console.log(`[CONSOLIDATE] Processing ${findings.length} findings, ${parkedArticles.length} parked articles...`);
 

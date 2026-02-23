@@ -50,7 +50,7 @@ import { traceFunnel, printTraceReport } from './metrics/tracer.js';
 import { FunnelPhaseSnapshot, FunnelSnapshot } from './types.js';
 import { eliminateObviousNoise, getEliminationBreakdown, EliminationResult, EliminationBreakdown, EliminatedResult, llmBatchTitleDedupe, TitleDedupeProgress } from './eliminator.js';
 import { getChineseVariantsLLM } from './utils/chinese.js';
-import { createSession, getSession, updateSession, deleteSession, ScreeningSession, DetectedCompany } from './session-store.js';
+import { createSession, getSession, updateSession, deleteSession, isStillOwner, ScreeningSession, DetectedCompany } from './session-store.js';
 import { clusterByIncidentLLM, ClusteringResult, ClusterProgressCallback, IncidentCluster } from './deduplicator.js';
 import { initReportsDb, saveReport as saveReportToDb, saveReportMarkdown, type CleanEntityResult } from './reports-db.js';
 import { reportsRouter } from './reports-api.js';
@@ -2476,7 +2476,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       };
 
       console.log(`[V4] DEBUG: Calling clusterByIncidentLLM with clusterStartBatchIndex=${clusterStartBatchIndex}, restoredClusters=${restoredClusterBatchResults?.length || 0}`);
-      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 5, clusterProgress, clusterStartBatchIndex, restoredClusterBatchResults);
+      const clusterResult = await clusterByIncidentLLM(passed, subjectName, 5, clusterProgress, clusterStartBatchIndex, restoredClusterBatchResults, signal);
 
       // Send cluster summary
       sendEvent({
@@ -2614,7 +2614,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         categorizeBatchIndex: adjustedBatchNumber,
         currentPhase: 'categorize'
       }, connectionId);
-    });
+    }, signal);
 
       // Merge new results with any restored partial results
       // partialCategorized already contains both restored + newly categorized items
@@ -2773,6 +2773,13 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         } catch (saveErr) {
           console.error(`[V4] Failed to save progress on abort:`, saveErr);
         }
+        activeScreenings.delete(screeningKey);
+        return;
+      }
+
+      // Check if this connection still owns the session (cross-instance abort)
+      if (!await isStillOwner(sessionId, connectionId)) {
+        console.log(`[V4] Ownership lost at ${i + 1}/${toProcess.length}, stopping`);
         activeScreenings.delete(screeningKey);
         return;
       }
@@ -3043,7 +3050,9 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         const profileUpdate = ((i + 1) % 5 === 0) ? { profile: subjectProfile } : {};
         const saved = await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings, ...profileUpdate }, connectionId);
         if (!saved) {
-          console.warn(`[V4] PROGRESS_SAVE_FAILED: article ${i + 1}/${toProcess.length}, updateSession returned false`);
+          console.log(`[V4] Session update rejected (superseded), stopping at ${i + 1}/${toProcess.length}`);
+          activeScreenings.delete(screeningKey);
+          return;
         }
       } catch (saveErr) {
         console.error(`[V4] PROGRESS_SAVE_ERROR: article ${i + 1}/${toProcess.length}:`, saveErr);
@@ -3073,7 +3082,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       // Update session to consolidate phase BEFORE starting (for reconnection tracking)
       await updateSession(sessionId, { currentPhase: 'consolidate' }, connectionId);
 
-      consolidatedFindings = await consolidateFindings(allFindings, subjectName, parkedArticles);
+      consolidatedFindings = await consolidateFindings(allFindings, subjectName, parkedArticles, signal);
       tracker.recordConsolidation(allFindings.length, consolidatedFindings.length);
 
       // Store consolidated results in session (for reconnection)

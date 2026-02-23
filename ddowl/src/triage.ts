@@ -820,7 +820,8 @@ export async function categorizeAll(
   results: BatchSearchResult[],
   subjectName: string,
   subjectProfile?: SubjectProfile | null,
-  onBatchComplete?: (progress: BatchProgress) => void | Promise<void>  // Allow async callbacks
+  onBatchComplete?: (progress: BatchProgress) => void | Promise<void>,  // Allow async callbacks
+  signal?: AbortSignal  // For cross-instance abort on ownership loss
 ): Promise<CategorizedOutput> {
   if (results.length === 0) {
     return { red: [], amber: [], green: [] };
@@ -832,6 +833,12 @@ export async function categorizeAll(
 
   // Process in batches
   for (let i = 0; i < results.length; i += BATCH_SIZE) {
+    // Check if aborted (disconnect or ownership lost)
+    if (signal?.aborted) {
+      console.log(`[CATEGORIZE] Aborted at batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+      break;
+    }
+
     const batch = results.slice(i, i + BATCH_SIZE);
     const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
     console.log(`[CATEGORIZE] Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);

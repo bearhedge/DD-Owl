@@ -318,7 +318,8 @@ export async function clusterByIncidentLLM(
   maxPerCluster: number = 3,
   onProgress?: ClusterProgressCallback,
   startBatchIndex: number = 0,  // For mid-clustering resume: which batch to start from (0-indexed)
-  previousBatchResults: IncidentCluster[] | null = null  // Restored clusters from previous batches
+  previousBatchResults: IncidentCluster[] | null = null,  // Restored clusters from previous batches
+  signal?: AbortSignal  // For cross-instance abort on ownership loss
 ): Promise<ClusteringResult> {
   console.log(`[CLUSTER] Starting clustering for ${articles.length} articles about "${subjectName}"${startBatchIndex > 0 ? ` (resuming from batch ${startBatchIndex + 1})` : ''}`);
 
@@ -384,6 +385,12 @@ export async function clusterByIncidentLLM(
   const restoredClusters = previousBatchResults || [];
 
   for (let i = startBatchIndex; i < batches.length; i++) {
+    // Check if aborted (disconnect or ownership lost)
+    if (signal?.aborted) {
+      console.log(`[CLUSTER] Aborted at batch ${i + 1}/${batches.length}`);
+      break;
+    }
+
     // Notify batch start
     await onProgress?.({
       type: 'batch_start',
