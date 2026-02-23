@@ -631,14 +631,16 @@ async function categorizeBatch(
   for (const r of results) {
     const skipCheck = shouldSkipUrl({ title: r.title, snippet: r.snippet || '', url: r.url });
     if (skipCheck.skip) {
-      output.green.push({ ...r, category: 'GREEN' as const, reason: skipCheck.reason });
-      skippedCount++;
-
-      // Spotlight: pre-filter marked GREEN but article has adverse keywords — possible false negative
+      // Check if article has adverse keywords despite being from a blocked domain
       const textToCheck = (r.title + ' ' + (r.snippet || '')).toLowerCase();
       const matched = ADVERSE_KEYWORDS_TRIAGE.filter(kw => textToCheck.includes(kw.toLowerCase()));
       if (matched.length > 0) {
-        console.log(`[SPOTLIGHT] Pre-filter GREEN but has adverse keywords: "${r.title.slice(0, 60)}" (filter: ${skipCheck.reason}, keywords: ${matched.join(',')})`);
+        // Override: let the LLM categorize it — adverse content on blocked domains is still adverse
+        console.log(`[SPOTLIGHT] Pre-filter override: "${r.title.slice(0, 60)}" has adverse keywords (${matched.join(',')}) — sending to LLM despite ${skipCheck.reason}`);
+        relevant.push(r);
+      } else {
+        output.green.push({ ...r, category: 'GREEN' as const, reason: skipCheck.reason });
+        skippedCount++;
       }
     } else {
       relevant.push(r);
