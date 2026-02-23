@@ -974,8 +974,8 @@ export type GICSSectorName = typeof GICS_SECTORS[GICSSectorCode];
 // Patterns use word boundaries and require strong signals to avoid false positives
 const SECTOR_PATTERNS: Array<{ sector: GICSSectorCode; pattern: RegExp; weight: number }> = [
   // Health Care - high weight, specific medical terms
-  { sector: 35, pattern: /\b(pharmaceutical company|biotech company|biopharmaceutical|bio-pharmaceutical|medical device|hospital|healthcare provider|drug development|vaccine company|clear aligner|orthodontic|dental|clinical trial|oncology|therapeutics|diagnostic|CRO|clinical research|oncology therapies|drug candidates)\b/i, weight: 3 },
-  { sector: 35, pattern: /\b(pharmaceutical|biotech|biotechnology|vaccine|medicine|medical)\b/i, weight: 1 },
+  { sector: 35, pattern: /\b(pharmaceutical company|biotech company|biopharmaceutical|bio-pharmaceutical|medical device|hospital|healthcare provider|healthcare service provider|drug development|vaccine company|clear aligner|orthodontic|dental|clinical trial|oncology|therapeutics|diagnostic|CRO|clinical research|oncology therapies|drug candidates|inhalation drug|respiratory disease)\b/i, weight: 3 },
+  { sector: 35, pattern: /\b(pharmaceutical|biotech|biotechnology|vaccine|medicine|medical|healthcare)\b/i, weight: 1 },
 
   // Energy - specific power/energy terms, before Utilities
   { sector: 10, pattern: /\b(nuclear power|power producer|power generation|IPP|independent power producer|oil and gas|petroleum|renewable energy|solar power|wind power|coal-fired|gas-fired)\b/i, weight: 3 },
@@ -990,24 +990,24 @@ const SECTOR_PATTERNS: Array<{ sector: GICSSectorCode; pattern: RegExp; weight: 
   { sector: 40, pattern: /\b(bank(?:ing)?|securities|brokerage|lending|mortgage)\b/i, weight: 1 },
 
   // Information Technology - tech companies
-  { sector: 45, pattern: /\b(software company|SaaS|cloud computing|cloud platform|AI company|artificial intelligence|semiconductor|fintech|robotics|IT services|cybersecurity|data center)\b/i, weight: 3 },
-  { sector: 45, pattern: /\b(software|technology|digital platform|mobile app|big data|machine learning)\b/i, weight: 1 },
+  { sector: 45, pattern: /\b(software company|SaaS|cloud computing|cloud platform|AI company|artificial intelligence|semiconductor|fintech|robotics|IT services|cybersecurity|data center|AI application|large model|digital teaching|digital education|enterprise AI)\b/i, weight: 3 },
+  { sector: 45, pattern: /\b(software|technology|digital platform|mobile app|big data|machine learning|AI solutions|digital solution)\b/i, weight: 1 },
 
   // Consumer Staples - food and beverage, before Consumer Discretionary
-  { sector: 30, pattern: /\b(food company|beverage company|packaged drinking water|quick-frozen food|dairy company|grocery|supermarket|agriculture|farming)\b/i, weight: 3 },
-  { sector: 30, pattern: /\b(food|beverage|dairy|meat|tobacco|cosmetic)\b/i, weight: 1 },
+  { sector: 30, pattern: /\b(food company|beverage company|packaged drinking water|quick-frozen food|dairy company|grocery|supermarket|agriculture|farming|tea leaf products|tea leaf provider)\b/i, weight: 3 },
+  { sector: 30, pattern: /\b(food|beverage|dairy|meat|tobacco|cosmetic|tea leaves|tea ware)\b/i, weight: 1 },
 
-  // Consumer Discretionary - retail, auto, hospitality
-  { sector: 25, pattern: /\b(retailer|chain store|mobile phone retailer|used vehicle|automobile dealer|restaurant chain|hotel|hospitality|e-commerce|fashion|apparel|luxury)\b/i, weight: 3 },
-  { sector: 25, pattern: /\b(retail|restaurant|hotel|automobile|automotive|apparel|fashion|travel|tourism)\b/i, weight: 1 },
+  // Consumer Discretionary - retail, auto, hospitality, sporting goods
+  { sector: 25, pattern: /\b(retailer|chain store|mobile phone retailer|used vehicle|automobile dealer|restaurant chain|hotel|hospitality|e-commerce|fashion|apparel|luxury|fishing tackle|fishing gear|outdoor equipment|sporting goods)\b/i, weight: 3 },
+  { sector: 25, pattern: /\b(retail|restaurant|hotel|automobile|automotive|apparel|fashion|travel|tourism|fishing|outdoor)\b/i, weight: 1 },
 
   // Materials - chemicals, mining, materials
   { sector: 15, pattern: /\b(gold mining|mining company|chemical company|steel company|cement|biodegradable|new materials|packaging materials)\b/i, weight: 3 },
   { sector: 15, pattern: /\b(chemical|mining|metals|steel|cement|packaging|paper|aluminum|copper|gold|lithium)\b/i, weight: 1 },
 
-  // Industrials - manufacturing, construction, logistics
-  { sector: 20, pattern: /\b(construction company|engineering company|logistics company|manufacturing|machinery|aerospace|defense|building material|rail transit|urban rail)\b/i, weight: 3 },
-  { sector: 20, pattern: /\b(construction|logistics|engineering|industrial|freight|shipping|transportation|railway|airline)\b/i, weight: 1 },
+  // Industrials - manufacturing, construction, logistics, electrical equipment
+  { sector: 20, pattern: /\b(construction company|engineering company|logistics company|manufacturing|machinery|aerospace|defense|building material|rail transit|urban rail|air conditioner provider|air conditioner manufacturer)\b/i, weight: 3 },
+  { sector: 20, pattern: /\b(construction|logistics|engineering|industrial|freight|shipping|transportation|railway|airline|air conditioner|electrical equipment)\b/i, weight: 1 },
 
   // Real Estate
   { sector: 60, pattern: /\b(property management|real estate|property developer|REIT|residential property|commercial property)\b/i, weight: 3 },
@@ -1032,17 +1032,13 @@ export interface SectorExtraction {
  */
 function findOverviewSection(text: string): string | null {
   // Strategy 1: Look for standalone OVERVIEW section (most common in HKEX prospectuses)
-  // The pattern is: \nOVERVIEW\n followed by business description
+  // The \nOVERVIEW\n pattern reliably matches the actual section header (not TOC entries)
   const overviewMatch = text.match(/\nOVERVIEW\n([\s\S]{0,3000})/);
   if (overviewMatch && overviewMatch[1]) {
     const content = overviewMatch[1].trim();
-    // Validate it looks like actual business content
-    // Accept: "We are...", "Founded in..., we are...", "Established in..., we..."
-    if (content.match(/^(?:Founded|Established|Incorporated)?\s*(?:in\s+\d{4},?\s*)?we\s+(are|have|were|provide|operate|develop|offer|manufacture|focus)/i)) {
-      return content.slice(0, 1500);
-    }
-    // Also accept if it starts directly with "We are"
-    if (content.match(/^We\s+(are|have|were|provide|operate|develop|offer|manufacture)/i)) {
+    // Accept if it's substantial text (200+ chars) that looks like prose, not a TOC
+    // TOC entries have page numbers/dots; real content has sentences
+    if (content.length >= 200 && !content.match(/^\.{3,}/) && content.includes(' ')) {
       return content.slice(0, 1500);
     }
   }
@@ -1051,8 +1047,7 @@ function findOverviewSection(text: string): string | null {
   const summaryMatch = text.match(/\nSUMMARY\n([\s\S]{0,3000})/);
   if (summaryMatch && summaryMatch[1]) {
     const content = summaryMatch[1].trim();
-    if (content.match(/^(?:Founded|Established|Incorporated)?\s*(?:in\s+\d{4},?\s*)?we\s+(are|have|were|provide|operate|develop|offer|manufacture|focus)/i) ||
-        content.match(/^We\s+(are|have|were|provide|operate|develop|offer|manufacture)/i)) {
+    if (content.length >= 200 && !content.match(/^\.{3,}/) && content.includes(' ')) {
       return content.slice(0, 1500);
     }
   }
@@ -1097,7 +1092,19 @@ function findOverviewSection(text: string): string | null {
  */
 export function extractSectorFromText(fullText: string): SectorExtraction {
   // Find Overview section
-  const overviewText = findOverviewSection(fullText);
+  let overviewText = findOverviewSection(fullText);
+  let usedCoverFallback = false;
+
+  // Fallback: if no overview section found, use first ~3 pages worth of text
+  // Cover pages often contain industry keywords like "a pharmaceutical company"
+  if (!overviewText) {
+    const coverText = fullText.slice(0, 5000);
+    // Only use if it contains some industry-related content
+    if (coverText.match(/\b(company|limited|group|corporation|holdings)\b/i)) {
+      overviewText = coverText;
+      usedCoverFallback = true;
+    }
+  }
 
   if (!overviewText) {
     return {
@@ -1149,8 +1156,11 @@ export function extractSectorFromText(fullText: string): SectorExtraction {
   }
 
   // Determine confidence based on weighted score
+  // Cap at 'low' when using cover page fallback (less reliable context)
   let confidence: 'high' | 'medium' | 'low' = 'low';
-  if (bestScore >= 4) {
+  if (usedCoverFallback) {
+    confidence = 'low';
+  } else if (bestScore >= 4) {
     confidence = 'high';
   } else if (bestScore >= 2) {
     confidence = 'medium';
@@ -1249,7 +1259,7 @@ export interface PricingExtraction {
 }
 
 /**
- * Extract pricing data from prospectus PDF (first ~10 pages)
+ * Extract pricing data from prospectus PDF (first ~25 pages)
  * Prospectus cover pages follow standardized HKEX format with offer price and shares
  */
 export async function extractPricingFromProspectus(pdfBuffer: Buffer): Promise<PricingExtraction> {
@@ -1267,25 +1277,31 @@ export async function extractPricingFromProspectus(pdfBuffer: Buffer): Promise<P
     const parser = new PDFParse(uint8Array);
     const parsed = await parser.getText();
 
-    // Use first 10 pages (cover + summary pages where pricing info lives)
-    const firstPages = parsed.pages.slice(0, 10).map(p => p.text).join('\n');
+    // Use first 25 pages (cover + summary pages where pricing info lives)
+    // Pricing summary tables often appear on pages 10-20 in larger prospectuses
+    const firstPages = parsed.pages.slice(0, 25).map(p => p.text).join('\n');
     // Clean up whitespace for matching
     const text = firstPages.replace(/\r\n/g, '\n');
 
     // ── Deal Type ──
     // Check the title/cover for deal type
+    // Use first ~2000 chars (cover page) for "Introduction" detection to avoid
+    // matching section headers deeper in the document
+    const coverText = text.slice(0, 2000);
     if (/GLOBAL\s+OFFERING/i.test(text)) {
       result.dealType = 'Global offering';
-    } else if (/INTRODUCTION/i.test(text) && !/GLOBAL\s+OFFERING/i.test(text)) {
-      // "Introduction" listings have no offering/pricing
-      result.dealType = 'Introduction';
-      return result;
-    } else if (/PLACING/i.test(text) && !/GLOBAL\s+OFFERING/i.test(text)) {
-      result.dealType = 'Placing';
     } else if (/SHARE\s+OFFER/i.test(text)) {
       result.dealType = 'Share offer';
     } else if (/PUBLIC\s+OFFER/i.test(text)) {
       result.dealType = 'Public offer';
+    } else if (/PLACING/i.test(coverText)) {
+      result.dealType = 'Placing';
+    } else if (/LISTING\s+BY\s+WAY\s+OF\s+INTRODUCTION/i.test(coverText) ||
+               (/\bINTRODUCTION\b/i.test(coverText) && !/PLACING|OFFER|OFFERING/i.test(coverText))) {
+      // "Introduction" listings have no offering/pricing — only match if cover page
+      // says "Introduction" without any offering/placing keywords
+      result.dealType = 'Introduction';
+      return result;
     }
 
     // ── Offer Price ──
@@ -1299,6 +1315,18 @@ export async function extractPricingFromProspectus(pdfBuffer: Buffer): Promise<P
       /HK\$([\d,.]+)\s*per\s*(?:Offer\s*)?Share/i,
       // Price per H share
       /HK\$([\d,.]+)\s*per\s*H\s*Share/i,
+      // "Price per Offer Share" without "HK$" prefix in same line
+      /Price\s*(?:per|of)\s*(?:each\s*)?(?:Offer\s*)?Share\s*[:：]?\s*HK\$([\d,.]+)/i,
+      // "Issue Price" format (common in older prospectuses)
+      /Issue\s*Price\s*[:：]?\s*HK\$([\d,.]+)/i,
+      // "Maximum Offer Price" or "Indicative Offer Price"
+      /(?:Maximum|Indicative|Initial)\s*(?:Offer|Public)\s*Price\s*[:：]?\s*HK\$([\d,.]+)/i,
+      // Placing price
+      /Placing\s*Price\s*[:：]?\s*HK\$([\d,.]+)/i,
+      // "Public Offer Price" (common in Public offer type deals)
+      /Public\s*Offer\s*Price\s*[:：]?\s*HK\$([\d,.]+)/i,
+      // Table format: "HK$X.XX" on a line near "Offer Price"
+      /Offer\s*Price[\s\S]{0,100}?HK\$([\d,.]+)/i,
     ];
 
     for (const pattern of pricePatterns) {
@@ -1328,6 +1356,12 @@ export async function extractPricingFromProspectus(pdfBuffer: Buffer): Promise<P
       /Global\s+Offering[\s\S]{0,200}?\b([\d,]{5,})\s*(?:Offer\s*)?Shares/i,
       // "X Shares ... being offered" format
       /\b([\d,]{5,})\s*(?:H\s+)?Shares\s+(?:are\s+)?(?:being\s+)?(?:offered|proposed)/i,
+      // "Total number of Shares ... 123,456,000"
+      /Total\s+number\s+of\s+(?:Offer\s+)?Shares[\s\S]{0,50}?([\d,]{5,})/i,
+      // "X new Shares"
+      /\b([\d,]{5,})\s+new\s+(?:H\s+)?Shares/i,
+      // "consisting of X Shares"
+      /consisting\s+of\s+([\d,]{5,})\s*(?:Offer\s*)?Shares/i,
     ];
 
     for (const pattern of sharesPatterns) {
@@ -1335,8 +1369,8 @@ export async function extractPricingFromProspectus(pdfBuffer: Buffer): Promise<P
       if (match) {
         const sharesStr = match[1].replace(/,/g, '');
         const shares = parseInt(sharesStr);
-        // Reasonable range: at least 1M shares, less than 100B
-        if (shares >= 1_000_000 && shares < 100_000_000_000) {
+        // Reasonable range: at least 100K shares (small GEM IPOs), less than 100B
+        if (shares >= 100_000 && shares < 100_000_000_000) {
           result.sharesOffered = shares;
           result.rawSharesText = match[0].trim().slice(0, 200);
           break;
