@@ -65,10 +65,7 @@ export async function runHeuristicFlags(pool: Pool): Promise<{ totalActive: numb
         (SELECT da2.source_url FROM deal_appointments da2 WHERE da2.deal_id = d.id AND da2.source_url IS NOT NULL LIMIT 1)
       ) AS pdf_url,
       COUNT(da.id) AS bank_count,
-      COALESCE(
-        array_agg(da.roles) FILTER (WHERE da.id IS NOT NULL),
-        '{}'
-      ) AS all_roles
+      BOOL_OR('sponsor' = ANY(da.roles)) AS has_sponsor
     FROM deals d
     JOIN companies c ON c.id = d.company_id
     LEFT JOIN deal_appointments da ON da.deal_id = d.id
@@ -96,14 +93,8 @@ export async function runHeuristicFlags(pool: Pool): Promise<{ totalActive: numb
     }
 
     // Problem 3: No sponsor role
-    if (bankCount > 0) {
-      const allRoles: string[][] = deal.all_roles || [];
-      const hasSponsor = allRoles.some((roles: string[]) =>
-        Array.isArray(roles) && roles.includes('sponsor')
-      );
-      if (!hasSponsor) {
-        problems.push('No sponsor role assigned');
-      }
+    if (bankCount > 0 && !deal.has_sponsor) {
+      problems.push('No sponsor role assigned');
     }
 
     // Problem 4: No OC PDF link
