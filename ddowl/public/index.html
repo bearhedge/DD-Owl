@@ -255,6 +255,29 @@
       color: #444;
     }
 
+    #contextInput {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px 18px;
+      font-size: 16px;
+      font-family: inherit;
+      border: 1px solid #333;
+      border-radius: 6px;
+      background: #0a0a0a;
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s;
+      resize: none;
+      overflow: hidden;
+      line-height: 1.4;
+    }
+    #contextInput:focus {
+      border-color: #4a9eff;
+    }
+    #contextInput::placeholder {
+      color: #444;
+    }
+
     button {
       padding: 14px 28px;
       font-size: 14px;
@@ -1762,11 +1785,11 @@
 
         <!-- Further Info (optional entity context) -->
         <div style="margin-top: 8px;">
-          <input
-            type="text"
+          <textarea
             id="contextInput"
+            rows="1"
             placeholder="Further info (e.g. VP at 中國建設銀行, Shenzhen)"
-          >
+          ></textarea>
         </div>
 
         <!-- Name Variations Section -->
@@ -2754,6 +2777,22 @@
             SessionHistory.clear();
             renderRecentSessions();
           }
+        });
+      }
+    });
+
+    // Auto-expand contextInput textarea (1 row → max 6 rows)
+    document.addEventListener('DOMContentLoaded', () => {
+      const ctx = document.getElementById('contextInput');
+      if (ctx) {
+        const maxRows = 6;
+        const lineHeight = parseFloat(getComputedStyle(ctx).lineHeight) || 22.4;
+        const padding = parseFloat(getComputedStyle(ctx).paddingTop) + parseFloat(getComputedStyle(ctx).paddingBottom);
+        const maxHeight = lineHeight * maxRows + padding;
+        ctx.addEventListener('input', () => {
+          ctx.style.height = 'auto';
+          ctx.style.height = Math.min(ctx.scrollHeight, maxHeight) + 'px';
+          ctx.style.overflow = ctx.scrollHeight > maxHeight ? 'auto' : 'hidden';
         });
       }
     });
