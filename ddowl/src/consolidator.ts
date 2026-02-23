@@ -574,6 +574,27 @@ function mergeAcrossClusterGroups(groups: RawFinding[][], subjectName?: string):
         console.log(`[CONSOLIDATE] Cross-cluster sim: "${label_i}" vs "${label_j}" = ${sim.toFixed(3)}${sim >= 0.75 ? ' → MERGE' : ''}`);
       }
       if (sim >= 0.75) {
+        // Safety check: block merge if groups have distinct non-subject proper nouns with no overlap
+        const text_i = `${groups[i][0].headline} ${groups[i][0].summary}`.toLowerCase();
+        const text_j = `${groups[j][0].headline} ${groups[j][0].summary}`.toLowerCase();
+        const nouns_i = extractProperNouns(text_i);
+        const nouns_j = extractProperNouns(text_j);
+        // Remove subject tokens
+        if (subjectName) {
+          const tokens = new Set<string>();
+          (subjectName.toLowerCase().match(/[a-z]{3,}/g) || []).forEach(w => tokens.add(w));
+          (subjectName.match(/[\u4e00-\u9fff]{2,}/g) || []).forEach(w => tokens.add(w));
+          tokens.add(subjectName.toLowerCase());
+          for (const t of tokens) { nouns_i.delete(t); nouns_j.delete(t); }
+        }
+        // If both have proper nouns and zero overlap → different incidents, don't merge
+        if (nouns_i.size >= 2 && nouns_j.size >= 2) {
+          const overlap = [...nouns_i].filter(n => nouns_j.has(n)).length;
+          if (overlap === 0) {
+            console.log(`[CONSOLIDATE] Cross-cluster BLOCKED: no proper noun overlap ("${[...nouns_i].slice(0,3).join(',')}" vs "${[...nouns_j].slice(0,3).join(',')}")`);
+            continue; // skip this merge
+          }
+        }
         combined.push(...groups[j]);
         used.add(j);
       }

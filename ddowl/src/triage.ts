@@ -2,9 +2,7 @@
 import axios from 'axios';
 import { SubjectProfile } from './types.js';
 
-// LLM Configuration for Triage with Fallback Chain
-// Priority: Kimi (primary, no content blocks) → DeepSeek (fallback)
-const KIMI_API_KEY = process.env.KIMI_API_KEY || '';
+// LLM Configuration for Triage
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
 
 interface LLMProvider {
@@ -16,22 +14,10 @@ interface LLMProvider {
   isGemini?: boolean;
 }
 
-// Build provider list in priority order (only include configured providers)
+// Build provider list (only include configured providers)
 function getProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
 
-  // 1. Kimi K2 (PRIMARY - no content moderation blocks on Chinese adverse media)
-  if (KIMI_API_KEY) {
-    providers.push({
-      name: 'Kimi K2',
-      url: 'https://api.moonshot.ai/v1/chat/completions',
-      model: 'kimi-k2',
-      apiKey: KIMI_API_KEY,
-      timeout: 120000,
-    });
-  }
-
-  // 2. DeepSeek (fallback)
   if (DEEPSEEK_API_KEY) {
     providers.push({
       name: 'DeepSeek',
@@ -45,7 +31,7 @@ function getProviders(): LLMProvider[] {
   return providers;
 }
 
-// Check if error is content moderation related (should trigger fallback)
+// Check if error is content moderation related
 function isContentModerationError(error: any): boolean {
   const errorMessage = error?.response?.data?.error?.message || error?.message || '';
   const errorCode = error?.response?.data?.error?.code || '';
@@ -53,10 +39,6 @@ function isContentModerationError(error: any): boolean {
   // DeepSeek content moderation
   if (errorMessage.includes('Content Exists Risk')) return true;
   if (errorCode === 'content_filter') return true;
-
-  // Kimi content moderation
-  if (errorMessage.includes('content policy')) return true;
-  if (errorMessage.includes('sensitive')) return true;
 
   // Rate limits should also trigger fallback
   if (error?.response?.status === 429) return true;
@@ -99,7 +81,7 @@ async function callGeminiAPI(provider: LLMProvider, prompt: string): Promise<str
   return response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-// Helper to call OpenAI-compatible APIs (DeepSeek, Kimi)
+// Helper to call OpenAI-compatible APIs (DeepSeek)
 async function callOpenAICompatibleAPI(provider: LLMProvider, prompt: string): Promise<string> {
   const response = await axios.post(
     provider.url,
@@ -682,9 +664,11 @@ async function categorizeBatch(
   }
 
   // Format non-fiction results as numbered list
-  const resultsText = relevant.map((r, i) =>
-    `${i + 1}. Title: ${r.title.slice(0, 80)}\n   Snippet: ${(r.snippet || '').slice(0, 150)}`
-  ).join('\n\n');
+  const resultsText = relevant.map((r, i) => {
+    const isTargetedSearch = r.query && r.query.includes('|');
+    const queryHint = isTargetedSearch ? `\n   Search: ${r.query.slice(0, 100)}` : '';
+    return `${i + 1}. Title: ${r.title.slice(0, 80)}\n   Snippet: ${(r.snippet || '').slice(0, 150)}${queryHint}`;
+  }).join('\n\n');
 
   const prompt = `Categorize ${results.length} search results about "${subjectName}" as RED/AMBER/GREEN.
 
@@ -698,12 +682,24 @@ RED (severe):
 - 制裁/黑名单 = sanctions/blacklist
 
 AMBER (investigate):
-- 证监会/SFC/监管 = regulatory body mention
-- 股权集中/异常交易 = concentration warning/unusual trading
-- 调查/涉嫌/被查 = investigation/suspected/under inquiry
-- 诉讼/起诉/纠纷 = lawsuit/prosecution/dispute
-- 债务/欠款/违约 = debt/default
-- 内幕交易 = insider trading
+- 证监会/證監會/SFC/CSRC/监管/處罰/罚款/罰款/裁罚/禁入/禁令/警告/处分/惩戒 = regulatory enforcement
+- 股权集中/异常交易/操纵股价/操縱股價/操纵市场/操縱市場 = market manipulation
+- 调查/調查/涉嫌/被查/查处/查處/双规/雙規/监察/監察/纪检/紀檢 = investigation/inquiry
+- 诉讼/訴訟/起诉/起訴/被诉/被訴/纠纷/糾紛/官司/仲裁/判决/判決/开庭/開庭/审判/審判/控告/指控 = legal proceedings
+- 债务/債務/欠款/拖欠/违约/違約/破产/破產/清盘/清盤/坏账/壞帳/逾期/失信/被执行人/老赖 = debt/default/insolvency
+- 内幕交易/內幕交易/内线交易/內線交易/非法集资/非法集資 = financial crime
+- 投诉/投訴/举报/舉報/维权/維權/消费者/三包/退款 = consumer complaint/whistleblower
+- 召回/缺陷/安全隐患/安全隱患/质量问题/質量問題/事故/爆炸/起火/刹车失灵/malfunction/recall/defect/fire/explosion/accident/"safety hazard"/"product liability" = product safety
+- 污染/排污/排放/废水/环保/環保/碳排放/Greenpeace/ESG/environmental/pollution/"climate violation" = environmental/ESG
+- 强迫劳动/強迫勞動/童工/child labor/奴隶/奴隸/剥削/剝削/过劳/過勞/996/加班/血汗/sweatshop/"modern slavery"/overwork/Uyghur/"forced labor" = labor/human rights
+- 审查/審查/censorship/数据泄露/數據洩露/隐私/隱私/privacy/GDPR/"data breach"/surveillance/监控/監控/"data protection" = censorship/privacy/data
+- 商业秘密/trade secret/窃取/竊取/泄露/洩露/espionage = IP theft/trade secret
+- 反垄断/反壟斷/垄断/壟斷/antitrust/cartel/monopoly/"price fixing"/不正当竞争/不正當競爭/"anti-competitive"/collusion = antitrust
+- 侵权/infringement/抄袭/counterfeit/假冒/盗版 = IP infringement
+- 逃税/逃稅/避税/避稅/偷税/偷稅/"tax evasion"/"tax fraud"/"transfer pricing"/海关/海關 = tax evasion/customs
+- 丑闻/醜聞/scandal/争议/爭議/controversy/违法/違法/违规/違規/不端行为/misconduct/违纪/違紀 = misconduct/scandal
+- 骚扰/騷擾/harassment/性侵/assault/"domestic violence"/猥亵/猥褻 = personal misconduct
+- whistleblower/"internal investigation"/廉洁/廉潔/内部调查/內部調查/开除/開除 = internal governance
 
 GREEN: No adverse keywords, different person, neutral business news
 
@@ -714,6 +710,8 @@ IMPORTANT CONTEXT RULES:
 - Only flag AMBER/RED when the keyword indicates ACTUAL misconduct, enforcement, or legal trouble targeting the subject
 - SEC/证监会 filings, prospectuses, and annual reports are routine corporate governance — mark GREEN
 - If the SAME incident appears multiple times from different sources, only the first mention matters — duplicates of the same story should get the same category
+
+SEARCH CONTEXT: Some results include a "Search" line showing the adverse query that found them. Articles from targeted adverse searches (ESG, product safety, regulatory, tax, antitrust) are MORE LIKELY to be genuinely adverse even if the title seems neutral. Bias toward AMBER for these.
 
 If title/snippet contains adverse keywords about "${subjectName}" indicating ACTUAL enforcement or misconduct, mark RED or AMBER accordingly. Do NOT mark GREEN if genuine adverse keywords are present.
 ${subjectProfile && (subjectProfile.currentRole || subjectProfile.associatedCompanies.length > 0 || subjectProfile.nationality.length > 0) ? `

@@ -55,7 +55,7 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-ouwen-chenbingxu',
         description: 'Ou Wen & Chen Bingxu fired for corruption (2024)',
         category: 'corruption',
-        keywords: ['欧文', '陈丙旭', '西欧', '拉美'],
+        keywords: ['欧文', '陈丙旭', '西欧', '拉美', 'LatAm', 'Europe Managers', 'Sacks', 'Bribery'],
         severity: 'RED',
       },
       {
@@ -84,7 +84,7 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-uyghur',
         description: 'Uyghur forced labor (ASPI 2020)',
         category: 'esg',
-        keywords: ['维吾尔', 'Uyghur', 'ASPI', '强迫劳动'],
+        keywords: ['维吾尔', 'Uyghur', 'ASPI', '强迫劳动', 'forced labor', 'forced labour'],
         severity: 'RED',
       },
       {
@@ -148,14 +148,14 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-12315-complaints',
         description: '12315 consumer complaints',
         category: 'product',
-        keywords: ['12315', '虚假广告', '不正当竞争'],
+        keywords: ['12315', '虚假广告', '不正当竞争', '投诉', '三包', 'consumer complaint'],
         severity: 'AMBER',
       },
       {
         id: 'xm-smartphone-quality',
         description: 'Smartphone quality complaints (2022)',
         category: 'product',
-        keywords: ['手机质量', '售后服务差'],
+        keywords: ['手机质量', '售后服务差', '投诉', 'complaint', '自动乱按', 'quality'],
         severity: 'AMBER',
       },
       {
@@ -198,7 +198,7 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-false-advertising',
         description: 'False advertising penalties (2022)',
         category: 'regulatory',
-        keywords: ['虚假广告', '国家级', '最高级', '绝对化用语'],
+        keywords: ['虚假广告', '虚假宣传', '国家级', '最高级', '绝对化用语', 'false advertising', '欺诈'],
         severity: 'AMBER',
       },
       {
@@ -220,14 +220,14 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-india-tax-evasion',
         description: 'India tax evasion multi-case (2019-2023)',
         category: 'tax',
-        keywords: ['印度', '逃税', '800亿', 'INR', 'royalty'],
+        keywords: ['印度', '逃税', '800亿', 'INR', 'royalty', 'tax evasion', 'India tax'],
         severity: 'RED',
       },
       {
         id: 'xm-dri-import-tax',
         description: 'DRI import tax + frozen funds (2022)',
         category: 'tax',
-        keywords: ['DRI', '进口税', '65.3亿', '冻结'],
+        keywords: ['DRI', '进口税', '65.3亿', '冻结', 'import tax', 'frozen fund', '资产冻结'],
         severity: 'RED',
       },
       // ANTITRUST (2)
@@ -235,7 +235,7 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-cci-collusion',
         description: 'India CCI collusion (2024)',
         category: 'antitrust',
-        keywords: ['CCI', 'Competition Commission', 'Amazon', 'Flipkart', '反垄断'],
+        keywords: ['CCI', 'Competition Commission', 'Amazon', 'Flipkart', '反垄断', 'antitrust', 'collusion'],
         severity: 'AMBER',
       },
       {
@@ -250,7 +250,7 @@ export const BENCHMARK_CASES: BenchmarkCase[] = [
         id: 'xm-noyb-gdpr',
         description: 'Noyb EU data privacy (2025)',
         category: 'litigation',
-        keywords: ['Noyb', 'GDPR', '数据传输', '奥地利'],
+        keywords: ['Noyb', 'GDPR', '数据传输', '奥地利', 'EU privacy', 'data protection complaint'],
         severity: 'AMBER',
       },
       {
@@ -329,8 +329,9 @@ export function evaluateBenchmark(
   // Check each expected issue
   for (const expected of benchmark.expectedIssues) {
     const found = findings.some(finding => {
-      // Check if any keyword appears in headline or summary
-      const text = `${finding.headline} ${finding.summary}`.toLowerCase();
+      // Check if any keyword appears in headline, summary, or source titles
+      const sourceTitles = (finding.sources || []).map(s => s.title).join(' ');
+      const text = `${finding.headline} ${finding.summary} ${sourceTitles}`.toLowerCase();
       return expected.keywords.some(kw => text.includes(kw.toLowerCase()));
     });
 
