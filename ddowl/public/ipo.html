@@ -736,7 +736,7 @@
             ocDate: dateStr,
             sponsors,
             others,
-            documentUrl: (d.pdf_links && d.pdf_links[0]) || ''
+            documentUrl: d.oc_pdf_url || (d.pdf_links && d.pdf_links[0]) || ''
           };
         });
 
