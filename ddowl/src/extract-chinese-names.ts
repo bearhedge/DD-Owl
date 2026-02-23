@@ -66,12 +66,12 @@ const NAME_SUFFIXES = [
 export function extractChineseNameFromText(text: string): string | null {
   // Match Chinese characters (CJK unified ideographs)
   // Allow spaces between chars (some PDFs have space-separated chars)
-  const chinesePattern = /[\u4e00-\u9fff](?:\s*[\u4e00-\u9fff])*/g;
+  const chinesePattern = /[\u4e00-\u9fff](?:[\s\uff08\uff09]*[\u4e00-\u9fff])*/g;
 
   const matches = text.match(chinesePattern);
   if (!matches) return null;
 
-  const cleaned = matches.map(m => m.replace(/\s+/g, ''));
+  const cleaned = matches.map(m => m.replace(/[\s\uff08\uff09]+/g, ''));
 
   // Pass 1: Strict company name (ends with 公司/控股/集團)
   for (const name of cleaned) {

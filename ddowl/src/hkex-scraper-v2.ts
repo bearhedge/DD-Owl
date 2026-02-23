@@ -248,22 +248,42 @@ export async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<P
       return roles.length > 0 ? roles : ['other'];
     }
 
+    // Bank suffix pattern — matches common legal entity suffixes
+    const bankSuffixPattern = /(?:Limited|L\.?L\.?C\.?|Inc\.?|Branch|Corporation|Corp\.?|Company|Co\.)$/i;
+
+    // Clean bank name: strip footnote markers, marketing aliases, whitespace
+    function cleanBankName(name: string): string {
+      return name
+        .replace(/[#*†]+$/, '')                    // trailing footnote markers
+        .replace(/\s*\([""][^""]*[""]\)\s*$/, '')  // ("BofA Securities") smart quotes
+        .replace(/\s*\("[^"]*"\)\s*$/, '')         // ("BofA Securities") straight quotes
+        .trim();
+    }
+
+    // Skip lines that are ordering disclaimers
+    function isOrderingDisclaimer(line: string): boolean {
+      return /\(in\s+(alphabetical|no\s+particular)\s+order/i.test(line);
+    }
+
     // Method 1: Extract from "has appointed X as sponsor/coordinator"
     const appointmentPatterns = [
-      /has\s+appointed\s+([\s\S]+?Limited)\s+as\s+(?:its?\s+)?(?:the\s+)?(?:sole\s+)?(?:joint\s+)?((?:(?:global\s+)?(?:overall\s+)?(?:sponsor|coordinator|co-ordinator|bookrunner|book\s*runner|lead\s*manager)(?:\s*(?:and|,)\s*)?)+)/gi,
+      /has\s+appointed\s+([\s\S]+?)(?:Limited|L\.?L\.?C\.?|Inc\.?|Branch|Corporation|Corp\.?|Company|Co\.)[#*†]*(?:\s*\([""][^""]*[""]\)|\s*\("[^"]*"\))?\s+as\s+(?:its?\s+)?(?:the\s+)?(?:sole\s+)?(?:joint\s+)?((?:(?:global\s+)?(?:overall\s+)?(?:sponsor|coordinator|co-ordinator|bookrunner|book\s*runner|lead\s*manager)(?:\s*(?:and|,)\s*)?)+)/gi,
     ];
 
     for (const pattern of appointmentPatterns) {
       let match;
       while ((match = pattern.exec(lastPagesText)) !== null) {
-        const captured = match[1].replace(/\s+/g, ' ').trim();
+        // Reconstruct the full captured text including the suffix
+        const fullCapture = match[0].substring(
+          match[0].toLowerCase().indexOf('appointed') + 'appointed'.length
+        ).replace(/\s+as\s+.*$/is, '').trim();
         const rolePart = match[2] || match[0];
         const roles = parseRolesFromText(rolePart);
 
-        const bankNames = captured
+        const bankNames = fullCapture
           .split(/\s+and\s+|\s*,\s*/)
-          .map(s => s.trim())
-          .filter(s => s.match(/Limited$/i) && s.length > 10);
+          .map(s => cleanBankName(s.trim()))
+          .filter(s => bankSuffixPattern.test(s) && s.length > 10);
 
         for (const bankName of bankNames) {
           if (!banks.find(b => b.bank === bankName) && !bankName.match(/HOLDINGS LIMITED$/i)) {
@@ -275,14 +295,16 @@ export async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<P
     }
 
     // Method 2: Extract from role headings
-    // These patterns detect role HEADINGS - we parse ALL roles from the heading text
-    const roleHeadingPattern = /^(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?((?:(?:Sponsor|Coordinator|Co-ordinator|Bookrunner|Lead\s*Manager)(?:\(s\))?(?:(?:\s*[-–]\s*|\s+and\s+)(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?)?)+)/i;
+    const roleHeadingPattern = /^(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?(?:Financial\s+(?:adviser|advisor)\s+and\s+)?(?:(?:Sponsor|Coordinator|Co-ordinator|Bookrunner|Lead\s*Manager)(?:\(s\))?(?:(?:\s*[-–]\s*|\s+and\s+)(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?)?)+/i;
 
     const lines = lastPagesText.split('\n');
     let currentRoles: Role[] = ['other'];
 
     for (const line of lines) {
       const trimmed = line.trim();
+
+      // Skip ordering disclaimers
+      if (isOrderingDisclaimer(trimmed)) continue;
 
       // Check if this line is a role heading
       const headingMatch = trimmed.match(roleHeadingPattern);
@@ -291,18 +313,21 @@ export async function extractBanksFromPdf(page: Page, pdfUrl: string): Promise<P
         continue;
       }
 
+      // Clean the line before checking if it's a bank name
+      const cleaned = cleanBankName(trimmed);
+
       // Check if this line is a bank name
       const isBankName =
-        trimmed.match(/Limited$/i) &&
-        trimmed.match(/^[A-Z]/) &&
-        trimmed.length > 15 &&
-        trimmed.length < 80 &&
-        !trimmed.match(/HOLDINGS LIMITED$/i) &&
-        !trimmed.match(/Stock Exchange|Commission|responsibility|disclaimer|announcement/i) &&
-        (trimmed.match(/Securities|Capital|Financial|Bank|Partners|Investment/i) || currentRoles[0] !== 'other');
+        bankSuffixPattern.test(cleaned) &&
+        cleaned.match(/^[A-Z]/) &&
+        cleaned.length > 15 &&
+        cleaned.length < 80 &&
+        !cleaned.match(/HOLDINGS LIMITED$/i) &&
+        !cleaned.match(/Stock Exchange|Commission|responsibility|disclaimer|announcement/i) &&
+        (cleaned.match(/Securities|Capital|Financial|Bank|Partners|Investment/i) || currentRoles[0] !== 'other');
 
       if (isBankName) {
-        const bankName = trimmed.replace(/^\d+[\.\)]\s*/, '').trim();
+        const bankName = cleaned.replace(/^\d+[\.\)]\s*/, '').trim();
         if (bankName && !banks.find(b => b.bank === bankName)) {
           const isLead = currentRoles.includes('sponsor') || currentRoles.includes('coordinator');
           banks.push({
@@ -392,22 +417,42 @@ function parseBanksFromText(pages: { text: string }[]): BankAppointment[] {
     return roles.length > 0 ? roles : ['other'];
   }
 
+  // Bank suffix pattern — matches common legal entity suffixes
+  const bankSuffixPattern = /(?:Limited|L\.?L\.?C\.?|Inc\.?|Branch|Corporation|Corp\.?|Company|Co\.)$/i;
+
+  // Clean bank name: strip footnote markers, marketing aliases, whitespace
+  function cleanBankName(name: string): string {
+    return name
+      .replace(/[#*†]+$/, '')                    // trailing footnote markers
+      .replace(/\s*\([""][^""]*[""]\)\s*$/, '')  // ("BofA Securities") smart quotes
+      .replace(/\s*\("[^"]*"\)\s*$/, '')         // ("BofA Securities") straight quotes
+      .trim();
+  }
+
+  // Skip lines that are ordering disclaimers
+  function isOrderingDisclaimer(line: string): boolean {
+    return /\(in\s+(alphabetical|no\s+particular)\s+order/i.test(line);
+  }
+
   // Method 1: "has appointed X as ..."
   const appointmentPatterns = [
-    /has\s+appointed\s+([\s\S]+?Limited)\s+as\s+(?:its?\s+)?(?:the\s+)?(?:sole\s+)?(?:joint\s+)?((?:(?:global\s+)?(?:overall\s+)?(?:sponsor|coordinator|co-ordinator|bookrunner|book\s*runner|lead\s*manager)(?:\s*(?:and|,)\s*)?)+)/gi,
+    /has\s+appointed\s+([\s\S]+?)(?:Limited|L\.?L\.?C\.?|Inc\.?|Branch|Corporation|Corp\.?|Company|Co\.)[#*†]*(?:\s*\([""][^""]*[""]\)|\s*\("[^"]*"\))?\s+as\s+(?:its?\s+)?(?:the\s+)?(?:sole\s+)?(?:joint\s+)?((?:(?:global\s+)?(?:overall\s+)?(?:sponsor|coordinator|co-ordinator|bookrunner|book\s*runner|lead\s*manager)(?:\s*(?:and|,)\s*)?)+)/gi,
   ];
 
   for (const pattern of appointmentPatterns) {
     let match;
     while ((match = pattern.exec(pagesText)) !== null) {
-      const captured = match[1].replace(/\s+/g, ' ').trim();
+      // Reconstruct the full captured text including the suffix that was part of the lookahead
+      const fullCapture = match[0].substring(
+        match[0].toLowerCase().indexOf('appointed') + 'appointed'.length
+      ).replace(/\s+as\s+.*$/is, '').trim();
       const rolePart = match[2] || match[0];
       const roles = parseRolesFromText(rolePart);
 
-      const bankNames = captured
+      const bankNames = fullCapture
         .split(/\s+and\s+|\s*,\s*/)
-        .map(s => s.trim())
-        .filter(s => s.match(/Limited$/i) && s.length > 10);
+        .map(s => cleanBankName(s.trim()))
+        .filter(s => bankSuffixPattern.test(s) && s.length > 10);
 
       for (const bankName of bankNames) {
         if (!banks.find(b => b.bank === bankName) && !bankName.match(/HOLDINGS LIMITED$/i)) {
@@ -419,7 +464,7 @@ function parseBanksFromText(pages: { text: string }[]): BankAppointment[] {
   }
 
   // Method 2: Role headings
-  const roleHeadingPattern = /^(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?((?:(?:Sponsor|Coordinator|Co-ordinator|Bookrunner|Lead\s*Manager)(?:\(s\))?(?:(?:\s*[-–]\s*|\s+and\s+)(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?)?)+)/i;
+  const roleHeadingPattern = /^(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?(?:Financial\s+(?:adviser|advisor)\s+and\s+)?(?:(?:Sponsor|Coordinator|Co-ordinator|Bookrunner|Lead\s*Manager)(?:\(s\))?(?:(?:\s*[-–]\s*|\s+and\s+)(?:Joint\s+)?(?:Sole\s+)?(?:Global\s+)?(?:Overall\s+)?)?)+/i;
 
   const lines = pagesText.split('\n');
   let currentRoles: Role[] = ['other'];
@@ -427,23 +472,29 @@ function parseBanksFromText(pages: { text: string }[]): BankAppointment[] {
   for (const line of lines) {
     const trimmed = line.trim();
 
+    // Skip ordering disclaimers
+    if (isOrderingDisclaimer(trimmed)) continue;
+
     const headingMatch = trimmed.match(roleHeadingPattern);
     if (headingMatch) {
       currentRoles = parseRolesFromText(trimmed);
       continue;
     }
 
+    // Clean the line before checking if it's a bank name
+    const cleaned = cleanBankName(trimmed);
+
     const isBankName =
-      trimmed.match(/Limited$/i) &&
-      trimmed.match(/^[A-Z]/) &&
-      trimmed.length > 15 &&
-      trimmed.length < 80 &&
-      !trimmed.match(/HOLDINGS LIMITED$/i) &&
-      !trimmed.match(/Stock Exchange|Commission|responsibility|disclaimer|announcement/i) &&
-      (trimmed.match(/Securities|Capital|Financial|Bank|Partners|Investment/i) || currentRoles[0] !== 'other');
+      bankSuffixPattern.test(cleaned) &&
+      cleaned.match(/^[A-Z]/) &&
+      cleaned.length > 15 &&
+      cleaned.length < 80 &&
+      !cleaned.match(/HOLDINGS LIMITED$/i) &&
+      !cleaned.match(/Stock Exchange|Commission|responsibility|disclaimer|announcement/i) &&
+      (cleaned.match(/Securities|Capital|Financial|Bank|Partners|Investment/i) || currentRoles[0] !== 'other');
 
     if (isBankName) {
-      const bankName = trimmed.replace(/^\d+[\.\)]\s*/, '').trim();
+      const bankName = cleaned.replace(/^\d+[\.\)]\s*/, '').trim();
       if (bankName && !banks.find(b => b.bank === bankName)) {
         const isLead = currentRoles.includes('sponsor') || currentRoles.includes('coordinator');
         banks.push({ bank: bankName, roles: currentRoles, isLead });
