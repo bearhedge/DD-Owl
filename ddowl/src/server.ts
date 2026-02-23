@@ -1106,6 +1106,10 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
   const incomingSessionId = req.query.sessionId as string;
   const lastSeenBatch = parseInt(req.query.lastBatch as string) || 0;
   const lastSeenArticle = parseInt(req.query.lastArticle as string) || 0;
+  const subjectContext = (req.query.context as string) || '';
+  if (subjectContext) {
+    console.log(`[V4] Entity context provided: "${subjectContext}"`);
+  }
 
   // Session-based reconnection (preferred) - restore state from Redis
   let existingSession: ScreeningSession | null = null;
@@ -1913,7 +1917,12 @@ OUTPUT FORMAT (JSON only):
 
 For nationality, provide the headquarters jurisdiction. For industry, list all relevant sectors.`
           : `You are a due diligence analyst. Given these search results about "${subjectName}", extract a preliminary subject profile.
+${subjectContext ? `
+VERIFIED CONTEXT (from the requesting analyst — treat as ground truth):
+${subjectContext}
 
+Use this context to identify the correct individual in the search results. Prioritize results that match this context.
+` : ''}
 SEARCH RESULTS:
 ${snippetSummary}
 
@@ -2536,10 +2545,10 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
 
       // Send individual categorized_item events AS THEY HAPPEN (not after all batches)
       for (const item of progress.batchResult.red) {
-        sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
+        sendEvent({ type: 'categorized_item', category: 'RED', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url, entityMatch: item.entityMatch, entityReason: item.entityReason });
       }
       for (const item of progress.batchResult.amber) {
-        sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url });
+        sendEvent({ type: 'categorized_item', category: 'AMBER', title: item.title, snippet: item.snippet, query: item.query, reason: item.reason, url: item.url, entityMatch: item.entityMatch, entityReason: item.entityReason });
       }
       // Don't log GREEN items to reduce noise - there are many
 

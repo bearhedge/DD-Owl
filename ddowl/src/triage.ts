@@ -619,6 +619,8 @@ export interface CategorizedResult {
   reason: string;
   clusterId?: string;     // From Phase 2.5 incident clustering
   clusterLabel?: string;  // Incident description from clustering
+  entityMatch?: 'confirmed' | 'likely' | 'uncertain' | 'unlikely';
+  entityReason?: string;
 }
 
 export interface CategorizedOutput {
@@ -715,20 +717,26 @@ IMPORTANT CONTEXT RULES:
 
 If title/snippet contains adverse keywords about "${subjectName}" indicating ACTUAL enforcement or misconduct, mark RED or AMBER accordingly. Do NOT mark GREEN if genuine adverse keywords are present.
 ${subjectProfile && (subjectProfile.currentRole || subjectProfile.associatedCompanies.length > 0 || subjectProfile.nationality.length > 0) ? `
-SUBJECT PROFILE (use for entity verification):
+SUBJECT PROFILE (for entity matching — do NOT change RED/AMBER/GREEN based on this):
 ${subjectProfile.currentRole ? `- Role: ${subjectProfile.currentRole.title} at ${subjectProfile.currentRole.company}` : ''}
 ${subjectProfile.industry.length > 0 ? `- Industry: ${subjectProfile.industry.join(', ')}` : ''}
 ${subjectProfile.associatedCompanies.length > 0 ? `- Companies: ${subjectProfile.associatedCompanies.map(c => c.name).join(', ')}` : ''}
 ${subjectProfile.nationality.length > 0 ? `- Nationality: ${subjectProfile.nationality.join(', ')}` : ''}
 ${subjectProfile.ageRange ? `- Age: ${subjectProfile.ageRange}` : ''}
 
-ENTITY RESOLUTION: If an article is clearly about a DIFFERENT "${subjectName}" (different era, different industry, different geography, or different role than the profile above), mark it GREEN with reason "Different individual".
+ENTITY MATCHING: For each result, add "entityMatch" field:
+- "confirmed": Article clearly about this specific person (matching company, role, or unique details)
+- "likely": Probable match but not certain
+- "uncertain": Cannot determine (default if unsure)
+- "unlikely": Clearly a different person (different era, industry, geography)
+Keep RED/AMBER/GREEN based on CONTENT only. Never downgrade category based on entity match. An "unlikely" match with adverse keywords must still be RED/AMBER.
 ` : ''}
 RESULTS:
 ${resultsText}
 
 Return JSON only:
-{"classifications":[{"index":1,"category":"GREEN","reason":"neutral"},{"index":2,"category":"RED","reason":"corruption mentioned"}]}`;
+{"classifications":[{"index":1,"category":"GREEN","reason":"neutral"},{"index":2,"category":"RED","reason":"corruption mentioned","entityMatch":"confirmed","entityReason":"matches VP role at company X"}]}
+If no subject profile was provided above, omit entityMatch and entityReason fields.`;
 
   let rawText = '';
   for (const provider of providers) {
@@ -779,7 +787,7 @@ Return JSON only:
     classifiedIndices.add(c.index - 1);
     const cat = (typeof c.category === 'string' ? c.category.toUpperCase() : 'AMBER') as 'RED' | 'AMBER' | 'GREEN';
     const validCat = ['RED', 'AMBER', 'GREEN'].includes(cat) ? cat : 'AMBER';
-    const categorized = { ...result, category: validCat, reason: c.reason || 'no reason' };
+    const categorized: CategorizedResult = { ...result, category: validCat, reason: c.reason || 'no reason', entityMatch: c.entityMatch, entityReason: c.entityReason };
     if (validCat === 'RED') output.red.push(categorized);
     else if (validCat === 'AMBER') output.amber.push(categorized);
     else output.green.push(categorized);

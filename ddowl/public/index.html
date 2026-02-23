@@ -1760,6 +1760,16 @@
           <button class="btn-secondary" id="addToQueueBtn" onclick="addToQueue()" title="Add to queue">+</button>
         </div>
 
+        <!-- Further Info (optional entity context) -->
+        <div style="margin-top: 8px;">
+          <input
+            type="text"
+            id="contextInput"
+            placeholder="Further info (e.g. VP at 中國建設銀行, Shenzhen)"
+            style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; color: #666;"
+          >
+        </div>
+
         <!-- Name Variations Section -->
         <div style="margin-top: 16px;">
           <label style="display: block; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Name Variations</label>
@@ -3992,6 +4002,7 @@
       const name = document.getElementById('nameInput').value.trim();
       const additionalVariations = getVariations();
       const language = selectedLanguages.join(',');
+      const context = document.getElementById('contextInput').value.trim();
 
       if (name.length < 2) {
         alert('Please enter a valid name (2+ characters)');
@@ -4078,7 +4089,8 @@
         const languageParam = `&language=${language}`;
         // Include last seen progress so server can tell us what we missed
         const lastSeenParam = sessionId ? `&lastBatch=${lastSeenBatch}&lastArticle=${lastSeenArticle}` : '';
-        const url = `/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${sessionParam}${lastSeenParam}`;
+        const contextParam = context ? `&context=${encodeURIComponent(context)}` : '';
+        const url = `/api/screen/v4?name=${encodeURIComponent(name)}${variationsParam}${languageParam}${contextParam}${sessionParam}${lastSeenParam}`;
         console.log(`[SSE] Connecting: ${url}`);
         eventSource = new EventSource(url);
         currentEventSource = eventSource;  // Track globally for disconnect button
@@ -4343,10 +4355,11 @@
 
           // Categorized item - colored severity, title, URL, snippet
           if (data.type === 'categorized_item') {
+            const entityBadge = data.entityMatch === 'unlikely' ? ' ⚠️ possible different person' : '';
             if (data.category === 'RED') {
-              addLogEntry('red', `${data.title}`, data.url, data.snippet);
+              addLogEntry('red', `${data.title}${entityBadge}`, data.url, data.snippet);
             } else if (data.category === 'AMBER') {
-              addLogEntry('amber', `${data.title}`, data.url, data.snippet);
+              addLogEntry('amber', `${data.title}${entityBadge}`, data.url, data.snippet);
             } else if (data.category === 'GREEN') {
               addLogEntry('green', `${data.title}`, data.url, data.snippet);
             }
