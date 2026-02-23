@@ -458,7 +458,7 @@ export async function scrapeAllApplications(options: {
   extractBanks?: boolean;
 } = {}): Promise<ScrapedDeal[]> {
   const {
-    years = [2026, 2025],
+    years = [new Date().getFullYear(), new Date().getFullYear() - 1],
     boards = ['mainBoard'],
     limit = 0,
     extractBanks = true,

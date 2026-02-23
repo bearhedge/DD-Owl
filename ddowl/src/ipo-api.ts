@@ -488,7 +488,8 @@ ipoRouter.post('/scrape-oc', async (req: Request, res: Response) => {
     (async () => {
       try {
         const { scrapeAllApplications, closeBrowser } = await import('./hkex-scraper-v2.js');
-        const deals = await scrapeAllApplications({ years: [2026, 2025], extractBanks: true });
+        const currentYear = new Date().getFullYear();
+        const deals = await scrapeAllApplications({ years: [currentYear, currentYear - 1], extractBanks: true });
 
         let newDeals = 0;
         let newAppointments = 0;
@@ -960,6 +961,121 @@ ipoRouter.post('/batch-add-deal-banks', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Batch add deal banks error:', err);
     res.status(500).json({ error: 'Failed to batch add deal banks' });
+  }
+});
+
+/**
+ * POST /api/ipo/deduplicate-banks
+ * Finds banks with same short_name but different IDs, keeps lowest-id as canonical,
+ * reassigns deal_appointments, and deletes duplicate bank rows.
+ */
+ipoRouter.post('/deduplicate-banks', async (req: Request, res: Response) => {
+  try {
+    const { dry_run } = req.query;
+    const isDryRun = dry_run === 'true' || dry_run === '1';
+
+    // Find duplicate groups
+    const dupsResult = await pool.query(`
+      SELECT short_name, array_agg(id ORDER BY id) as ids, array_agg(name ORDER BY id) as names
+      FROM banks
+      WHERE short_name IS NOT NULL
+      GROUP BY short_name
+      HAVING COUNT(*) > 1
+    `);
+
+    const groups = dupsResult.rows;
+    if (groups.length === 0) {
+      res.json({ message: 'No duplicate banks found', groups: 0 });
+      return;
+    }
+
+    let appointmentsReassigned = 0;
+    let banksDeleted = 0;
+    const details: { shortName: string; canonicalId: number; duplicateIds: number[]; appointmentsMoved: number }[] = [];
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      for (const group of groups) {
+        const [canonicalId, ...duplicateIds] = group.ids as number[];
+
+        if (duplicateIds.length === 0) continue;
+
+        // For each duplicate, reassign its deal_appointments to canonical
+        let movedCount = 0;
+        for (const dupId of duplicateIds) {
+          // Check for conflicts: if canonical already has an appointment for a deal
+          // that the duplicate also has, delete the duplicate's appointment
+          const conflicts = await client.query(`
+            SELECT da1.deal_id FROM deal_appointments da1
+            WHERE da1.bank_id = $1
+            AND EXISTS (SELECT 1 FROM deal_appointments da2 WHERE da2.deal_id = da1.deal_id AND da2.bank_id = $2)
+          `, [dupId, canonicalId]);
+
+          if (conflicts.rows.length > 0) {
+            const conflictDealIds = conflicts.rows.map((r: any) => r.deal_id);
+            if (!isDryRun) {
+              await client.query(`
+                DELETE FROM deal_appointments WHERE bank_id = $1 AND deal_id = ANY($2::int[])
+              `, [dupId, conflictDealIds]);
+            }
+          }
+
+          // Reassign remaining appointments from duplicate to canonical
+          if (!isDryRun) {
+            const reassigned = await client.query(`
+              UPDATE deal_appointments SET bank_id = $1 WHERE bank_id = $2 RETURNING id
+            `, [canonicalId, dupId]);
+            movedCount += reassigned.rowCount || 0;
+          } else {
+            const countResult = await client.query(`
+              SELECT COUNT(*) as cnt FROM deal_appointments WHERE bank_id = $1
+            `, [dupId]);
+            movedCount += parseInt(countResult.rows[0].cnt);
+          }
+
+          // Delete the duplicate bank
+          if (!isDryRun) {
+            await client.query(`DELETE FROM banks WHERE id = $1`, [dupId]);
+            banksDeleted++;
+          } else {
+            banksDeleted++;
+          }
+        }
+
+        appointmentsReassigned += movedCount;
+        details.push({
+          shortName: group.short_name,
+          canonicalId,
+          duplicateIds,
+          appointmentsMoved: movedCount,
+        });
+      }
+
+      if (!isDryRun) {
+        await client.query('COMMIT');
+      } else {
+        await client.query('ROLLBACK');
+      }
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+
+    res.json({
+      message: `${isDryRun ? '[DRY RUN] ' : ''}Deduplicated ${groups.length} bank groups: ${banksDeleted} banks deleted, ${appointmentsReassigned} appointments reassigned`,
+      isDryRun,
+      groups: groups.length,
+      banksDeleted,
+      appointmentsReassigned,
+      details,
+    });
+  } catch (err) {
+    console.error('Deduplicate banks error:', err);
+    res.status(500).json({ error: 'Failed to deduplicate banks' });
   }
 });
 
