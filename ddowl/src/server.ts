@@ -1840,6 +1840,21 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     }
 
     // ========================================
+    // PHASE 0.9: BIOGRAPHICAL SEARCH (clean name query for entity resolution)
+    // ========================================
+    let bioResults: { title: string; snippet: string }[] = [];
+    if (!existingSession?.profile) {
+      try {
+        const bioHl = isChineseName(subjectName) ? 'zh-cn' : 'en';
+        const bioSearchResults = await searchGoogle(`"${subjectName}"`, 1, 10, undefined, bioHl);
+        bioResults = bioSearchResults.map(r => ({ title: r.title, snippet: r.snippet }));
+        console.log(`[V4] Bio search: ${bioResults.length} results for "${subjectName}"`);
+      } catch (err: any) {
+        console.error(`[V4] Bio search failed (non-fatal): ${err?.message}`);
+      }
+    }
+
+    // ========================================
     // PHASE 1.9: PROFILE SEED (from search snippets)
     // ========================================
     let subjectProfile: SubjectProfile = {
@@ -1867,7 +1882,12 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
     } else {
       // Build preliminary profile from search snippets (1 LLM call)
       try {
-        const snippetSummary = allResults.slice(0, 100).map((r, i) =>
+        const profileInputResults = [
+          ...bioResults,
+          ...allResults.slice(0, 100 - bioResults.length),
+        ].slice(0, 100);
+
+        const snippetSummary = profileInputResults.map((r, i) =>
           `[${i + 1}] ${r.title} — ${r.snippet || ''}`
         ).join('\n');
 
@@ -2506,7 +2526,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       }
 
       // Categorize remaining items
-      const newCategorized = await categorizeAll(remainingItems, subjectName, async (progress) => {
+      const newCategorized = await categorizeAll(remainingItems, subjectName, subjectProfile, async (progress) => {
         // Adjust batch number to account for skipped batches
         const adjustedBatchNumber = progress.batchNumber + categorizeBatchStartIndex;
       // Accumulate results for session persistence
@@ -2751,24 +2771,6 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         continue;
       }
 
-      // PDFs/binary files can't be fetched safely (OOM risk) — route to FURTHER for manual review
-      const lowerUrlPath = item.url.toLowerCase().split('?')[0];
-      if (lowerUrlPath.endsWith('.pdf') || lowerUrlPath.endsWith('.doc') || lowerUrlPath.endsWith('.docx') || lowerUrlPath.endsWith('.xls') || lowerUrlPath.endsWith('.xlsx')) {
-        const furtherReason = 'Binary file (PDF/DOC) - needs manual review';
-        console.log(`[SPOTLIGHT] FURTHER (binary): "${item.title.slice(0, 60)}" (${item.url.slice(0, 80)})`);
-        urlTracker.processed.push({ url: item.url, title: item.title, query: item.query, result: 'FURTHER', headline: furtherReason });
-        sendEvent({
-          type: 'further_link',
-          url: item.url,
-          title: item.title,
-          reason: furtherReason,
-          originalCategory: item.category,
-          triageReason: item.reason,
-        });
-        await updateSession(sessionId, { currentIndex: i + 1, findings: allFindings }, connectionId);
-        continue;
-      }
-
       sendEvent({
         type: 'analyze_start',
         index: i + 1,
@@ -2781,10 +2783,12 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       try {
         // Timeout wrapper: max 45 seconds for fetch+analyze combined
         const ANALYZE_TIMEOUT_MS = 45000;
+        const controller = new AbortController();
+        const analyzeTimeout = setTimeout(() => controller.abort(), ANALYZE_TIMEOUT_MS);
 
-        // Helper to run fetch+analyze with timeout
-        const analyzeArticle = async () => {
-          const content = await fetchPageContent(item.url);
+        // Helper to run fetch+analyze with abort signal
+        const analyzeArticle = async (signal: AbortSignal) => {
+          const content = await fetchPageContent(item.url, signal);
           tracker.recordFetch(content.length > 100);
 
           if (content.length < 100) {
@@ -2799,10 +2803,17 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
           return { content, analysis };
         };
 
-        const result = await Promise.race([
-          analyzeArticle(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('FETCH_TIMEOUT')), ANALYZE_TIMEOUT_MS))
-        ]);
+        let result: { content: string; analysis: any };
+        try {
+          result = await analyzeArticle(controller.signal);
+        } catch (abortErr: any) {
+          if (abortErr?.name === 'AbortError' || controller.signal.aborted) {
+            throw new Error('FETCH_TIMEOUT');
+          }
+          throw abortErr;
+        } finally {
+          clearTimeout(analyzeTimeout);
+        }
 
         if (!result.analysis) {
           // Flag for manual review if triage thought it was important

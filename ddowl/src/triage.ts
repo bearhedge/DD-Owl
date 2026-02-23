@@ -1,5 +1,6 @@
 // src/triage.ts
 import axios from 'axios';
+import { SubjectProfile } from './types.js';
 
 // LLM Configuration for Triage with Fallback Chain
 // Priority: Kimi (primary, no content blocks) → DeepSeek (fallback)
@@ -632,7 +633,8 @@ export interface CategorizedOutput {
 async function categorizeBatch(
   results: BatchSearchResult[],
   subjectName: string,
-  batchOffset: number = 0
+  batchOffset: number = 0,
+  subjectProfile?: SubjectProfile | null
 ): Promise<CategorizedOutput> {
   const output: CategorizedOutput = { red: [], amber: [], green: [] };
 
@@ -712,7 +714,16 @@ IMPORTANT CONTEXT RULES:
 - If the SAME incident appears multiple times from different sources, only the first mention matters — duplicates of the same story should get the same category
 
 If title/snippet contains adverse keywords about "${subjectName}" indicating ACTUAL enforcement or misconduct, mark RED or AMBER accordingly. Do NOT mark GREEN if genuine adverse keywords are present.
+${subjectProfile && (subjectProfile.currentRole || subjectProfile.associatedCompanies.length > 0 || subjectProfile.nationality.length > 0) ? `
+SUBJECT PROFILE (use for entity verification):
+${subjectProfile.currentRole ? `- Role: ${subjectProfile.currentRole.title} at ${subjectProfile.currentRole.company}` : ''}
+${subjectProfile.industry.length > 0 ? `- Industry: ${subjectProfile.industry.join(', ')}` : ''}
+${subjectProfile.associatedCompanies.length > 0 ? `- Companies: ${subjectProfile.associatedCompanies.map(c => c.name).join(', ')}` : ''}
+${subjectProfile.nationality.length > 0 ? `- Nationality: ${subjectProfile.nationality.join(', ')}` : ''}
+${subjectProfile.ageRange ? `- Age: ${subjectProfile.ageRange}` : ''}
 
+ENTITY RESOLUTION: If an article is clearly about a DIFFERENT "${subjectName}" (different era, different industry, different geography, or different role than the profile above), mark it GREEN with reason "Different individual".
+` : ''}
 RESULTS:
 ${resultsText}
 
@@ -800,6 +811,7 @@ export interface BatchProgress {
 export async function categorizeAll(
   results: BatchSearchResult[],
   subjectName: string,
+  subjectProfile?: SubjectProfile | null,
   onBatchComplete?: (progress: BatchProgress) => void | Promise<void>  // Allow async callbacks
 ): Promise<CategorizedOutput> {
   if (results.length === 0) {
@@ -816,7 +828,7 @@ export async function categorizeAll(
     const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
     console.log(`[CATEGORIZE] Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
 
-    const batchResult = await categorizeBatch(batch, subjectName, i);
+    const batchResult = await categorizeBatch(batch, subjectName, i, subjectProfile);
     output.red.push(...batchResult.red);
     output.amber.push(...batchResult.amber);
     output.green.push(...batchResult.green);
