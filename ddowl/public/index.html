@@ -3509,8 +3509,10 @@
       const MAX_RETRIES = 10;
       let eventSource = null;
       let lastMessageTime = Date.now();
+      let isReconnecting = false;
 
       function connectSSE() {
+        isReconnecting = false;  // Reset on actual connection attempt
         const variationsParam = variations.length > 1 ? `&variations=${encodeURIComponent(variations.join(','))}` : '';
         const languageParam = `&language=${language}`;
         const url = `/api/screen/v4?name=${encodeURIComponent(savedName)}${variationsParam}${languageParam}&sessionId=${savedSessionId}`;
@@ -3530,9 +3532,10 @@
         lastMessageTime = Date.now();
         currentHealthCheckInterval = setInterval(() => {
           const gap = Date.now() - lastMessageTime;
-          if (gap > 60000) {
+          if (gap > 60000 && !isReconnecting) {
             console.warn(`[SSE] No heartbeat for ${gap}ms, reconnecting...`);
             addLogEntry('warn', `Connection stale, reconnecting...`);
+            isReconnecting = true;
             eventSource.close();
             clearInterval(currentHealthCheckInterval);
             currentHealthCheckInterval = null;
@@ -3790,7 +3793,9 @@
             clearInterval(currentHealthCheckInterval);
             currentHealthCheckInterval = null;
           }
+          if (isReconnecting) return;  // Health check already handling reconnection
           if (retryCount < MAX_RETRIES) {
+            isReconnecting = true;
             retryCount++;
             addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
             setTimeout(connectSSE, Math.min(2000 * retryCount, 15000));
@@ -3815,9 +3820,10 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && eventSource && eventSource.readyState !== EventSource.CLOSED) {
           const gap = Date.now() - lastMessageTime;
-          if (gap > 30000) {  // 30s without messages after tab resume
+          if (gap > 30000 && !isReconnecting) {  // 30s without messages after tab resume
             console.warn(`[SSE] Tab resumed, ${Math.round(gap/1000)}s since last message, reconnecting...`);
             addLogEntry('warn', `Tab resumed after ${Math.round(gap/1000)}s, reconnecting...`);
+            isReconnecting = true;
             eventSource.close();
             if (currentHealthCheckInterval) {
               clearInterval(currentHealthCheckInterval);
@@ -4119,6 +4125,7 @@
       let lastQueryIndex = 0;
       let eventSource = null;
       let lastMessageTime = Date.now();
+      let isReconnecting = false;
 
       // Track last seen progress for reconnect replay
       // Initialize from localStorage to survive page refresh
@@ -4127,6 +4134,7 @@
       let lastSeenArticle = storageKey ? parseInt(localStorage.getItem(`${storageKey}_article`) || '0', 10) : 0;
 
       function connectSSE() {
+        isReconnecting = false;  // Reset on actual connection attempt
         // Build reconnection URL - use sessionId (stored in Redis on server)
         // This replaces the old approach of encoding huge state in URL params
         const sessionParam = sessionId ? `&sessionId=${sessionId}` : '';
@@ -4148,9 +4156,10 @@
         lastMessageTime = Date.now();
         currentHealthCheckInterval = setInterval(() => {
           const gap = Date.now() - lastMessageTime;
-          if (gap > 60000) { // 60 seconds without any message (allow time for Gemini categorization)
+          if (gap > 60000 && !isReconnecting) { // 60 seconds without any message (allow time for Gemini categorization)
             console.warn(`[SSE] No heartbeat for ${gap}ms, proactively reconnecting...`);
             addLogEntry('warn', `Connection stale (${Math.round(gap/1000)}s), reconnecting...`);
+            isReconnecting = true;
             eventSource.close();
             clearInterval(currentHealthCheckInterval);
             currentHealthCheckInterval = null;
@@ -4754,7 +4763,9 @@
             clearInterval(currentHealthCheckInterval);
             currentHealthCheckInterval = null;
           }
+          if (isReconnecting) return;  // Health check already handling reconnection
           if (retryCount < MAX_RETRIES) {
+            isReconnecting = true;
             retryCount++;
             addLogEntry('warn', `Connection lost. Reconnecting (${retryCount}/${MAX_RETRIES})...`);
             setTimeout(connectSSE, Math.min(2000 * retryCount, 15000));
@@ -4780,9 +4791,10 @@
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && eventSource && eventSource.readyState !== EventSource.CLOSED) {
           const gap = Date.now() - lastMessageTime;
-          if (gap > 30000) {  // 30s without messages after tab resume
+          if (gap > 30000 && !isReconnecting) {  // 30s without messages after tab resume
             console.warn(`[SSE] Tab resumed, ${Math.round(gap/1000)}s since last message, reconnecting...`);
             addLogEntry('warn', `Tab resumed after ${Math.round(gap/1000)}s, reconnecting...`);
+            isReconnecting = true;
             eventSource.close();
             if (currentHealthCheckInterval) {
               clearInterval(currentHealthCheckInterval);

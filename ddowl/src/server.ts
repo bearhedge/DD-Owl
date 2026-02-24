@@ -1675,6 +1675,13 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
         await new Promise(r => setTimeout(r, 200));
       }
 
+      // Bail out if aborted — don't save progress for aborted queries
+      if (signal.aborted) {
+        console.log(`[V4] Search aborted for: ${subjectName} (after page loop)`);
+        activeScreenings.delete(screeningKey);
+        return;
+      }
+
       for (const r of googleResults) {
         allResults.push({
           url: r.link,
