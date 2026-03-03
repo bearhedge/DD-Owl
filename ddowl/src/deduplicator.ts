@@ -79,11 +79,11 @@ Output ONLY valid JSON (no markdown, no explanation):
 {"clusters": [[1,2], [3,4,5], [6]], "labels": ["incident 1", "incident 2", "incident 3"]}`;
 }
 
-// Call LLM for clustering (with fallback chain: DeepSeek → Kimi)
+// Call LLM for clustering (DeepSeek)
 async function callLLMForClustering(prompt: string): Promise<BatchClusterResponse> {
   const providers = [];
 
-  // Build provider list: DeepSeek primary (cheap, good Chinese), Kimi fallback
+  // DeepSeek only
   if (DEEPSEEK_API_KEY) {
     providers.push({
       name: 'DeepSeek',
@@ -106,27 +106,6 @@ async function callLLMForClustering(prompt: string): Promise<BatchClusterRespons
     });
   }
 
-  if (KIMI_API_KEY) {
-    providers.push({
-      name: 'Kimi K2',
-      call: async () => {
-        const response = await axios.post(
-          'https://api.moonshot.ai/v1/chat/completions',
-          {
-            model: 'kimi-k2',
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.1,
-            max_tokens: 4096,
-          },
-          {
-            headers: { Authorization: `Bearer ${KIMI_API_KEY}` },
-            timeout: 60000,
-          }
-        );
-        return response.data.choices?.[0]?.message?.content || '';
-      }
-    });
-  }
 
   // Try providers in order
   for (const provider of providers) {

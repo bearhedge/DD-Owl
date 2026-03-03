@@ -689,7 +689,6 @@ Return JSON only:
 
   // Try LLM providers in order
   const providers = [
-    { name: 'Kimi K2', url: 'https://api.moonshot.ai/v1/chat/completions', key: KIMI_API_KEY, model: 'kimi-k2' },
     { name: 'DeepSeek', url: 'https://api.deepseek.com/v1/chat/completions', key: DEEPSEEK_API_KEY, model: 'deepseek-chat' },
   ].filter(p => p.key);
 

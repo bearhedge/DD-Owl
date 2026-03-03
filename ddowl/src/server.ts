@@ -1487,8 +1487,18 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       }
 
       if (phase === 'analyze' || phase === 'consolidate' || phase === 'complete') {
-        skipCategorize = true;
         restoredCategorized = existingSession.categorized;
+
+        // CORRUPTION CHECK: If phase is analyze+ but categorized data is missing,
+        // the session was corrupted (stale connection advanced phase without saving data).
+        // Fall back to re-running from categorize instead of skipping with empty data.
+        if (!restoredCategorized || (!restoredCategorized.red && !restoredCategorized.amber)) {
+          console.error(`[V4] SESSION CORRUPTION: phase=${phase} but categorized data is missing/empty. Falling back to re-run categorize.`);
+          // Don't skip categorize — let it re-run from the passedElimination data
+        } else {
+          skipCategorize = true;
+        }
+
         restoredFindings = existingSession.findings || [];
         // Safety: ensure currentIndex is a valid number, default to 0 if missing
         analyzeStartIndex = typeof existingSession.currentIndex === 'number' ? existingSession.currentIndex : 0;
@@ -2384,6 +2394,13 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
     // Update session with elimination + dedupe results (Redis)
     // Only update phase if not skipping (don't overwrite 'analyze' with 'cluster' on resume)
     if (!skipTitleDedupe) {
+      if (signal.aborted) {
+        console.log(`[V4] Signal aborted after elimination — skipping session update to prevent stale write`);
+        clearInterval(heartbeat);
+        activeScreenings.delete(screeningKey);
+        res.end();
+        return;
+      }
       await updateSession(sessionId, { passedElimination: passed, currentPhase: 'cluster' }, connectionId);
     }
 
@@ -2438,6 +2455,9 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
 
       // Progress callback for clustering - sends SSE events AND saves to session for resume
       const clusterProgress: ClusterProgressCallback = async (progress) => {
+        // Skip all session updates if signal is aborted (stale connection)
+        if (signal.aborted) return;
+
         if (progress.type === 'batch_start') {
           sendEvent({
             type: 'cluster_batch_start',
@@ -2524,6 +2544,17 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
 
       // Continue with deduplicated results - clear cluster progress fields
       passed = clusterResult.toAnalyze;
+
+      // GUARD: If aborted (client disconnected or new connection took over), do NOT update session.
+      // Without this, a stale connection can overwrite phase markers and corrupt session state.
+      if (signal.aborted) {
+        console.log(`[V4] Signal aborted after clustering — skipping session update to prevent stale write`);
+        clearInterval(heartbeat);
+        activeScreenings.delete(screeningKey);
+        res.end();
+        return;
+      }
+
       await updateSession(sessionId, {
         passedElimination: passed,
         currentPhase: 'categorize',
@@ -2559,6 +2590,12 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       categorized = restoredCategorized;
       console.log(`[V4] Skipped categorize phase, using restored categorization (${categorized.red.length} RED, ${categorized.amber.length} AMBER)`);
     } else {
+      if (skipCategorize && !restoredCategorized) {
+        // SAFETY: Session says we're past categorize (phase=analyze/consolidate/complete) but
+        // categorized data is missing. This indicates session corruption (e.g., stale connection
+        // advanced the phase without saving categorized data). Re-run categorize from scratch.
+        console.error(`[V4] SESSION CORRUPTION DETECTED: skipCategorize=true but restoredCategorized is missing. Phase was advanced without categorization data. Re-running categorize from scratch.`);
+      }
       const categorizeStart = Date.now();
 
       // Calculate items to skip for mid-categorize resume
@@ -2585,6 +2622,9 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
 
       // Categorize remaining items
       const newCategorized = await categorizeAll(remainingItems, subjectName, subjectProfile, async (progress) => {
+        // Skip session updates if signal is aborted (stale connection)
+        if (signal.aborted) return;
+
         // Adjust batch number to account for skipped batches
         const adjustedBatchNumber = progress.batchNumber + categorizeBatchStartIndex;
       // Accumulate results for session persistence
@@ -2709,6 +2749,15 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       // Update categorized with grouped results
       categorized.red = redGrouped.toAnalyze;
       categorized.amber = amberGrouped.toAnalyze;
+
+      // GUARD: If aborted, do NOT advance phase to 'analyze' — prevents stale connection from corrupting session
+      if (signal.aborted) {
+        console.log(`[V4] Signal aborted after categorize — skipping session update to prevent stale write`);
+        clearInterval(heartbeat);
+        activeScreenings.delete(screeningKey);
+        res.end();
+        return;
+      }
 
       // Update session with deduplicated categorized results - clear categorize progress fields
       await updateSession(sessionId, {
@@ -3084,6 +3133,15 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
       consolidatedFindings = restoredConsolidated;
       console.log(`[V4] Skipped consolidate phase, using ${consolidatedFindings.length} restored findings`);
     } else if (allFindings.length > 0) {
+      // GUARD: If aborted, do NOT advance to consolidate phase
+      if (signal.aborted) {
+        console.log(`[V4] Signal aborted before consolidate — skipping to prevent stale write`);
+        clearInterval(heartbeat);
+        activeScreenings.delete(screeningKey);
+        res.end();
+        return;
+      }
+
       sendEvent({ type: 'phase', phase: 5, name: 'CONSOLIDATE', message: `Consolidating ${allFindings.length} findings...` });
 
       // Update session to consolidate phase BEFORE starting (for reconnection tracking)

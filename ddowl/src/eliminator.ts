@@ -452,16 +452,7 @@ Return JSON only:
 Where each array contains indices of duplicate titles. Only include groups with 2+ items.
 If no duplicates found, return: {"groups": []}`;
 
-  // Try Kimi K2 first (better for Chinese), then DeepSeek
   const providers = [];
-  if (KIMI_API_KEY) {
-    providers.push({
-      name: 'Kimi K2',
-      url: 'https://api.moonshot.ai/v1/chat/completions',
-      model: 'kimi-k2',
-      apiKey: KIMI_API_KEY,
-    });
-  }
   if (DEEPSEEK_API_KEY) {
     providers.push({
       name: 'DeepSeek',

@@ -20,15 +20,6 @@ interface LLMProvider {
 function getProviders(): LLMProvider[] {
   const providers: LLMProvider[] = [];
 
-  if (KIMI_API_KEY) {
-    providers.push({
-      name: 'Kimi K2',
-      url: 'https://api.moonshot.ai/v1/chat/completions',
-      model: 'kimi-k2',
-      apiKey: KIMI_API_KEY,
-    });
-  }
-
   if (DEEPSEEK_API_KEY) {
     providers.push({
       name: 'DeepSeek',
