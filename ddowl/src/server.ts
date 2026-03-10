@@ -1613,7 +1613,11 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // CRITICAL: We must skip even if restoredResults is empty, otherwise we'd restart
       // gather and OVERWRITE currentPhase back to 'gather', destroying session state
       allResults = restoredResults || [];
-      console.log(`[V4] Skipped gather phase, using ${allResults.length} restored results`);
+      // Restore query count so metrics aren't zero on reconnect
+      if (existingSession?.queriesExecuted) {
+        tracker.restoreQueryCount(existingSession.queriesExecuted);
+      }
+      console.log(`[V4] Skipped gather phase, using ${allResults.length} restored results (queriesExecuted: ${existingSession?.queriesExecuted || 0})`);
     } else {
       const totalSearches = selectedTemplates.length - gatherStartIndex;
       const cjkNames = nameVariations.filter(n => isChineseName(n));
@@ -1639,7 +1643,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       // Check if user paused the session
       if (await isSessionPaused(sessionId)) {
         // Save current position before exiting so resume starts here
-        await updateSession(sessionId, { gatheredResults: allResults, gatherIndex: i }, connectionId);
+        await updateSession(sessionId, { gatheredResults: allResults, gatherIndex: i, queriesExecuted: tracker.getMetrics().queriesExecuted }, connectionId);
         console.log(`[V4] Session ${sessionId} paused at gather query ${i + 1}/${selectedTemplates.length}, saved gatherIndex=${i}`);
         sendEvent({ type: 'paused', phase: 'gather', queryIndex: i + 1 });
         clearInterval(heartbeat);
@@ -1720,6 +1724,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       await updateSession(sessionId, {
         gatheredResults: allResults,
         gatherIndex: i + 1,  // 1-indexed: completed queries
+        queriesExecuted: tracker.getMetrics().queriesExecuted,
         currentPhase: 'gather'
       }, connectionId);
 
@@ -1761,7 +1766,7 @@ app.get('/api/screen/v4', async (req: Request, res: Response) => {
       });
 
       // Update session with gathered results (Redis) - clear gatherIndex to indicate gather is fully complete
-      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate', gatherIndex: undefined }, connectionId);
+      await updateSession(sessionId, { gatheredResults: allResults, currentPhase: 'eliminate', gatherIndex: undefined, queriesExecuted: tracker.getMetrics().queriesExecuted }, connectionId);
     } // End of gather phase else block
 
     // ========================================
@@ -2838,7 +2843,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
               amber: categorized.amber.length,
               green: categorized.green.length,
             },
-            processed: { total: 0, adverse: 0, cleared: 0, failed: 0 },
+            processed: { total: 0, adverse: 0, cleared: 0, failed: 0, further: 0 },
             consolidated: { before: 0, after: 0 },
           },
           costUsd: zeroMetrics.totalCostUSD,
@@ -3360,6 +3365,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
           dateRange: f.dateRange,
           sourceCount: f.sourceCount,
           sourceUrls: f.sources,
+          articleContents: f.articleContents,
         })),
         cleanResults: Object.keys(cleanResults).length > 0 ? cleanResults : undefined,
         screeningStats: {
@@ -3380,6 +3386,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
             adverse: urlTracker.processed.filter(p => p.result === 'ADVERSE').length,
             cleared: urlTracker.processed.filter(p => p.result === 'CLEARED').length,
             failed: urlTracker.processed.filter(p => p.result === 'FAILED').length,
+            further: urlTracker.processed.filter(p => p.result === 'FURTHER').length,
           },
           consolidated: {
             before: allFindings.length,

@@ -10,6 +10,7 @@ export async function initReportsDb(): Promise<void> {
     'ALTER TABLE dd_reports ADD COLUMN IF NOT EXISTS clean_results_json TEXT',
     'ALTER TABLE dd_reports ADD COLUMN IF NOT EXISTS screening_stats_json TEXT',
     'ALTER TABLE dd_reports ADD COLUMN IF NOT EXISTS quality_rating INTEGER',
+    'ALTER TABLE dd_findings ADD COLUMN IF NOT EXISTS article_contents_json TEXT',
   ];
   for (const sql of migrations) {
     await pool.query(sql);
@@ -28,7 +29,7 @@ export interface ScreeningStats {
   gathered: number;
   programmaticElimination: { before: number; after: number; eliminated: number; govBypassed: number };
   categorized: { red: number; amber: number; green: number };
-  processed: { total: number; adverse: number; cleared: number; failed: number };
+  processed: { total: number; adverse: number; cleared: number; failed: number; further?: number };
   consolidated: { before: number; after: number };
 }
 
@@ -46,6 +47,7 @@ export interface SaveReportInput {
     dateRange?: string;
     sourceCount: number;
     sourceUrls: { url: string; title: string }[];
+    articleContents?: { url: string; content: string }[];
   }[];
   cleanResults?: Record<string, CleanEntityResult[]>;
   screeningStats?: ScreeningStats;
@@ -94,6 +96,7 @@ export interface FindingRow {
   included_in_report: number;
   human_verdict: string | null;
   wrong_reason: string | null;
+  article_contents_json: string | null;
 }
 
 export interface MissedFlagRow {
@@ -193,11 +196,14 @@ export async function saveReport(input: SaveReportInput): Promise<number> {
     await client.query('DELETE FROM dd_findings WHERE report_id = $1', [reportId]);
 
     for (const f of input.findings) {
+      const articleContentsJson = f.articleContents && f.articleContents.length > 0
+        ? JSON.stringify(f.articleContents)
+        : null;
       await client.query(`
-        INSERT INTO dd_findings (report_id, severity, headline, event_type, summary, date_range, source_count, source_urls, included_in_report)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
+        INSERT INTO dd_findings (report_id, severity, headline, event_type, summary, date_range, source_count, source_urls, included_in_report, article_contents_json)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0, $9)
       `, [reportId, f.severity, f.headline, f.eventType, f.summary,
-          f.dateRange || null, f.sourceCount, JSON.stringify(f.sourceUrls)]);
+          f.dateRange || null, f.sourceCount, JSON.stringify(f.sourceUrls), articleContentsJson]);
     }
 
     // Track source domains

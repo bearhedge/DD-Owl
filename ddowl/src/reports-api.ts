@@ -8,6 +8,13 @@ import {
   type SaveReportInput,
 } from './reports-db.js';
 import { deleteAllSessions } from './session-store.js';
+import { pool } from './db/index.js';
+import {
+  extractFactsForReport,
+  generateWriteUpFromFacts,
+  classifySource,
+  type ReportExtractedFacts,
+} from './reportGenerator.js';
 
 export const reportsRouter = Router();
 
@@ -195,5 +202,124 @@ reportsRouter.post('/:id/missed', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[REPORTS API] Error adding missed flag:', err);
     res.status(500).json({ error: 'Failed to add missed flag' });
+  }
+});
+
+// POST /api/reports/:id/regenerate — generate gold-standard write-up via SSE
+reportsRouter.post('/:id/regenerate', async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const report = await getReport(id);
+    if (!report) { res.status(404).json({ error: 'Report not found' }); return; }
+
+    // Get confirmed findings (included_in_report = 1), fall back to all if none confirmed
+    let findings = report.findings.filter(f => f.included_in_report === 1);
+    if (findings.length === 0) findings = report.findings;
+    if (findings.length === 0) { res.status(400).json({ error: 'No findings to generate report from' }); return; }
+
+    // Set up SSE
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    });
+
+    const sendSSE = (data: any) => {
+      try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {}
+    };
+
+    let fullMarkdown = '';
+    let footnoteIndex = 1;
+    const allSourceUrls: string[] = [];
+
+    // Intro
+    const intro = `Media & Internet Searches\n\nSearches conducted of the media and internet retrieved coverage for ${report.subject_name}.\n\n`;
+    fullMarkdown += intro;
+    sendSSE({ type: 'chunk', text: intro });
+
+    for (let fi = 0; fi < findings.length; fi++) {
+      const f = findings[fi];
+      const sources = JSON.parse(f.source_urls || '[]') as { url: string; title: string }[];
+      const articleContents: { url: string; content: string }[] = f.article_contents_json
+        ? JSON.parse(f.article_contents_json)
+        : [];
+
+      sendSSE({ type: 'status', text: `Extracting facts for finding ${fi + 1}/${findings.length}: ${f.headline}` });
+
+      // Stage 1: Extract facts per source
+      const factsBySource: ReportExtractedFacts[] = [];
+
+      for (const src of sources) {
+        const sourceMetadata = classifySource(src.url, src.title);
+        const articleEntry = articleContents.find(ac => ac.url === src.url);
+        const content = articleEntry?.content || '';
+
+        const facts = await extractFactsForReport(
+          content,
+          f.summary,
+          src.url,
+          src.title,
+          report.subject_name,
+          sourceMetadata
+        );
+        factsBySource.push(facts);
+      }
+
+      sendSSE({ type: 'status', text: `Generating write-up for finding ${fi + 1}/${findings.length}...` });
+
+      // Stage 2: Generate constrained prose
+      if (fi > 0) {
+        fullMarkdown += '\n\n';
+        sendSSE({ type: 'chunk', text: '\n\n' });
+      }
+
+      const consolidatedFinding = {
+        headline: f.headline,
+        summary: f.summary,
+        severity: f.severity as 'RED' | 'AMBER' | 'REVIEW',
+        eventType: f.event_type,
+        dateRange: f.date_range || '',
+        sourceCount: f.source_count,
+        sources,
+      };
+
+      const result = await generateWriteUpFromFacts(
+        consolidatedFinding,
+        factsBySource,
+        report.subject_name,
+        footnoteIndex,
+        (chunk: string) => {
+          fullMarkdown += chunk;
+          sendSSE({ type: 'chunk', text: chunk });
+        }
+      );
+
+      for (const src of sources) {
+        allSourceUrls.push(src.url);
+      }
+      footnoteIndex += result.footnotesUsed;
+    }
+
+    // Consolidated footnotes
+    if (allSourceUrls.length > 0) {
+      const footnoteSeparator = '\n\n---\n\n';
+      const footnoteBlock = allSourceUrls.map((url, i) => `[${i + 1}]  ${url}`).join('\n');
+      fullMarkdown += footnoteSeparator + footnoteBlock;
+      sendSSE({ type: 'chunk', text: footnoteSeparator + footnoteBlock });
+    }
+
+    // Save generated markdown to report
+    await pool.query('UPDATE dd_reports SET report_markdown = $1 WHERE id = $2', [fullMarkdown, id]);
+
+    sendSSE({ type: 'done', markdown: fullMarkdown });
+    res.end();
+
+  } catch (err: any) {
+    console.error('[REPORTS API] Regenerate error:', err);
+    try {
+      res.write(`data: ${JSON.stringify({ type: 'error', message: err.message || 'Generation failed' })}\n\n`);
+      res.end();
+    } catch {}
   }
 });
