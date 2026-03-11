@@ -2001,7 +2001,7 @@ If you cannot determine a field with reasonable confidence, use the default empt
           );
 
           const profileText = profileResponse.data.choices?.[0]?.message?.content || '';
-          tracker.recordLLMCall('deepseek', 'profile', profilePrompt, profileText);
+          tracker.recordLLMCall('deepseek', 'profile', profilePrompt, profileText, profileResponse.data.usage);
           const cleanText = profileText.replace(/```json\s*/gi, '').replace(/```/g, '');
           const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
 
@@ -2087,7 +2087,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         );
 
         const subRaw = subResp.data.choices?.[0]?.message?.content || '';
-        tracker.recordLLMCall('deepseek', 'subsidiary', subsidiaryPrompt, subRaw);
+        tracker.recordLLMCall('deepseek', 'subsidiary', subsidiaryPrompt, subRaw, subResp.data.usage);
         const subText = subRaw.replace(/```json\s*/gi, '').replace(/```/g, '');
         const subMatch = subText.match(/\[[\s\S]*\]/);
         if (subMatch) {
@@ -2679,7 +2679,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
         currentPhase: 'categorize'
       }, connectionId);
     }, signal,
-      (provider, _op, input, output) => tracker.recordLLMCall(provider as Provider, 'triage', input, output)
+      (provider, _op, input, output, usage) => tracker.recordLLMCall(provider as Provider, 'triage', input, output, usage)
     );
 
       // Merge new results with any restored partial results
@@ -3008,7 +3008,7 @@ Only include entities you are confident about. Do NOT guess. Return [] if unsure
             role: subjectProfile.currentRole?.title,
             associates: subjectProfile.associatedPeople.map(p => p.name),
           },
-            (provider, input, output) => tracker.recordLLMCall(provider as Provider, 'analysis', input, output)
+            (provider, input, output, usage) => tracker.recordLLMCall(provider as Provider, 'analysis', input, output, usage)
           );
           return { content, analysis };
         };

@@ -65,8 +65,13 @@ export interface TriageOutput {
   green: TriageResult[];
 }
 
+interface LLMResponse {
+  text: string;
+  usage?: { prompt_tokens: number; completion_tokens: number };
+}
+
 // Helper to call Gemini API (different format from OpenAI-compatible APIs)
-async function callGeminiAPI(provider: LLMProvider, prompt: string): Promise<string> {
+async function callGeminiAPI(provider: LLMProvider, prompt: string): Promise<LLMResponse> {
   const response = await axios.post(
     `${provider.url}?key=${provider.apiKey}`,
     {
@@ -78,11 +83,17 @@ async function callGeminiAPI(provider: LLMProvider, prompt: string): Promise<str
       timeout: provider.timeout,
     }
   );
-  return response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return {
+    text: response.data.candidates?.[0]?.content?.parts?.[0]?.text || '',
+    usage: response.data.usageMetadata ? {
+      prompt_tokens: response.data.usageMetadata.promptTokenCount || 0,
+      completion_tokens: response.data.usageMetadata.candidatesTokenCount || 0,
+    } : undefined,
+  };
 }
 
 // Helper to call OpenAI-compatible APIs (DeepSeek)
-async function callOpenAICompatibleAPI(provider: LLMProvider, prompt: string): Promise<string> {
+async function callOpenAICompatibleAPI(provider: LLMProvider, prompt: string): Promise<LLMResponse> {
   const response = await axios.post(
     provider.url,
     {
@@ -98,7 +109,10 @@ async function callOpenAICompatibleAPI(provider: LLMProvider, prompt: string): P
       timeout: provider.timeout,
     }
   );
-  return response.data.choices?.[0]?.message?.content || '';
+  return {
+    text: response.data.choices?.[0]?.message?.content || '',
+    usage: response.data.usage,
+  };
 }
 
 export async function triageSearchResults(
@@ -183,11 +197,10 @@ Return JSON only:
     console.log(`[PRE-SCREEN] Trying ${provider.name} (${provider.model})...`);
 
     try {
-      if (provider.isGemini) {
-        rawText = await callGeminiAPI(provider, prompt);
-      } else {
-        rawText = await callOpenAICompatibleAPI(provider, prompt);
-      }
+      const llmResponse = provider.isGemini
+        ? await callGeminiAPI(provider, prompt)
+        : await callOpenAICompatibleAPI(provider, prompt);
+      rawText = llmResponse.text;
 
       console.log(`[PRE-SCREEN] ✓ ${provider.name} succeeded`);
       break; // Success! Exit the loop
@@ -619,7 +632,7 @@ async function categorizeBatch(
   subjectName: string,
   batchOffset: number = 0,
   subjectProfile?: SubjectProfile | null,
-  onLLMCall?: (provider: string, operation: string, input: string, output: string) => void
+  onLLMCall?: (provider: string, operation: string, input: string, output: string, usage?: { prompt_tokens: number; completion_tokens: number }) => void
 ): Promise<CategorizedOutput> {
   const output: CategorizedOutput = { red: [], amber: [], green: [] };
 
@@ -740,14 +753,17 @@ Return JSON only:
 If no subject profile was provided above, omit entityMatch and entityReason fields.`;
 
   let rawText = '';
+  let lastUsage: { prompt_tokens: number; completion_tokens: number } | undefined;
   for (const provider of providers) {
     console.log(`[CATEGORIZE] Batch at offset ${batchOffset}: trying ${provider.name}...`);
     try {
-      rawText = provider.isGemini
+      const llmResponse = provider.isGemini
         ? await callGeminiAPI(provider, prompt)
         : await callOpenAICompatibleAPI(provider, prompt);
+      rawText = llmResponse.text;
+      lastUsage = llmResponse.usage;
       console.log(`[CATEGORIZE] ✓ ${provider.name} succeeded`);
-      onLLMCall?.(provider.name.toLowerCase(), 'triage', prompt, rawText);
+      onLLMCall?.(provider.name.toLowerCase(), 'triage', prompt, rawText, lastUsage);
       break;
     } catch (error: any) {
       console.error(`[CATEGORIZE] ✗ ${provider.name} failed: ${error.message}`);
@@ -824,7 +840,7 @@ export async function categorizeAll(
   subjectProfile?: SubjectProfile | null,
   onBatchComplete?: (progress: BatchProgress) => void | Promise<void>,  // Allow async callbacks
   signal?: AbortSignal,  // For cross-instance abort on ownership loss
-  onLLMCall?: (provider: string, operation: string, input: string, output: string) => void
+  onLLMCall?: (provider: string, operation: string, input: string, output: string, usage?: { prompt_tokens: number; completion_tokens: number }) => void
 ): Promise<CategorizedOutput> {
   if (results.length === 0) {
     return { red: [], amber: [], green: [] };

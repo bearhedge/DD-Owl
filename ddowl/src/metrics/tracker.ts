@@ -1,6 +1,12 @@
 import { ScreeningMetrics, CostEstimate } from '../types.js';
 import { estimateCost, estimateTokens, Provider, SERPER_COST_PER_QUERY } from './costs.js';
 
+export interface LLMUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens?: number;
+}
+
 export class MetricsTracker {
   private metrics: ScreeningMetrics;
 
@@ -90,15 +96,16 @@ export class MetricsTracker {
     this.metrics.consolidationRatio = afterCount > 0 ? beforeCount / afterCount : 0;
   }
 
-  // Cost tracking
+  // Cost tracking — accepts API usage object (accurate) or falls back to text estimation
   recordLLMCall(
     provider: Provider,
     operation: CostEstimate['operation'],
     inputText: string,
-    outputText: string
+    outputText: string,
+    usage?: LLMUsage
   ): void {
-    const inputTokens = estimateTokens(inputText);
-    const outputTokens = estimateTokens(outputText);
+    const inputTokens = usage?.prompt_tokens ?? estimateTokens(inputText);
+    const outputTokens = usage?.completion_tokens ?? estimateTokens(outputText);
     const cost = estimateCost(provider, inputTokens, outputTokens);
 
     this.metrics.costs.push({
@@ -109,8 +116,11 @@ export class MetricsTracker {
       estimatedCostUSD: cost,
     });
 
+    // Recompute: LLM costs + Serper search costs
+    const llmCost = this.metrics.costs.reduce((sum, c) => sum + c.estimatedCostUSD, 0);
+    const serperCost = this.metrics.queriesExecuted * SERPER_COST_PER_QUERY;
     this.metrics.totalCostUSD = Math.round(
-      this.metrics.costs.reduce((sum, c) => sum + c.estimatedCostUSD, 0) * 1_000_000
+      (llmCost + serperCost) * 1_000_000
     ) / 1_000_000;
   }
 

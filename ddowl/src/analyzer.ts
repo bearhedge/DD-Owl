@@ -399,7 +399,7 @@ export async function fetchPageContent(url: string, signal?: AbortSignal): Promi
 export async function quickScan(
   url: string,
   subjectName: string,
-  onLLMCall?: (provider: string, input: string, output: string) => void
+  onLLMCall?: (provider: string, input: string, output: string, usage?: { prompt_tokens: number; completion_tokens: number }) => void
 ): Promise<{ shouldAnalyze: boolean; reason: string }> {
   // Fetch first 1500 chars only
   let content = '';
@@ -441,7 +441,8 @@ Answer in JSON:
     );
 
     const rawText = response.data.choices?.[0]?.message?.content || '';
-    onLLMCall?.(DEEPSEEK_API_KEY ? 'deepseek' : 'kimi', prompt, rawText);
+    const usage = response.data.usage;
+    onLLMCall?.(DEEPSEEK_API_KEY ? 'deepseek' : 'kimi', prompt, rawText, usage);
 
     // Strip markdown code blocks that DeepSeek wraps around JSON
     const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
@@ -470,7 +471,7 @@ export async function analyzeWithLLM(
   searchTerm: string,
   sourceUrl?: string,
   currentProfile?: { companies: string[]; role?: string; associates: string[] },
-  onLLMCall?: (provider: string, input: string, output: string) => void
+  onLLMCall?: (provider: string, input: string, output: string, usage?: { prompt_tokens: number; completion_tokens: number }) => void
 ): Promise<{
   isAdverse: boolean;
   severity: 'RED' | 'AMBER' | 'GREEN' | 'REVIEW';
@@ -611,7 +612,8 @@ If the article does NOT mention "${subjectName}" or has NO adverse information, 
     console.log(`[ANALYZE] ✓ LLM responded in ${llmTime}ms`);
 
     const rawText = response.data.choices?.[0]?.message?.content || '';
-    onLLMCall?.(DEEPSEEK_API_KEY ? 'deepseek' : 'kimi', prompt, rawText);
+    const usage = response.data.usage;
+    onLLMCall?.(DEEPSEEK_API_KEY ? 'deepseek' : 'kimi', prompt, rawText, usage);
 
     // Strip markdown code blocks that DeepSeek wraps around JSON
     const text = rawText.replace(/```json\s*/gi, '').replace(/```/g, '');
