@@ -350,6 +350,31 @@
     .save-status { font-size: 11px; color: #2ed573; }
 
 
+    /* Screening funnel table */
+    .funnel-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .funnel-table th {
+      text-align: left;
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      padding: 6px 10px;
+      border-bottom: 1px solid #333;
+    }
+    .funnel-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #1a1a1a;
+      vertical-align: middle;
+    }
+    .funnel-table tr:last-child td { border-bottom: none; }
+    .funnel-phase { color: #888; }
+    .funnel-count { font-weight: 600; color: #4a9eff; font-variant-numeric: tabular-nums; }
+    .funnel-rate { color: #666; font-size: 11px; }
+    .funnel-desc { color: #555; font-size: 11px; }
+
     .empty-state {
       text-align: center;
       color: #444;
@@ -571,26 +596,88 @@
       if (report.screening_stats_json) {
         try {
           const s = JSON.parse(report.screening_stats_json);
+          const fmt = n => (n || 0).toLocaleString();
+
+          const gathered = s.gathered || 0;
+          const afterFilter = s.programmaticElimination?.after || 0;
+          const eliminated = s.programmaticElimination?.eliminated || 0;
+          const redCount = s.categorized?.red || 0;
+          const amberCount = s.categorized?.amber || 0;
+          const flaggedCount = redCount + amberCount;
+          const totalAnalyzed = s.processed?.total || 0;
+          const adverse = s.processed?.adverse || 0;
+          const failed = s.processed?.failed || 0;
+          const dedupBefore = s.consolidated?.before || 0;
+          const dedupAfter = s.consolidated?.after || report.finding_count;
+
+          const passRate = gathered > 0 ? (afterFilter / gathered * 100).toFixed(1) : '—';
+          const flaggedRate = afterFilter > 0 ? (flaggedCount / afterFilter * 100).toFixed(1) : '—';
+          const analyzeRate = flaggedCount > 0 ? (totalAnalyzed / flaggedCount * 100).toFixed(1) : '—';
+          const hitRate = totalAnalyzed > 0 ? (adverse / totalAnalyzed * 100).toFixed(1) : '—';
+          const failRate = totalAnalyzed > 0 ? (failed / totalAnalyzed * 100).toFixed(1) : '—';
+
+          const rows = [];
+          rows.push(`<tr>
+            <td class="funnel-phase">Search Results</td>
+            <td class="funnel-count">${fmt(gathered)}</td>
+            <td class="funnel-rate">—</td>
+            <td class="funnel-desc">Links found across all search queries</td>
+          </tr>`);
+          rows.push(`<tr>
+            <td class="funnel-phase">Noise Filter</td>
+            <td class="funnel-count">${fmt(afterFilter)}</td>
+            <td class="funnel-rate">${passRate}% pass</td>
+            <td class="funnel-desc">Removed ${fmt(eliminated)} irrelevant/duplicate links</td>
+          </tr>`);
+          rows.push(`<tr>
+            <td class="funnel-phase">Categorized</td>
+            <td><span class="severity-badge red">${fmt(redCount)} RED</span> <span class="severity-badge amber">${fmt(amberCount)} AMBER</span></td>
+            <td class="funnel-rate">${flaggedRate}% flagged</td>
+            <td class="funnel-desc">AI classified by risk severity</td>
+          </tr>`);
+          rows.push(`<tr>
+            <td class="funnel-phase">Deep Analysis</td>
+            <td class="funnel-count">${fmt(totalAnalyzed)}</td>
+            <td class="funnel-rate">${analyzeRate}% of flagged</td>
+            <td class="funnel-desc">Full article fetch + LLM analysis</td>
+          </tr>`);
+          rows.push(`<tr>
+            <td class="funnel-phase">Confirmed Adverse</td>
+            <td class="funnel-count">${fmt(adverse)}</td>
+            <td class="funnel-rate">${hitRate}% hit rate</td>
+            <td class="funnel-desc">Articles with verified adverse content</td>
+          </tr>`);
+          if (failed > 0) {
+            rows.push(`<tr>
+              <td class="funnel-phase">Inaccessible</td>
+              <td class="funnel-count">${fmt(failed)}</td>
+              <td class="funnel-rate">${failRate}%</td>
+              <td class="funnel-desc">Articles that couldn't be fetched</td>
+            </tr>`);
+          }
+          if (dedupBefore > 0 && dedupBefore !== dedupAfter) {
+            rows.push(`<tr>
+              <td class="funnel-phase">Final Findings</td>
+              <td class="funnel-count">${fmt(dedupAfter)}</td>
+              <td class="funnel-rate">—</td>
+              <td class="funnel-desc">After deduplication (${fmt(dedupBefore)} → ${fmt(dedupAfter)})</td>
+            </tr>`);
+          } else {
+            rows.push(`<tr>
+              <td class="funnel-phase">Final Findings</td>
+              <td class="funnel-count">${fmt(dedupAfter)}</td>
+              <td class="funnel-rate">—</td>
+              <td class="funnel-desc">Total findings in report</td>
+            </tr>`);
+          }
+
           statsHtml = `
-            <div style="background:#0a0a0a; border:1px solid #222; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:12px;">
+            <div style="background:#0a0a0a; border:1px solid #222; border-radius:8px; padding:12px 16px; margin-bottom:16px;">
               <div style="color:#888; margin-bottom:8px; font-size:11px; text-transform:uppercase;">Screening Funnel</div>
-              <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:center;">
-                <span style="color:#4a9eff;">${s.gathered || 0} gathered</span>
-                <span style="color:#555;">\u2192</span>
-                <span style="color:#e0e0e0;">${s.programmaticElimination?.after || 0} after filter</span>
-                <span style="color:#555;">\u2192</span>
-                <span><span style="color:#ff4757;">${s.categorized?.red || 0} RED</span> <span style="color:#ffa502;">${s.categorized?.amber || 0} AMBER</span> <span style="color:#2ed573;">${s.categorized?.green || 0} GREEN</span></span>
-                <span style="color:#555;">\u2192</span>
-                <span style="color:#e0e0e0;">${s.processed?.total || 0} analyzed</span>
-                <span style="color:#555;">\u2192</span>
-                <span style="color:#e0e0e0;">${s.consolidated?.after || report.finding_count} findings</span>
-              </div>
-              <div style="color:#555; margin-top:6px; font-size:11px;">
-                Filtered: ${s.programmaticElimination?.eliminated || 0} noise removed
-                ${s.programmaticElimination?.govBypassed ? ' | ' + s.programmaticElimination.govBypassed + ' gov bypassed' : ''}
-                | Analyzed: ${s.processed?.adverse || 0} confirmed${s.processed?.further ? ', ' + s.processed.further + ' for review' : ''}, ${s.processed?.failed || 0} inaccessible
-                ${s.consolidated ? ' | Deduplicated: ' + s.consolidated.before + ' \u2192 ' + s.consolidated.after : ''}
-              </div>
+              <table class="funnel-table">
+                <thead><tr><th>Phase</th><th>Count</th><th>Rate</th><th>Description</th></tr></thead>
+                <tbody>${rows.join('')}</tbody>
+              </table>
             </div>`;
         } catch { /* ignore */ }
       }
@@ -608,15 +695,6 @@
         </div>
         ${statsHtml}
       `;
-
-      // Quality rating widget
-      const currentRating = report.quality_rating || 0;
-      html += `<div class="quality-rating">
-        <span class="quality-rating-label">Quality</span>
-        ${Array.from({length: 10}, (_, i) => i + 1).map(n =>
-          `<div class="rating-dot ${n <= currentRating ? 'active' : ''}" onclick="setRating(${id}, ${n})">${n}</div>`
-        ).join('')}
-      </div>`;
 
       // Findings
       html += '<h3 style="font-size:14px; margin-bottom:12px;">Findings</h3>';
@@ -692,6 +770,18 @@
           </div>
         </div>
       `;
+
+      // Quality rating widget — at the bottom after reviewing everything
+      const currentRating = report.quality_rating || 0;
+      html += `
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid #222;">
+          <div class="quality-rating">
+            <span class="quality-rating-label">Quality</span>
+            ${Array.from({length: 10}, (_, i) => i + 1).map(n =>
+              `<div class="rating-dot ${n <= currentRating ? 'active' : ''}" onclick="setRating(${id}, ${n})">${n}</div>`
+            ).join('')}
+          </div>
+        </div>`;
 
       document.getElementById('modalContent').innerHTML = html;
       document.getElementById('modalOverlay').classList.add('active');
