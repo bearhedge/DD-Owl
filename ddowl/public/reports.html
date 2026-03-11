@@ -601,8 +601,6 @@
           const afterFilter = s.programmaticElimination?.after || 0;
           const eliminated = s.programmaticElimination?.eliminated || 0;
           const govBypassed = s.programmaticElimination?.govBypassed || 0;
-          const noiseEliminated = eliminated;
-          const totalFiltered = gathered - afterFilter;
           const redCount = s.categorized?.red || 0;
           const amberCount = s.categorized?.amber || 0;
           const flaggedCount = redCount + amberCount;
@@ -614,6 +612,14 @@
           const dedupBefore = s.consolidated?.before || 0;
           const dedupAfter = s.consolidated?.after || report.finding_count;
 
+          // After noise elimination but before title dedupe
+          const afterNoise = gathered - eliminated;
+          // Title dedupe removed = afterNoise - afterFilter (afterFilter is post-dedupe)
+          const titleDeduped = afterNoise - afterFilter;
+
+          // Count user-confirmed findings
+          const selectedCount = report.findings ? report.findings.filter(f => f.included_in_report === 1).length : 0;
+
           const rows = [];
           rows.push(`<tr>
             <td class="funnel-phase">Found</td>
@@ -621,14 +627,21 @@
             <td class="funnel-desc">Links found across all queries</td>
           </tr>`);
           rows.push(`<tr>
-            <td class="funnel-phase">Filtered</td>
-            <td class="funnel-count" style="color:#ff4757;">−${fmt(totalFiltered)}</td>
-            <td class="funnel-desc">${fmt(noiseEliminated)} noise${govBypassed > 0 ? ', ' + fmt(govBypassed) + ' gov bypass' : ''}</td>
+            <td class="funnel-phase">Noise filter</td>
+            <td class="funnel-count" style="color:#ff4757;">−${fmt(eliminated)}</td>
+            <td class="funnel-desc">Spam domains, job postings, wrong-person patterns</td>
           </tr>`);
+          if (titleDeduped > 0) {
+            rows.push(`<tr>
+              <td class="funnel-phase">Title dedupe</td>
+              <td class="funnel-count" style="color:#ff4757;">−${fmt(titleDeduped)}</td>
+              <td class="funnel-desc">Duplicate articles removed by LLM</td>
+            </tr>`);
+          }
           rows.push(`<tr>
-            <td class="funnel-phase">Kept</td>
+            <td class="funnel-phase">Unique</td>
             <td class="funnel-count">${fmt(afterFilter)}</td>
-            <td class="funnel-desc">Passed noise filters</td>
+            <td class="funnel-desc">Passed all filters</td>
           </tr>`);
           rows.push(`<tr>
             <td class="funnel-phase">Flagged</td>
@@ -643,19 +656,25 @@
           rows.push(`<tr>
             <td class="funnel-phase">Adverse</td>
             <td class="funnel-count">${fmt(adverse)}</td>
-            <td class="funnel-desc">${cleared > 0 ? fmt(cleared) + ' cleared' : 'Articles with verified adverse content'}</td>
+            <td class="funnel-desc">${cleared > 0 ? fmt(cleared) + ' cleared' : 'Verified adverse content'}</td>
           </tr>`);
           if (dedupBefore > 0 && dedupBefore !== dedupAfter) {
             rows.push(`<tr>
               <td class="funnel-phase">Findings</td>
               <td class="funnel-count">${fmt(dedupAfter)}</td>
-              <td class="funnel-desc">After deduplication (${fmt(dedupBefore)} → ${fmt(dedupAfter)})</td>
+              <td class="funnel-desc">After consolidation (${fmt(dedupBefore)} → ${fmt(dedupAfter)})</td>
+            </tr>`);
+          } else if (dedupAfter > 0) {
+            rows.push(`<tr>
+              <td class="funnel-phase">Findings</td>
+              <td class="funnel-count">${fmt(dedupAfter)}</td>
+              <td class="funnel-desc">${selectedCount > 0 ? fmt(selectedCount) + ' confirmed by reviewer' : 'Pending review'}</td>
             </tr>`);
           } else {
             rows.push(`<tr>
               <td class="funnel-phase">Findings</td>
-              <td class="funnel-count">${fmt(dedupAfter)}</td>
-              <td class="funnel-desc">Final findings in report</td>
+              <td class="funnel-count">0</td>
+              <td class="funnel-desc">Clean — no adverse findings</td>
             </tr>`);
           }
 
