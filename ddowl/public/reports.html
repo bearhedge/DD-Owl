@@ -656,13 +656,13 @@
           rows.push(`<tr>
             <td class="funnel-phase">Adverse</td>
             <td class="funnel-count">${fmt(adverse)}</td>
-            <td class="funnel-desc">${cleared > 0 ? fmt(cleared) + ' cleared' : 'Verified adverse content'}</td>
+            <td class="funnel-desc">${adverse} article${adverse !== 1 ? 's' : ''} with adverse content${cleared > 0 ? ', ' + fmt(cleared) + ' cleared' : ''}</td>
           </tr>`);
           if (dedupBefore > 0 && dedupBefore !== dedupAfter) {
             rows.push(`<tr>
               <td class="funnel-phase">Findings</td>
               <td class="funnel-count">${fmt(dedupAfter)}</td>
-              <td class="funnel-desc">After consolidation (${fmt(dedupBefore)} → ${fmt(dedupAfter)})</td>
+              <td class="funnel-desc">${fmt(dedupBefore)} extracted from ${fmt(adverse)} article${adverse !== 1 ? 's' : ''}, ${fmt(dedupBefore - dedupAfter)} merged as overlapping</td>
             </tr>`);
           } else if (dedupAfter > 0) {
             rows.push(`<tr>
