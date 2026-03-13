@@ -146,6 +146,11 @@ export const DIRTY_WORD_EQUIVALENTS: Record<string, string[]> = {
   '盗': ['盜', '盗窃', '盜竊'],
   '窃': ['竊', '窃取', '竊取', '窃贼', '竊賊'],
   '赌': ['賭', '赌博', '賭博'],
+
+  // === SECURITIES TRADING ===
+  '减持': ['減持', '违规减持', '違規減持', '超额减持', '超額減持', 'share reduction'],
+  '增持': ['增持', 'stake increase'],
+  '信息披露': ['信息披露', '資訊披露', 'disclosure'],
 };
 
 /**

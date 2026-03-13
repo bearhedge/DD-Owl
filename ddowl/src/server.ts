@@ -2050,6 +2050,64 @@ If you cannot determine a field with reasonable confidence, use the default empt
     }
 
     // ========================================
+    // PHASE 1.92: ASSOCIATED COMPANY REGULATORY SEARCH (Individual only)
+    // For individuals with known associated companies, search for company-specific
+    // regulatory violations that person-name-only search misses (name disambiguation)
+    // ========================================
+    if (!isCompanyScreening(subjectName) && subjectProfile.associatedCompanies.length > 0 && !skipSubsidiaryAndSupplementary) {
+      const companyRegTerms = '违规|違規|处罚|處罰|罚款|罰款|监管|監管|超额|超額|信息披露|减持|減持|警告|禁入|处分|處分';
+      const MAX_COMPANY_SEARCHES = 3;
+      const companiesToSearch = subjectProfile.associatedCompanies.slice(0, MAX_COMPANY_SEARCHES);
+
+      console.log(`[V4] [COMPANY_REG] Running regulatory search for ${companiesToSearch.length} associated companies`);
+      sendEvent({ type: 'phase', phase: '1.92', name: 'COMPANY_REGULATORY_SEARCH', message: `Searching regulatory records for ${companiesToSearch.length} associated companies...` });
+
+      for (const company of companiesToSearch) {
+        if (signal.aborted) break;
+
+        const companyName = company.name;
+        const cjkNames = nameVariations.filter(n => isChineseName(n));
+        const personClause = cjkNames.length > 0
+          ? cjkNames.map(n => `"${n}"`).join(' OR ')
+          : `"${subjectName}"`;
+        const query = `"${companyName}" (${personClause}) ${companyRegTerms}`;
+
+        sendEvent({ type: 'progress', message: `Company regulatory search: ${companyName}` });
+
+        try {
+          const hl = isChineseName(companyName) ? 'zh-cn' : 'en';
+          for (let page = 1; page <= 3; page++) {
+            if (signal.aborted) break;
+            const pageResults = await searchGoogle(query, page, 10, signal, hl);
+            if (pageResults.length === 0) break;
+
+            let newResults = 0;
+            for (const r of pageResults) {
+              if (!allResults.find(existing => existing.url === r.link)) {
+                allResults.push({
+                  url: r.link,
+                  title: r.title,
+                  snippet: r.snippet || '',
+                  query: `[COMPANY_REG:${companyName}] ${query}`,
+                });
+                newResults++;
+              }
+            }
+
+            tracker.recordQuery(pageResults.length);
+            if (newResults === 0) break;
+            if (pageResults.length < 10) break;
+            await new Promise(r => setTimeout(r, 200));
+          }
+
+          console.log(`[V4] [COMPANY_REG] ${companyName}: search complete`);
+        } catch (err: any) {
+          console.error(`[V4] [COMPANY_REG] ${companyName} search failed (non-fatal): ${err?.message}`);
+        }
+      }
+    }
+
+    // ========================================
     // PHASE 1.95: SUBSIDIARY EXTRACTION & SUPPLEMENTARY SEARCH
     // Extracts subsidiaries (LLM), then runs profile-guided supplementary searches
     // with core subsidiary names included in OR clauses (language-separated)
