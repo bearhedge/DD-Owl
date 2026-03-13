@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DD Owl — Reports</title>
+  <title>DD OWL — Reports</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -658,17 +658,22 @@
             <td class="funnel-count">${fmt(adverse)}</td>
             <td class="funnel-desc">${adverse} article${adverse !== 1 ? 's' : ''} with adverse content${cleared > 0 ? ', ' + fmt(cleared) + ' cleared' : ''}</td>
           </tr>`);
+          const headlineList = report.findings.length > 0
+            ? '<br>' + report.findings.map(f =>
+                `<span style="color:#888;">•</span> <span class="severity-badge ${f.severity.toLowerCase()}">${f.severity}</span> ${escapeHtml(f.headline)}`
+              ).join('<br>')
+            : '';
           if (dedupBefore > 0 && dedupBefore !== dedupAfter) {
             rows.push(`<tr>
               <td class="funnel-phase">Findings</td>
               <td class="funnel-count">${fmt(dedupAfter)}</td>
-              <td class="funnel-desc">${fmt(dedupBefore)} extracted from ${fmt(adverse)} article${adverse !== 1 ? 's' : ''}, ${fmt(dedupBefore - dedupAfter)} merged as overlapping</td>
+              <td class="funnel-desc">${fmt(dedupBefore)} extracted from ${fmt(adverse)} article${adverse !== 1 ? 's' : ''}, ${fmt(dedupBefore - dedupAfter)} merged as overlapping${headlineList}</td>
             </tr>`);
           } else if (dedupAfter > 0) {
             rows.push(`<tr>
               <td class="funnel-phase">Findings</td>
               <td class="funnel-count">${fmt(dedupAfter)}</td>
-              <td class="funnel-desc">${selectedCount > 0 ? fmt(selectedCount) + ' confirmed by reviewer' : 'Pending review'}</td>
+              <td class="funnel-desc">${selectedCount > 0 ? fmt(selectedCount) + ' confirmed by reviewer' : 'Pending review'}${headlineList}</td>
             </tr>`);
           } else {
             rows.push(`<tr>
